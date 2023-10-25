@@ -1,2 +1,2 @@
-# scad-lang
+# SCaD Lang
 Programming Language
