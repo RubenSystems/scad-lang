@@ -1,3 +1,18 @@
+//===- ast_types.rs - Abstract Syntax tree -----*- rust -*-===//
+//
+// Part of the SCaD Compiler, 
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Defines the Abstract Syntax Tree (AST) for SCaD.
+/// This file contains data structures representing different elements
+/// of the abstract syntax tree for the custom language.
+///
+//===----------------------------------------------------------------------===//
+
+
+
 // AST for Types
 enum Type {
     ArrayType { element_type: Box<Type>, size: i64 },
