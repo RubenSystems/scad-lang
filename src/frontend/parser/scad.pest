@@ -1,0 +1,177 @@
+// MISC
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" | "\r\n"  }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+// Terminals
+integer = @{ ASCII_DIGIT+ }
+float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+char_array = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }
+boolean_t = { "true" | "false" }
+
+// type
+type = _{ array_type | simple_type }
+array_type = { "[" ~ type ~ ";" ~ integer ~ "]" }
+simple_type = { identifier }
+
+// Variable declerations
+mutable_modifier = { "mut" }
+const_decl = { "let" ~ mutable_modifier? ~ identifier ~ ":" ~ type ~ "=" ~ expression }
+
+// block
+block = { "{" ~ statements ~ expression? ~ "}" } 
+
+// if statement
+if_control_flow = _{
+	if_block ~ else_if_block* ~ else_block?
+}
+
+if_block = {
+	"if" ~ boolean_expression ~ block
+}
+
+else_if_block = {
+	"else if" ~ boolean_expression ~ block
+}
+
+else_block = {
+	"else" ~ block
+}
+
+// loopz
+loop = {
+	"loop" ~ ("(" ~ boolean_expression ~ ")")? ~ block
+}
+
+// numerics
+numeric_op = _{ add | subtract | multiply | divide }
+	add = { "+" }
+	subtract = { "-" }
+	multiply = { "*" }
+	divide = { "/" }
+
+unary_minus = { "-" }
+numeric = _{ float | integer | "(" ~ numeric_expression ~ ")" | identifier }
+numeric_atom = _{unary_minus? ~ numeric}
+numeric_expression = {numeric_atom ~ (numeric_op ~ numeric_atom)*}
+
+
+// booleans
+unary_boolean_op = { not }
+	not = { "!" }
+
+boolean_joins = _{ and | or } // andor 
+	and = { "&&" }
+	or = { "||" }
+
+binary_boolean_op = _{ less_than_equal | greather_than_equal | greater_than | less_than | equality }
+	greater_than = { ">" }
+	less_than = { "<" }
+	equality = { "==" }
+	less_than_equal = { "<=" }
+	greather_than_equal = { ">=" }
+
+binary_boolean_comparitors = _{ float | integer | numeric_expression | identifier }
+binary_boolean_expression = { binary_boolean_comparitors ~ binary_boolean_op ~ binary_boolean_comparitors }
+
+
+boolean = _{ binary_boolean_expression | boolean_t | "(" ~ boolean_expression ~ ")" | identifier }
+boolean_atom = _{ not? ~ boolean }
+boolean_expression  = { boolean_atom ~ (boolean_joins ~ boolean_atom)* }
+
+// Major building blocks
+expression = _{ boolean_expression | numeric_expression | float | integer | char_array | identifier }
+statement = _{ const_decl | if_control_flow | loop | expression }
+statements = { (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
+program = _{ SOI ~ statements ~ EOI }
+
+
+// // MISC 
+// WHITESPACE = _{ " " | "\t" | "\n" | "\r" | "\r\n"  }
+// COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+// // Base types
+// integer = @{ ASCII_DIGIT+ }
+// float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+// char_array = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
+// // Numerics
+// unary_minus = { "-" }
+// numeric_representation = _{ integer | float | "(" ~ numeric_atom ~ ")" }
+// numeric_atom = _{ unary_minus? ~ numeric_representation }
+// numeric_operation_expression = { numeric_atom ~ (num_op ~ numeric_atom)* }
+
+
+// num_op = _{ add | subtract | multiply | divide }
+// 	add = { "+" }
+// 	subtract = { "-" }
+// 	multiply = { "*" }
+// 	divide = { "/" }
+
+
+// // Booleans
+// unary_not = {"!"}
+// boolean_atom = _{ unary_not? ~ expression }
+// boolean_ = { boolean_atom ~ (bool_op ~ boolean_atom)? }
+// boolean_operation_expression = { boolean_expression ~ (bool_op ~ boolean_expression)* }
+
+// bool_op = _{ greater_than | less_than | equality | less_than_equal | greather_than_equal }
+// 	greater_than = { ">" }
+// 	less_than = { "<" }
+// 	equality = { "==" }
+// 	less_than_equal = { "<=" }
+// 	greather_than_equal = { ">=" }
+
+// bool_join = { and | or } // Andor
+// 	and = { "and" }
+// 	or = { "or" }
+
+
+
+
+
+// program = _{ SOI ~ (statement)* ~ EOI }
+// expression = _{ (numeric_operation_expression | boolean_operation_expression) }
+// statement = _{ (expression)  }
+
+
+
+
+// // Define tokens for whitespace and comments
+// whitespace = _{ " " | "\t" | "\n" | "\r" | "\r\n" }
+// comment = _{ "//" ~ (!"\n" ~ any)* }
+
+// // Define the main grammar rules
+// program = { SOI ~ statement* ~ EOI }
+// statement = { (variable_declaration | expression) ~ (whitespace | comment)* }
+
+// // Define expressions
+// expression = {
+//     (identifier | number | string | symbol | any | binary_op | parenthesised_expr)
+// }
+// binary_op = { "==" | "!=" | "<" | ">" | ">=" | "<=" }
+// numeric_op = { "+" | "-" | "*" | "/" }
+
+// parenthesised_expr = { "(" ~ expression ~ ")" }
+
+// // conditional_expr = { "if" ~ expression ~ "{" ~ statement* ~ "}" ~ ("else" ~ "{" ~ statement* ~ "}")? }
+// // loop_expr = { "loop" ~ "{" ~ statement* ~ "}" }
+
+// // Define "any" expression
+// any = { ANY }
+
+// // Define token rules for identifiers, numbers, strings, and symbols
+// identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }
+// number = { "-"? ~ (ASCII_DIGIT+) ~ ("." ~ ASCII_DIGIT+)? }
+// string = { "\"" ~ (!"\"" ~ any)* ~ "\"" }
+// symbol = { ("=" | binary_op | numeric_op | "(" | ")" | "{" | "}" | ";" | ",") }
+
+// numeric_expression = { expression ~ numeric_op ~ expression }
+// boolean_expression = { expression ~ binary_op ~ expression }
+
+// // Define rules for variable declarations
+// variable_declaration = { "let" ~ identifier ~ ":" ~ identifier ~ "=" ~ expression }
+
+
+
+// ASCII_ALPHANUMERIC = { ASCII_ALPHA | ASCII_DIGIT }
