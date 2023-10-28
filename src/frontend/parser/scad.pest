@@ -67,7 +67,7 @@ numeric_op = _{ add | subtract | multiply | divide }
 
 unary_minus = { "-" }
 numeric = _{ float | integer | "(" ~ numeric_expression ~ ")" | identifier }
-numeric_atom = _{unary_minus? ~ numeric}
+numeric_atom = {unary_minus? ~ numeric}
 numeric_expression = {numeric_atom ~ (numeric_op ~ numeric_atom)*}
 
 
@@ -95,8 +95,8 @@ boolean_atom = _{ not? ~ boolean }
 boolean_expression  = { boolean_atom ~ (boolean_joins ~ boolean_atom)* }
 
 // Major building blocks
-expression = _{ boolean_expression | numeric_expression | float | integer | char_array | identifier }
-statement = _{ const_decl | if_control_flow | loop | expression }
-statements = { (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
+expression = { boolean_expression | numeric_expression | float | integer | char_array | identifier }
+statement = { const_decl | if_control_flow | loop | expression }
+statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
 program = _{ SOI ~ statements ~ EOI }
 

@@ -16,7 +16,7 @@ use crate::frontend::parser::{
 
 fn main() {
     let prog = r#"
-    (2 >= 4) && (3 >= (8 + 2 * 4));
+    -2 + 3;
     "#;
 
     let x = SCADParser::parse(Rule::program, prog).unwrap();

@@ -6,99 +6,138 @@
 ///
 /// \file
 /// Defines the Abstract Syntax Tree (AST) for SCaD.
-/// This file contains data structures representing different elements
+/// Thispub  file contains data structures representing different elements
 /// of the abstract syntax tree for the custom language.
 ///
 //===----------------------------------------------------------------------===//
 
 
+// Terminals
+pub struct TrueT;
+pub struct FalseT;
+pub struct Integer(i128);
+pub struct Float(f64);
 
-// AST for Types
-enum Type {
-    ArrayType { element_type: Box<Type>, size: i64 },
-    SimpleType(String), // Identifier
+pub struct CharArray(String);
+pub struct Identifier(String);
+
+
+pub enum Type {
+	Array {
+		subtype: Box<Type>,
+		size: usize
+	}, 
+	SimpleType {
+		identifier: String
+	}
 }
 
-// AST for Variable Declarations
-enum VariableDeclaration {
-    Constant {
-        mutable: bool,
-        identifier: String,
-        var_type: Type,
-        expression: Expression,
-    },
+pub struct Block {
+	statements: Vec<Statement>,
+	expression: Option<Expression>
 }
 
-// AST for Blocks
-enum Block {
-    Statements(Vec<Statement>),
-    StatementAndExpression(Vec<Statement>, Expression),
+pub struct ConstDecl {
+	mutable: bool, 
+	identifier: String, 
+	subtype: Type, 
+	expression: Expression
 }
 
-// AST for If Statements
-enum IfStatement {
-    If { condition: BooleanExpression, body: Block },
-    ElseIf { condition: BooleanExpression, body: Block },
-    Else { body: Block },
+pub struct ConditionalBlock {
+	condition: BooleanExpression, 
+	block: Block
 }
 
-// AST for Loops
-enum Loop {
-    ConditionallyInfiniteLoop { condition: Option<BooleanExpression>, body: Block },
+// Numerics
+enum NumericOp {
+	Add,
+	Subtract,
+	Multiply, 
+	Divide
 }
 
-// AST for Numerics
-enum NumericExpression {
-    AtomicNumeric { value: Numeric },
-    UnaryOperation { op: String, operand: Box<NumericExpression> },
-    BinaryOperation {
-        op: String,
-        left: Box<NumericExpression>,
-        right: Box<NumericExpression>,
-    },
+pub enum NumericRepr {
+	Int(Integer),
+	Float(Float),
+	NumericExpression(NumericExpression),
+	Identifier(Identifier)
 }
 
-enum Numeric {
-    Float(f64),
-    Integer(i64),
-    Variable(String), // Identifier
+pub struct NumericAtom {
+	unary_minus: bool, 
+	numeric_expression: NumericRepr
 }
 
-// AST for Booleans
-enum BooleanExpression {
-    AtomicBoolean { value: Boolean },
-    UnaryBooleanOperation { op: String, operand: Box<BooleanExpression> },
-    BinaryBooleanOperation {
-        op: String,
-        left: Box<BooleanExpression>,
-        right: Box<BooleanExpression>,
-    },
+pub struct NumericExpression {
+	atom: Box<NumericAtom>, 
+	rhss: Vec<NumericAtom>
 }
 
-enum Boolean {
-    BooleanLiteral(bool),
-    Variable(String), // Identifier
-    NumericExpression(NumericExpression),
+// Booleans
+pub enum BooleanJoins {
+	And, 
+	Or
 }
 
-// AST for Major Building Blocks
-enum Expression {
-    BooleanExpr(BooleanExpression),
-    NumericExpr(NumericExpression),
-    Float(f64),
-    Integer(i64),
-    CharArray(String),
-    Identifier(String),
+pub enum BinaryBooleanOp {
+	LessThanEqual, 
+	GreatherThanEqual, 
+	GreaterThan, 
+	LessThan, 
+	Equality
 }
 
-enum Statement {
-    ConstantDeclaration(VariableDeclaration),
-    IfControlFlow(IfStatement),
-    Loop(Loop),
-    Expr(Expression),
+pub enum BinaryBooleanComparitor {
+	Int(Integer),
+	Float(Float),
+	Identifier(Identifier)
 }
 
-// AST for Program
-struct Program {
-    statements: Vec<Statement>,
+pub enum BooleanRepr {
+	Int(Integer),
+	Float(Float),
+	True, 
+	False,
+	Identifier(Identifier),
+	BinaryBooleanExpression {
+		lhs: BinaryBooleanComparitor, 
+		op: BinaryBooleanOp, 
+		rhs: BinaryBooleanComparitor
+	}
+}
+
+pub struct BooleanAtom {
+	not: bool, 
+	repr: BooleanRepr
+}
+
+pub struct BooleanExpression {
+	repr: BooleanAtom, 
+	rhss: Vec<(BooleanJoins, BooleanAtom)>
+}
+
+// major building blocks
+
+pub enum Expression {
+	BooleanExpression(BooleanExpression),
+	NumericExpression(NumericExpression), 
+	Float(Float), 
+	Integer(Integer),
+	CharArray(CharArray),
+	Identifier(Identifier)
+}
+
+pub enum Statement {
+	ConstDecl(ConstDecl),
+	IfControlFlow {
+		if_block: ConditionalBlock,
+		else_ifs: Vec<ConditionalBlock>,
+		else_block: Option<Block>
+	}, 
+	Loop { 
+		condition: Option<BooleanExpression>, 
+		block: Block
+	}, 
+	Expression(Expression)
 }
