@@ -30,8 +30,9 @@ array_type = { "[" ~ type ~ ";" ~ integer ~ "]" }
 simple_type = { identifier }
 
 // Variable declerations
-mutable_modifier = { "mut" }
-const_decl = { "let" ~ mutable_modifier? ~ identifier ~ ":" ~ type ~ "=" ~ expression }
+const_decl = { "let" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
+var_decl = { "let mut" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
+
 
 // block
 block = { "{" ~ statements ~ expression? ~ "}" } 
@@ -96,7 +97,7 @@ boolean_expression  = { boolean_atom ~ (boolean_joins ~ boolean_atom)* }
 
 // Major building blocks
 expression = { boolean_expression | numeric_expression | float | integer | char_array | identifier }
-statement = { const_decl | if_control_flow | loop | expression }
+statement = { var_decl | const_decl | if_control_flow | loop | expression }
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
 program = _{ SOI ~ statements ~ EOI }
 
