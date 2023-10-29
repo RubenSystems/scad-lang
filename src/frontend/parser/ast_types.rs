@@ -60,9 +60,9 @@ pub struct ConstDecl {
 
 #[derive(Debug)]
 pub struct VariableDecl {
-    identifier: VariableName, // Identifier for the constant
-    subtype: Type,            // Type of the constant
-    expression: Expression,   // Expression representing the constant's value
+    pub identifier: VariableName, // Identifier for the constant
+    pub subtype: Type,            // Type of the constant
+    pub expression: Expression,   // Expression representing the constant's value
 }
 
 // Definition of a conditional block in the language

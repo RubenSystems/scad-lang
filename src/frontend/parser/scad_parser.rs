@@ -6,7 +6,7 @@ use pest_derive::Parser;
 
 use super::ast_types::{
     ConstDecl, Expression, Float, Identifier, Integer, NumericExpression, NumericOp, Statement,
-    Type, TypeName, VariableName,
+    Type, TypeName, VariableName, VariableDecl,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -79,6 +79,24 @@ impl ParserToAST {
                         };
 
                         Statement::ConstDecl(ConstDecl {
+                            identifier: identifier,
+                            subtype: parsed_stype,
+                            expression: expression,
+                        })
+                    },
+                    Rule::var_decl => {
+                        let mut p = primary.into_inner();
+                        let identifier = VariableName(p.next().unwrap().as_str().into());
+                        let stype_unparsed = p.next().unwrap();
+                        let parsed_stype = self.parse_type(stype_unparsed);
+
+                        let Statement::Expression(expression) =
+                            self.parse(p.next().unwrap().into_inner())
+                        else {
+                            unreachable!("NOT AN EXPRESSION!");
+                        };
+
+                        Statement::VariableDecl(VariableDecl {
                             identifier: identifier,
                             subtype: parsed_stype,
                             expression: expression,
