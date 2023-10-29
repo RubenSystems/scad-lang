@@ -84,37 +84,8 @@ impl ParserToAST {
                             expression: expression,
                         })
                     }
-                    // Rule::block => todo!(),
-                    // Rule::if_control_flow => todo!(),
-                    // Rule::if_block => todo!(),
-                    // Rule::else_if_block => todo!(),
-                    // Rule::else_block => todo!(),
-                    // Rule::r#loop => todo!(),
-                    // Rule::numeric_op => todo!(),
-                    // Rule::add => todo!(),
-                    // Rule::subtract => todo!(),
-                    // Rule::multiply => todo!(),
-                    // Rule::divide => todo!(),
-                    // Rule::unary_minus => todo!(),
-                    // Rule::numeric => todo!(),
                     Rule::numeric_atom => self.parse(primary.into_inner()),
                     Rule::numeric_expression => self.parse(primary.into_inner()),
-                    // Rule::unary_boolean_op => todo!(),
-                    // Rule::not => todo!(),
-                    // Rule::boolean_joins => todo!(),
-                    // Rule::and => todo!(),
-                    // Rule::or => todo!(),
-                    // Rule::binary_boolean_op => todo!(),
-                    // Rule::greater_than => todo!(),
-                    // Rule::less_than => todo!(),
-                    // Rule::equality => todo!(),
-                    // Rule::less_than_equal => todo!(),
-                    // Rule::greather_than_equal => todo!(),
-                    // Rule::binary_boolean_comparitors => todo!(),
-                    // Rule::binary_boolean_expression => todo!(),
-                    // Rule::boolean => todo!(),
-                    // Rule::boolean_atom => todo!(),
-                    // Rule::boolean_expression => todo!(),
                     Rule::expression => self.parse(primary.into_inner()),
                     Rule::statement => self.parse(primary.into_inner()),
                     Rule::statements => self.parse(primary.into_inner()),
@@ -125,10 +96,6 @@ impl ParserToAST {
                     }
                 },
             )
-            // .map_prefix(|op, rhs| match op.as_rule() {
-            //     Rule::unary_minus  => -rhs,
-            //     _          => unreachable!(),
-            // })
             .map_infix(|lhs, op, rhs| match op.as_rule() {
                 Rule::add => {
                     let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
