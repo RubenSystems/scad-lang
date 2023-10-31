@@ -35,7 +35,11 @@ var_decl = { "let mut" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
 
 
 // block
-block = { "{" ~ statements ~ expression? ~ "}" } 
+block = _{ statement_block | expression_block } 
+
+statement_block = { "{" ~ statements ~ "}" } 
+expression_block = { "{" ~ statements ~ expression ~ "}" } 
+
 
 // if statement
 if_control_flow = _{
@@ -43,11 +47,11 @@ if_control_flow = _{
 }
 
 if_block = {
-	"if" ~ boolean_expression ~ block
+	"if" ~ expression ~ block
 }
 
 else_if_block = {
-	"else if" ~ boolean_expression ~ block
+	"else if" ~ expression ~ block
 }
 
 else_block = {
@@ -55,49 +59,82 @@ else_block = {
 }
 
 // loopz
-loop = {
-	"loop" ~ ("(" ~ boolean_expression ~ ")")? ~ block
+loop = _{ nonconditional_loop | conditional_loop }
+
+nonconditional_loop = {
+	"loop" ~ block
 }
 
-// numerics
-numeric_op = _{ add | subtract | multiply | divide }
-	add = { "+" }
-	subtract = { "-" }
-	multiply = { "*" }
-	divide = { "/" }
-
-unary_minus = { "-" }
-numeric = _{ float | integer | "(" ~ numeric_expression ~ ")" | identifier }
-numeric_atom = {unary_minus? ~ numeric}
-numeric_expression = {numeric_atom ~ (numeric_op ~ numeric_atom)*}
+conditional_loop = {
+	"loop" ~ expression ~ block
+}
 
 
-// booleans
-unary_boolean_op = { not }
-	not = { "!" }
+infix_operator = _{ add | subtract | multiply | divide | and | or }
+infix_operation = { 
+	(non_infix_expressions ~ infix_operator ~ non_infix_expressions ) ~ (infix_operator ~ non_infix_expressions)* 
+}
+add = { "+" }
+subtract = { "-" }
+multiply = { "*" }
+divide = { "/" }
+and = { "&&" }
+or = { "||" }
 
-boolean_joins = _{ and | or } // andor 
-	and = { "&&" }
-	or = { "||" }
+binary_infix_operator = _{  greater_equal | greater | greater | less  | equal }
+binary_infix_operation = { 
+	non_infix_expressions ~ binary_infix_operator ~ non_infix_expressions 
+}
+greater = { ">" }
+greater_equal = { ">=" }
+less = { "<" }
+less_equal = { "<=" }
+equal = { "==" }
 
-binary_boolean_op = _{ less_than_equal | greather_than_equal | greater_than | less_than | equality }
-	greater_than = { ">" }
-	less_than = { "<" }
-	equality = { "==" }
-	less_than_equal = { "<=" }
-	greather_than_equal = { ">=" }
-
-binary_boolean_comparitors = _{ float | integer | numeric_expression | identifier }
-binary_boolean_expression = { binary_boolean_comparitors ~ binary_boolean_op ~ binary_boolean_comparitors }
-
-
-boolean = _{ binary_boolean_expression | boolean_t | "(" ~ boolean_expression ~ ")" | identifier }
-boolean_atom = _{ not? ~ boolean }
-boolean_expression  = { boolean_atom ~ (boolean_joins ~ boolean_atom)* }
 
 // Major building blocks
-expression = { boolean_expression | numeric_expression | float | integer | char_array | identifier }
+
+non_infix_expressions = _{ "(" ~ expression ~ ")" | expression_block | float | integer | char_array | identifier }
+expression = { binary_infix_operation | infix_operation | non_infix_expressions  }
+
 statement = { var_decl | const_decl | if_control_flow | loop | expression }
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
 program = _{ SOI ~ statements ~ EOI }
 
+
+
+// // numerics
+// numeric_op = _{ add | subtract | multiply | divide }
+// 	add = { "+" }
+// 	subtract = { "-" }
+// 	multiply = { "*" }
+// 	divide = { "/" }
+
+// unary_minus = { "-" }
+// numeric = _{ float | integer | "(" ~ numeric_expression ~ ")" | identifier }
+// numeric_atom = {unary_minus? ~ numeric}
+// numeric_expression = {numeric_atom ~ (numeric_op ~ numeric_atom)*}
+
+
+// // booleans
+// unary_boolean_op = { not }
+// 	not = { "!" }
+
+// boolean_joins = _{ and | or } // andor 
+// 	and = { "&&" }
+// 	or = { "||" }
+
+// binary_boolean_op = _{ less_than_equal | greather_than_equal | greater_than | less_than | equality }
+// 	greater_than = { ">" }
+// 	less_than = { "<" }
+// 	equality = { "==" }
+// 	less_than_equal = { "<=" }
+// 	greather_than_equal = { ">=" }
+
+// binary_boolean_comparitors = _{ float | integer | numeric_expression | identifier }
+// binary_boolean_expression = { binary_boolean_comparitors ~ binary_boolean_op ~ binary_boolean_comparitors }
+
+
+// boolean = _{ binary_boolean_expression | boolean_t | "(" ~ boolean_expression ~ ")" | identifier }
+// boolean_atom = _{ not? ~ boolean }
+// boolean_expression  = { boolean_atom ~ (boolean_joins ~ boolean_atom)* }

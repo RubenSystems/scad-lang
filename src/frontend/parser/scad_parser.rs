@@ -5,8 +5,8 @@ use pest::{
 use pest_derive::Parser;
 
 use super::ast_types::{
-    ConstDecl, Expression, Float, Identifier, Integer, NumericExpression, NumericOp, Statement,
-    Type, TypeName, VariableName, VariableDecl,
+    ConstDecl, Expression, Float, InfixOperation, InfixOperator, Integer, Statement, Type,
+    TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -25,7 +25,11 @@ impl ParserToAST {
             parser: PrattParser::new()
                 .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::subtract, Assoc::Left))
                 .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left))
-                .op(Op::prefix(Rule::unary_minus)),
+                .op(Op::infix(Rule::greater, Assoc::Left) | Op::infix(Rule::greater_equal, Assoc::Left))
+                .op(Op::infix(Rule::equal, Assoc::Left) | Op::infix(Rule::greater_equal, Assoc::Left))
+                .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
+
+                .op(Op::prefix(Rule::infix_operator)),
         }
     }
 }
@@ -38,7 +42,6 @@ impl ParserToAST {
                 identifier: TypeName(tpe.as_str().into()),
             },
             Rule::array_type => {
-                println!("GOT A TYPE {tpe:?}");
                 let mut p = tpe.into_inner();
                 let typename = self.parse_type(p.next().unwrap().into());
                 let size = p.next().unwrap().as_str().parse::<usize>().unwrap();
@@ -61,11 +64,6 @@ impl ParserToAST {
                     Rule::float => Statement::Expression(Expression::Float(Float(
                         primary.as_str().parse::<f64>().unwrap(),
                     ))),
-                    // Rule::char_array => todo!(),
-                    // Rule::identifier => todo!(),
-                    // Rule::boolean_t => todo!(),
-
-                    // Rule::mutable_modifier => todo!(),
                     Rule::const_decl => {
                         let mut p = primary.into_inner();
                         let identifier = VariableName(p.next().unwrap().as_str().into());
@@ -83,7 +81,7 @@ impl ParserToAST {
                             subtype: parsed_stype,
                             expression: expression,
                         })
-                    },
+                    }
                     Rule::var_decl => {
                         let mut p = primary.into_inner();
                         let identifier = VariableName(p.next().unwrap().as_str().into());
@@ -102,12 +100,18 @@ impl ParserToAST {
                             expression: expression,
                         })
                     }
-                    Rule::numeric_atom => self.parse(primary.into_inner()),
-                    Rule::numeric_expression => self.parse(primary.into_inner()),
+                    Rule::infix_operation => self.parse(primary.into_inner()),
+                    Rule::binary_infix_operation => self.parse(primary.into_inner()),
+
+                    // Rule::r#loop => {
+
+                    // }
+                    // Rule::numeric_atom => self.parse(primary.into_inner()),
+                    // Rule::numeric_expression => self.parse(primary.into_inner()),
                     Rule::expression => self.parse(primary.into_inner()),
                     Rule::statement => self.parse(primary.into_inner()),
                     Rule::statements => self.parse(primary.into_inner()),
-                    // Rule::program => todo!(),
+
                     rule => {
                         eprintln!("{}", primary);
                         unreachable!("Expr::parse expected atom, found {:?}", rule);
@@ -115,55 +119,32 @@ impl ParserToAST {
                 },
             )
             .map_infix(|lhs, op, rhs| match op.as_rule() {
-                Rule::add => {
+                // Rule::infix_operation => {
+                //     let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
+                //     else {
+                //         unreachable!();
+                //     };
+
+                //     Statement::Expression(Expression::InfixOperation(InfixOperation {
+                //         lhs: Box::new(lhs),
+                //         op: InfixOperator(op.as_str().into()),
+                //         rhs: Box::new(rhs),
+                //     }))
+                // }
+                rule => {
                     let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
                     else {
                         unreachable!();
                     };
 
-                    Statement::Expression(Expression::NumericExpression(NumericExpression {
+                    Statement::Expression(Expression::InfixOperation(InfixOperation {
                         lhs: Box::new(lhs),
-                        op: NumericOp::Add,
+                        op: InfixOperator(op.as_str().into()),
                         rhs: Box::new(rhs),
                     }))
                 }
-                Rule::subtract => {
-                    let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
-                    else {
-                        unreachable!();
-                    };
 
-                    Statement::Expression(Expression::NumericExpression(NumericExpression {
-                        lhs: Box::new(lhs),
-                        op: NumericOp::Subtract,
-                        rhs: Box::new(rhs),
-                    }))
-                }
-                Rule::multiply => {
-                    let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
-                    else {
-                        unreachable!();
-                    };
-
-                    Statement::Expression(Expression::NumericExpression(NumericExpression {
-                        lhs: Box::new(lhs),
-                        op: NumericOp::Subtract,
-                        rhs: Box::new(rhs),
-                    }))
-                }
-                Rule::divide => {
-                    let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
-                    else {
-                        unreachable!();
-                    };
-
-                    Statement::Expression(Expression::NumericExpression(NumericExpression {
-                        lhs: Box::new(lhs),
-                        op: NumericOp::Divide,
-                        rhs: Box::new(rhs),
-                    }))
-                }
-                rule => unreachable!("Can't parse infix operator {:?}", rule),
+                // rule => unreachable!("Can't parse infix operator {:?}", rule),
             })
             .parse(rules)
     }

@@ -23,6 +23,9 @@ pub struct Float(pub f64); // Terminal symbol for floating-point values
 pub struct CharArray(String); // Terminal symbol for character arrays
 
 #[derive(Debug)]
+pub struct InfixOperator(pub String); // Terminal symbol for character arrays
+
+#[derive(Debug)]
 pub struct Identifier(pub String); // Terminal symbol for identifiers
 
 #[derive(Debug)]
@@ -68,98 +71,42 @@ pub struct VariableDecl {
 // Definition of a conditional block in the language
 #[derive(Debug)]
 pub struct ConditionalBlock {
-    condition: BooleanExpression, // Condition for the block (boolean expression)
-    block: Block,                 // Block of statements to be executed if the condition is met
+    condition: Expression, // Condition for the block (boolean expression)
+    block: Block,          // Block of statements to be executed if the condition is met
 }
 
-// Enumeration of numeric operations supported in the language
 #[derive(Debug)]
-pub enum NumericOp {
-    Add,      // Addition operation
-    Subtract, // Subtraction operation
-    Multiply, // Multiplication operation
-    Divide,   // Division operation
+pub enum Loop {
+    Conditional(ConditionalLoop),
+    NonconditionalLoop(NonconditionalLoop),
 }
 
-// Enumeration of different representations for numeric values
-// #[derive(Debug)]
-// pub enum NumericRepr {
-//     Int(Integer),                         // Representation of an integer value
-//     Float(Float),                         // Representation of a floating-point value
-//     NumericExpression(NumericExpression), // Representation of a complex numeric expression
-//     Identifier(Identifier), // Representation of an identifier referring to a numeric value
-// }
+#[derive(Debug)]
+pub struct NonconditionalLoop {
+    pub block: Block,
+}
 
 #[derive(Debug)]
-pub struct NumericExpression {
+pub struct ConditionalLoop {
+    pub block: Block,
+    pub conditional: Expression,
+}
+
+#[derive(Debug)]
+pub struct InfixOperation {
     pub lhs: Box<Expression>,
-    pub op: NumericOp,
+    pub op: InfixOperator,
     pub rhs: Box<Expression>,
-}
-
-// Enumeration of logical 'AND' and 'OR' operators
-#[derive(Debug)]
-pub enum BooleanJoins {
-    And, // Logical 'AND' operator
-    Or,  // Logical 'OR' operator
-}
-
-// Enumeration of binary boolean operations for comparisons
-#[derive(Debug)]
-pub enum BinaryBooleanOp {
-    LessThanEqual,     // Less than or equal comparison
-    GreatherThanEqual, // Greater than or equal comparison
-    GreaterThan,       // Greater than comparison
-    LessThan,          // Less than comparison
-    Equality,          // Equality comparison
-}
-
-// Enumeration of different comparators in binary boolean expressions
-#[derive(Debug)]
-pub enum BinaryBooleanComparitor {
-    Int(Integer),           // Comparator representing an integer value
-    Float(Float),           // Comparator representing a floating-point value
-    Identifier(Identifier), // Comparator representing an identifier referring to a boolean value
-}
-
-// Enumeration of representations for boolean values and expressions
-#[derive(Debug)]
-pub enum BooleanRepr {
-    Int(Integer),           // Representation of an integer value as a boolean
-    Float(Float),           // Representation of a float value as a boolean
-    True,                   // Boolean 'true' value
-    False,                  // Boolean 'false' value
-    Identifier(Identifier), // Representation of an identifier referring to a boolean value
-    BinaryBooleanExpression {
-        lhs: BinaryBooleanComparitor, // Left-hand side comparator in the binary boolean expression
-        op: BinaryBooleanOp,          // Operator for the comparison
-        rhs: BinaryBooleanComparitor, // Right-hand side comparator in the binary boolean expression
-    },
-}
-
-// Definition of a single atomic boolean expression
-#[derive(Debug)]
-pub struct BooleanAtom {
-    not: bool,         // Indicates if the boolean value is negated
-    repr: BooleanRepr, // The boolean representation
-}
-
-// Definition of a boolean expression consisting of an atomic value and a series of right-hand side atoms
-#[derive(Debug)]
-pub struct BooleanExpression {
-    repr: BooleanAtom,                      // Atomic boolean value
-    rhss: Vec<(BooleanJoins, BooleanAtom)>, // List of right-hand side atoms combined with boolean joins
 }
 
 // Enumeration of major building blocks of the language expressions
 #[derive(Debug)]
 pub enum Expression {
-    BooleanExpression(BooleanExpression), // Boolean expressions
-    NumericExpression(NumericExpression), // Numeric expressions
-    Float(Float),                         // Floating-point values
-    Integer(Integer),                     // Integer values
-    CharArray(CharArray),                 // Character arrays
-    Identifier(Identifier),               // Identifiers
+    InfixOperation(InfixOperation), // Boolean expressions
+    Float(Float),                   // Floating-point values
+    Integer(Integer),               // Integer values
+    CharArray(CharArray),           // Character arrays
+    Identifier(Identifier),         // Identifiers
 }
 
 // Enumeration of different types of statements in the language
@@ -172,9 +119,6 @@ pub enum Statement {
         else_ifs: Vec<ConditionalBlock>, // List of else-if condition blocks
         else_block: Option<Block>,       // Optional else block if no conditions are met
     },
-    Loop {
-        condition: Option<BooleanExpression>, // Optional condition for loop execution
-        block: Block,                         // Block of statements within the loop
-    },
+    Loop(Loop),
     Expression(Expression), // Expression statement
 }
