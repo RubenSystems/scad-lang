@@ -20,7 +20,7 @@ pub struct Integer(pub i128); // Terminal symbol for integer values
 pub struct Float(pub f64); // Terminal symbol for floating-point values
 
 #[derive(Debug)]
-pub struct CharArray(String); // Terminal symbol for character arrays
+pub struct CharArray(pub String); // Terminal symbol for character arrays
 
 #[derive(Debug)]
 pub struct InfixOperator(pub String); // Terminal symbol for character arrays
@@ -107,6 +107,11 @@ pub enum Expression {
     Integer(Integer),               // Integer values
     CharArray(CharArray),           // Character arrays
     Identifier(Identifier),         // Identifiers
+    IfControlFlow {
+        if_block: Box<ConditionalBlock>, // If condition block
+        else_ifs: Vec<ConditionalBlock>, // List of else-if condition blocks
+        else_block: Option<Box<Block>>,  // Optional else block if no conditions are met
+    },
 }
 
 // Enumeration of different types of statements in the language
@@ -114,11 +119,6 @@ pub enum Expression {
 pub enum Statement {
     ConstDecl(ConstDecl),       // Constant declaration statement
     VariableDecl(VariableDecl), // Constant declaration statement
-    IfControlFlow {
-        if_block: ConditionalBlock,      // If condition block
-        else_ifs: Vec<ConditionalBlock>, // List of else-if condition blocks
-        else_block: Option<Block>,       // Optional else block if no conditions are met
-    },
     Loop(Loop),
     Expression(Expression), // Expression statement
 }

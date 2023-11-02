@@ -25,10 +25,11 @@ impl ParserToAST {
             parser: PrattParser::new()
                 .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::subtract, Assoc::Left))
                 .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left))
-                .op(Op::infix(Rule::greater, Assoc::Left) | Op::infix(Rule::greater_equal, Assoc::Left))
-                .op(Op::infix(Rule::equal, Assoc::Left) | Op::infix(Rule::greater_equal, Assoc::Left))
+                .op(Op::infix(Rule::greater, Assoc::Left)
+                    | Op::infix(Rule::greater_equal, Assoc::Left))
+                .op(Op::infix(Rule::equal, Assoc::Left)
+                    | Op::infix(Rule::greater_equal, Assoc::Left))
                 .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
-
                 .op(Op::prefix(Rule::infix_operator)),
         }
     }
@@ -142,9 +143,7 @@ impl ParserToAST {
                         op: InfixOperator(op.as_str().into()),
                         rhs: Box::new(rhs),
                     }))
-                }
-
-                // rule => unreachable!("Can't parse infix operator {:?}", rule),
+                } // rule => unreachable!("Can't parse infix operator {:?}", rule),
             })
             .parse(rules)
     }
