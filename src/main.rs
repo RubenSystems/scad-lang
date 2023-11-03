@@ -10,10 +10,14 @@ use frontend::parser::scad_parser::Rule;
 use pest::Parser;
 
 fn main() {
+    /*
+    
+    fn jeff(a: u32, b: [u64; 2]) u32 {
+        2 + 2
+    };
+    */
     let prog = r#"
-        fn jeff(a: u32, b: u64) u32 {
-            2 + 2
-        };
+
         jeff(a: 18 * 3, b: (32 * 3) + 1);
     "#;
 
@@ -21,9 +25,9 @@ fn main() {
     println!("{:#?}", x);
     let p = ParserToAST::new();
 
-    // let m = p.parse(x.next().unwrap().into_inner());
+    let m = p.parse(x.next().unwrap().into_inner());
 
-    // println!("{:#?}", m);
+    println!("{:#?}", m);
 
     // let x = statement_cps_translation(m, Box::new(|_| SSAExpression::Noop));
 

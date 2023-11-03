@@ -36,7 +36,7 @@ pub enum SSAExpression {
 #[derive(Debug)]
 pub enum SSAValue {
     RegisterReference(String),
-	VariableReference(String),
+    VariableReference(String),
     Integer(i128),
     Float(f64),
     Operation {
@@ -159,5 +159,6 @@ pub fn statement_cps_translation(
         Statement::Expression(exp) => {
             expression_ssa_transformation(exp, Box::new(|_| SSAExpression::Noop))
         }
+		Statement::FunctionDefinition(_) => todo!()
     }
 }

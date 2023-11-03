@@ -32,6 +32,9 @@ pub struct Identifier(pub String); // Terminal symbol for identifiers
 pub struct VariableName(pub String);
 
 #[derive(Debug)]
+pub struct FunctionName(pub String);
+
+#[derive(Debug)]
 pub struct TypeName(pub String);
 
 // Definition of types within the language, including arrays and simple types
@@ -49,8 +52,8 @@ pub enum Type {
 // Definition of a block within the language, containing statements and an optional expression
 #[derive(Debug)]
 pub struct Block {
-    statements: Vec<Statement>,     // List of statements within the block
-    expression: Option<Expression>, // Optional expression at the end of the block
+    pub statements: Vec<Statement>, // List of statements within the block
+    pub expression: Option<Expression>, // Optional expression at the end of the block
 }
 
 // Definition of constant declarations in the language
@@ -66,6 +69,14 @@ pub struct VariableDecl {
     pub identifier: VariableName, // Identifier for the constant
     pub subtype: Type,            // Type of the constant
     pub expression: Expression,   // Expression representing the constant's value
+}
+
+#[derive(Debug)]
+pub struct FunctionDefinition {
+    pub identifier: FunctionName,
+    pub args: Vec<(Identifier, Type)>,
+    pub return_type: Option<Type>,
+    pub block: Block,
 }
 
 // Definition of a conditional block in the language
@@ -121,4 +132,5 @@ pub enum Statement {
     VariableDecl(VariableDecl), // Constant declaration statement
     Loop(Loop),
     Expression(Expression), // Expression statement
+    FunctionDefinition(FunctionDefinition),
 }
