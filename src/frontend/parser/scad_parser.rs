@@ -5,8 +5,8 @@ use pest::{
 use pest_derive::Parser;
 
 use super::ast_types::{
-    ConstDecl, Expression, Float, InfixOperation, InfixOperator, Integer, Statement, Type,
-    TypeName, VariableDecl, VariableName,
+    ConstDecl, Expression, Float, Identifier, InfixOperation, InfixOperator, Integer, Statement,
+    Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -103,7 +103,9 @@ impl ParserToAST {
                     }
                     Rule::infix_operation => self.parse(primary.into_inner()),
                     Rule::binary_infix_operation => self.parse(primary.into_inner()),
-
+                    Rule::identifier => Statement::Expression(Expression::Identifier(Identifier(
+                        primary.as_str().into(),
+                    ))),
                     // Rule::r#loop => {
 
                     // }

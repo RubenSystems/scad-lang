@@ -15,7 +15,7 @@ fn generate_register_name() -> String {
 // SSA Definitions
 #[derive(Debug)]
 pub enum SSAExpression {
-	RegisterDecl {
+    RegisterDecl {
         name: String,
         e1: SSAValue,
         e2: Box<SSAExpression>,
@@ -30,13 +30,13 @@ pub enum SSAExpression {
         e1: SSAValue,
         e2: Box<SSAExpression>,
     },
-    Return,
     Noop,
 }
 
 #[derive(Debug)]
 pub enum SSAValue {
-    Variable(String),
+    RegisterReference(String),
+	VariableReference(String),
     Integer(i128),
     Float(f64),
     Operation {
@@ -57,7 +57,7 @@ fn op_to_llvm(op: &String) -> String {
 impl SSAValue {
     pub fn to_llvm_ir(&self) -> String {
         match self {
-            SSAValue::Variable(name) => format!("%{name}"),
+            SSAValue::RegisterReference(name) => format!("%{name}"),
             SSAValue::Integer(i) => i.to_string(),
             SSAValue::Float(f) => f.to_string(),
             SSAValue::Operation { lhs, op, rhs } => format!(
@@ -66,6 +66,7 @@ impl SSAValue {
                 lhs.to_llvm_ir(),
                 rhs.to_llvm_ir()
             ),
+            SSAValue::VariableReference(_) => todo!(),
         }
     }
 }
@@ -79,20 +80,18 @@ impl SSAExpression {
                     e1.to_llvm_ir(),
                     e2.to_llvm_ir()
                 )
-            },
+            }
             SSAExpression::ConstDecl { name, e1, e2 } => {
                 format!(
                     "%{name} = alloca i32, align 4\nstore i32 {}, ptr %{name}, align 4\n{}",
                     e1.to_llvm_ir(),
                     e2.to_llvm_ir()
                 )
-            },
-			SSAExpression::RegisterDecl { name, e1, e2 } => {
+            }
+            SSAExpression::RegisterDecl { name, e1, e2 } => {
                 format!("%{name} = {} \n{}", e1.to_llvm_ir(), e2.to_llvm_ir())
-            },
-            SSAExpression::Return => todo!(),
+            }
             SSAExpression::Noop => "".into(),
-
         }
     }
 }
@@ -116,7 +115,7 @@ pub fn expression_ssa_transformation(
                     SSAExpression::RegisterDecl {
                         name: tmp_name.clone(),
                         e1: operation,
-                        e2: Box::new(k(SSAValue::Variable(tmp_name))),
+                        e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
                     }
                 };
                 expression_ssa_transformation(*e.lhs, Box::new(k2))
