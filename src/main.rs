@@ -11,19 +11,22 @@ use pest::Parser;
 
 fn main() {
     let prog = r#"
-    let m : u32 = (900 + 300) * (200 * 9);
+        fn jeff(a: u32, b: u64) u32 {
+            2 + 2
+        };
+        jeff(a: 18 * 3, b: (32 * 3) + 1);
     "#;
 
     let mut x = SCADParser::parse(Rule::program, prog).unwrap();
-    // println!("{:#?}", x);
+    println!("{:#?}", x);
     let p = ParserToAST::new();
 
-    let m = p.parse(x.next().unwrap().into_inner());
+    // let m = p.parse(x.next().unwrap().into_inner());
 
-    println!("{:#?}", m);
+    // println!("{:#?}", m);
 
-    let x = statement_cps_translation(m, Box::new(|_| SSAExpression::Noop));
+    // let x = statement_cps_translation(m, Box::new(|_| SSAExpression::Noop));
 
-    println!("==\n{:#?}", x);
-    println!("==\n{}", x.to_llvm_ir());
+    // println!("==\n{:#?}", x);
+    // println!("==\n{}", x.to_llvm_ir());
 }

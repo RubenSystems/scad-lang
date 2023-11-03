@@ -69,6 +69,34 @@ conditional_loop = {
 	"loop" ~ expression ~ block
 }
 
+// Functios
+function_definition = {
+	"fn" ~ function_name ~ "(" ~ function_def_params? ~ ")" ~ type? ~ block 
+}
+
+function_call = {
+	function_name ~ "(" ~ function_call_params? ~ ")"
+}
+
+function_name = {identifier}
+
+// param: name: type
+function_def_params = {
+	function_def_param ~ ("," ~ function_def_param)*
+}
+
+function_call_params = {
+	function_call_param ~ ("," ~ function_call_param)*
+}
+
+function_def_param = { 
+	identifier ~ ":" ~ type
+}
+
+function_call_param = { 
+	identifier ~ ":" ~ expression
+}
+
 
 infix_operator = _{ add | subtract | multiply | divide | and | or }
 infix_operation = { 
@@ -97,7 +125,7 @@ equal = { "==" }
 non_infix_expressions = _{ "(" ~ expression ~ ")" | expression_block | float | integer | char_array | identifier }
 expression = { binary_infix_operation | infix_operation | non_infix_expressions  }
 
-statement = { var_decl | const_decl | if_control_flow | loop | expression }
+statement = { function_definition | function_call | var_decl | const_decl | if_control_flow | loop | expression }
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
 program = _{ SOI ~ statements ~ EOI }
 
