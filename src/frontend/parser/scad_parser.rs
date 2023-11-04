@@ -7,8 +7,8 @@ use pest_derive::Parser;
 use crate::frontend::parser::ast_types::{Block, FunctionDefinition, FunctionName};
 
 use super::ast_types::{
-    ConstDecl, Expression, Float, Identifier, InfixOperation, InfixOperator, Integer, Statement,
-    Type, TypeName, VariableDecl, VariableName,
+    ConstDecl, Expression, Float, FunctionCall, Identifier, InfixOperation, InfixOperator, Integer,
+    Statement, Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -57,27 +57,49 @@ impl ParserToAST {
         }
     }
 
-    fn parse_function_arg(&self, arg: pest::iterators::Pair<'_, Rule>) -> (Identifier, Type) {
-        let mut id = arg.into_inner(); 
+    fn parse_function_def_arg(&self, arg: pest::iterators::Pair<'_, Rule>) -> (Identifier, Type) {
+        let mut id = arg.into_inner();
         let identifier = Identifier(id.next().unwrap().as_str().into());
         let tpe = self.parse_type(id.next().unwrap());
         (identifier, tpe)
     }
 
-    fn parse_function_args(&self, tpe: pest::iterators::Pair<'_, Rule>) -> Vec<(Identifier, Type)> {
-        let mut it = tpe.into_inner();
-        let mut core = it.next().unwrap();
-        let mut args = vec![];
-        loop {
-            args.push(self.parse_function_arg(core));
-            println!("{:?}", args);
-            if let Some(c) = it.next() {
-                core = c;
-            } else {
-                break
-            }
+    fn parse_function_def_args(
+        &self,
+        tpe: pest::iterators::Pair<'_, Rule>,
+    ) -> Vec<(Identifier, Type)> {
+        tpe.into_inner()
+            .map(|x| self.parse_function_def_arg(x))
+            .collect()
+    }
+
+    fn parse_function_call_arg(
+        &self,
+        arg: pest::iterators::Pair<'_, Rule>,
+    ) -> (Identifier, Expression) {
+        let mut id = arg.into_inner();
+        let identifier = Identifier(id.next().unwrap().as_str().into());
+        let exp = self.parse(id.next().unwrap().into_inner());
+        if let Statement::Expression(e) = exp {
+            (identifier, e)
+        } else {
+            unreachable!("NOT AN EXPRESSION WAAAAA")
         }
-        args
+    }
+
+    fn parse_function_call_args(
+        &self,
+        tpe: pest::iterators::Pair<'_, Rule>,
+    ) -> Vec<(Identifier, Expression)> {
+        tpe.into_inner()
+            .map(|x| self.parse_function_call_arg(x))
+            .collect()
+    }
+
+    fn parse_block(&self, blk: pest::iterators::Pair<'_, Rule>) -> Vec<Statement> {
+        blk.into_inner()
+            .map(|x| self.parse(x.into_inner()))
+            .collect()
     }
 
     pub fn parse(&self, rules: Pairs<Rule>) -> Statement {
@@ -131,46 +153,53 @@ impl ParserToAST {
                     Rule::identifier => Statement::Expression(Expression::Identifier(Identifier(
                         primary.as_str().into(),
                     ))),
+                    Rule::function_call => {
+                        let mut it: Pairs<'_, Rule> = primary.into_inner();
+                        let identifier = FunctionName(it.next().unwrap().as_str().into());
+                        let args = self.parse_function_call_args(it.next().unwrap());
+
+                        Statement::Expression(Expression::FunctionCall(FunctionCall {
+                            identifier,
+                            args,
+                        }))
+                    }
                     Rule::function_definition => {
                         // on
 
-                        let mut it = primary.into_inner();
-
-                        let name : String = it.next().unwrap().as_str().into();
-
+                        let mut it: Pairs<'_, Rule> = primary.into_inner();
+                        let name: String = it.next().unwrap().as_str().into();
                         let mut nxt = it.next().unwrap();
-                        println!("=={:#?}", nxt.as_rule());
                         let args = match nxt.as_rule() {
                             Rule::function_def_params => {
-                                let res = Some(self.parse_function_args(nxt));
+                                let res = Some(self.parse_function_def_args(nxt));
                                 nxt = it.next().unwrap();
                                 res
-                            },
-                            _ => None
-                        }.unwrap_or(vec![]);
+                            }
+                            _ => None,
+                        }
+                        .unwrap_or(vec![]);
 
                         let return_type = match nxt.as_rule() {
                             Rule::r#type => {
                                 let res = Some(self.parse_type(nxt));
                                 nxt = it.next().unwrap();
                                 res
-                            },
-                            _ => None
+                            }
+                            _ => None,
                         };
 
-                        // println!("{:?}", it.next().unwrap().as_rule());
                         let def = FunctionDefinition {
                             identifier: FunctionName(name),
                             args: args,
                             return_type: return_type,
                             block: Block {
-                                statements: vec![],
-                                expression: None,
+                                statements: self.parse_block(nxt),
                             },
                         };
 
                         Statement::FunctionDefinition(def)
                     }
+
                     // Rule::r#loop => {
 
                     // }
@@ -179,7 +208,6 @@ impl ParserToAST {
                     Rule::expression => self.parse(primary.into_inner()),
                     Rule::statement => self.parse(primary.into_inner()),
                     Rule::statements => self.parse(primary.into_inner()),
-
                     rule => {
                         eprintln!("{}", primary);
                         unreachable!("Expr::parse expected atom, found {:?}", rule);

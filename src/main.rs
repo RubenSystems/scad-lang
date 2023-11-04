@@ -1,7 +1,7 @@
 pub mod frontend;
 
 use crate::frontend::codegen::element_generation::{
-    expression_ssa_transformation, statement_cps_translation, SSAExpression,
+    expression_ssa_transformation, statement_ssa_translation, SSAExpression,
 };
 use crate::frontend::codegen::generatable::Generatable;
 use crate::frontend::parser::ast_types::Statement;
@@ -11,25 +11,40 @@ use pest::Parser;
 
 fn main() {
     /*
-    
-    fn jeff(a: u32, b: [u64; 2]) u32 {
-        2 + 2
-    };
+
+
     */
     let prog = r#"
 
-        jeff(a: 18 * 3, b: (32 * 3) + 1);
+
+    fn main() {
+        let mut add_res : u32 = (18 * 4) + 3; 
+        add_res
+    };
     "#;
 
-    let mut x = SCADParser::parse(Rule::program, prog).unwrap();
-    println!("{:#?}", x);
-    let p = ParserToAST::new();
+    let mut parsed_result = SCADParser::parse(Rule::program, prog).unwrap();
+    // println!("{:#?}", x);
+    let parser = ParserToAST::new();
 
-    let m = p.parse(x.next().unwrap().into_inner());
+    let code: Vec<String> = parsed_result
+        .flat_map(|pair| {
+            if let Rule::EOI = pair.as_rule() {
+                None
+            } else {
+                Some(parser.parse(pair.into_inner()))
+            }
+        })
+        .map(|s| statement_ssa_translation(s, Box::new(|_| SSAExpression::Noop)))
+        .map(|ssa| ssa.to_llvm_ir())
+        .collect();
 
-    println!("{:#?}", m);
+    println!("{}", code.join("\n"))
+    // let m = p.parse(x.next().unwrap().into_inner());
 
-    // let x = statement_cps_translation(m, Box::new(|_| SSAExpression::Noop));
+    // println!("{:#?}", m);
+
+    // let x = statement_ssa_translation(m, Box::new(|_| SSAExpression::Noop));
 
     // println!("==\n{:#?}", x);
     // println!("==\n{}", x.to_llvm_ir());

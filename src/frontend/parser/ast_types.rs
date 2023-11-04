@@ -53,7 +53,6 @@ pub enum Type {
 #[derive(Debug)]
 pub struct Block {
     pub statements: Vec<Statement>, // List of statements within the block
-    pub expression: Option<Expression>, // Optional expression at the end of the block
 }
 
 // Definition of constant declarations in the language
@@ -77,6 +76,12 @@ pub struct FunctionDefinition {
     pub args: Vec<(Identifier, Type)>,
     pub return_type: Option<Type>,
     pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct FunctionCall {
+    pub identifier: FunctionName,
+    pub args: Vec<(Identifier, Expression)>,
 }
 
 // Definition of a conditional block in the language
@@ -123,6 +128,7 @@ pub enum Expression {
         else_ifs: Vec<ConditionalBlock>, // List of else-if condition blocks
         else_block: Option<Box<Block>>,  // Optional else block if no conditions are met
     },
+    FunctionCall(FunctionCall),
 }
 
 // Enumeration of different types of statements in the language
