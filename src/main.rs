@@ -16,11 +16,12 @@ fn main() {
     */
     let prog = r#"
 
-
-    fn main() {
-        let mut add_res : u32 = (18 * 4) + 3; 
-        add_res
-    };
+    fn main() jeff {
+        let mut value_of_four: i32 = 4; 
+        let mut value_of_three: i32 = value_of_four; 
+        let mut value_of_two: i32 = 2; 
+        value_of_four + value_of_three * value_of_two
+    };    
     "#;
 
     let mut parsed_result = SCADParser::parse(Rule::program, prog).unwrap();

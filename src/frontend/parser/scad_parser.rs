@@ -98,11 +98,14 @@ impl ParserToAST {
 
     fn parse_block(&self, blk: pest::iterators::Pair<'_, Rule>) -> Vec<Statement> {
         blk.into_inner()
-            .map(|x| self.parse(x.into_inner()))
+            .map(|x| {
+                self.parse(x.into_inner())
+            })
             .collect()
     }
 
     pub fn parse(&self, rules: Pairs<Rule>) -> Statement {
+
         self.parser
             .map_primary(
                 |primary: pest::iterators::Pair<'_, Rule>| match primary.as_rule() {
@@ -178,9 +181,9 @@ impl ParserToAST {
                             _ => None,
                         }
                         .unwrap_or(vec![]);
-
+                        
                         let return_type = match nxt.as_rule() {
-                            Rule::r#type => {
+                            Rule::r#type | Rule::simple_type | Rule::array_type => {
                                 let res = Some(self.parse_type(nxt));
                                 nxt = it.next().unwrap();
                                 res
