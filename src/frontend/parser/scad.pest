@@ -122,9 +122,9 @@ equal = { "==" }
 
 // Major building blocks
 
-non_infix_expressions = _{ "(" ~ expression ~ ")" | expression_block | float | integer | char_array | identifier }
+non_infix_expressions = _{ function_call | if_control_flow | "(" ~ expression ~ ")" | expression_block | float | integer | char_array | identifier }
 expression = { binary_infix_operation | infix_operation | non_infix_expressions  }
 
-statement = { function_definition | function_call | var_decl | const_decl | if_control_flow | loop | expression }
+statement = {  function_definition | var_decl | const_decl | loop | expression }
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
 program = _{ SOI ~ statements ~ EOI }

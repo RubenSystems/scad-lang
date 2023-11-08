@@ -1,6 +1,8 @@
+use core::panic;
+
 use crate::frontend::parser::ast_types::{
-    Block, CharArray, Expression, Float, Identifier, InfixOperation, Integer, Statement, Type,
-    VariableDecl,
+    Block, CharArray, Expression, FailureCopy, Float, Identifier, InfixOperation, Integer,
+    Statement, Type, VariableDecl,
 };
 
 use super::generatable::Generatable;
@@ -48,6 +50,7 @@ pub enum SSAExpression {
         tmp_name: String,
         e2: Box<SSAExpression>,
     },
+    Block(Vec<SSAExpression>),
 }
 
 #[derive(Debug)]
@@ -61,6 +64,29 @@ pub enum SSAValue {
         op: String,
         rhs: Box<SSAValue>,
     },
+    FunctionCall {
+        name: String,
+        parameters: Vec<SSAValue>,
+    },
+}
+impl FailureCopy for SSAValue {
+    fn fcopy(&self) -> SSAValue {
+        match self {
+            SSAValue::RegisterReference(r) => SSAValue::RegisterReference(r.clone()),
+            SSAValue::VariableDereference(v) => SSAValue::VariableDereference(v.clone()),
+            SSAValue::Integer(i) => SSAValue::Integer(*i),
+            SSAValue::Float(f) => SSAValue::Float(*f),
+            SSAValue::Operation { lhs, op, rhs } => SSAValue::Operation {
+                lhs: Box::new(lhs.fcopy()),
+                op: op.clone(),
+                rhs: Box::new(lhs.fcopy()),
+            },
+            SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
+                name: name.clone(),
+                parameters: parameters.iter().map(|x| x.fcopy()).collect(),
+            },
+        }
+    }
 }
 
 fn op_to_llvm(op: &String) -> String {
@@ -68,7 +94,7 @@ fn op_to_llvm(op: &String) -> String {
         "+" => "add".into(),
         "*" => "mul".into(),
         "-" => "sub".into(),
-        "/" => "div".into(),
+        "/" => "sdiv".into(),
         _ => todo!(),
     }
 }
@@ -86,9 +112,50 @@ impl SSAValue {
                 rhs.to_llvm_ir()
             ),
             SSAValue::VariableDereference(name) => format!("%{name}"),
+            SSAValue::FunctionCall { name, parameters } => {
+                let parsed_params: Vec<String> = parameters
+                    .iter()
+                    .map(|x| format!("i32 noundef {}", x.to_llvm_ir()))
+                    .collect();
+                format!("call i32 @{name}({})", parsed_params.join(","))
+            }
         }
     }
 }
+
+// fn function_unwrapper(function_name: String, exps: Vec<Expression>, vals: Vec<SSAValue>, k: Box<dyn FnOnce(SSAValue) -> SSAExpression>) -> SSAExpression {
+// 	match exps.as_slice() {
+// 		[] => {
+// 			let temp_name = generate_register_name();
+// 			SSAExpression::RegisterDecl {
+// 				name: temp_name.clone(),
+// 				e1: SSAValue::FunctionCall {
+// 					name: function_name,
+// 					parameters: vals,
+// 				},
+// 				e2: Box::new(k(SSAValue::RegisterReference(temp_name))),
+// 			}
+// 		},
+// 		[e, rest @ ..] => {
+// 			let k1 = |y| function_unwrapper(function_name, rest.to_vec(), [vs, vec![y]].concat(), k);
+// 			expression_ssa_transformation(e.clone(), Box::new(k1))
+// 		}
+// 	}
+
+// 	// if exps.len() == 0 {
+// 	// 	let temp_name = generate_register_name();
+// 	// 	SSAExpression::RegisterDecl {
+// 	// 		name: temp_name.clone(),
+// 	// 		e1: SSAValue::FunctionCall {
+// 	// 			name: name,
+// 	// 			parameters: vals,
+// 	// 		},
+// 	// 		e2: Box::new(k(SSAValue::RegisterReference(temp_name))),
+// 	// 	}
+// 	// } else {
+// 	// 	expression_ssa_transformation(exps[0], Box::new(|m| function_unwrapper(exps[1..].to_vec(), vals)))
+// 	// }
+// };
 
 impl SSAExpression {
     pub fn to_llvm_ir(&self) -> String {
@@ -114,13 +181,20 @@ impl SSAExpression {
             SSAExpression::FuncDecl { name, args, block } => {
                 let arg_defs: Vec<String> = args
                     .iter()
-                    .map(|(name, tpe)| format!("i32 %{name}"))
+                    .map(|(name, tpe)| format!("i32 %{name}.arg"))
                     .collect();
+
+                let arg_derefs : Vec<String> = args
+				.iter()
+				.map(|(name, tpe)| format!("%{name} = alloca i32, align 4\nstore i32 %{name}.arg, ptr %{name}, align 4"))
+				.collect();
+
                 let statements: Vec<String> = block.iter().map(|s| s.to_llvm_ir()).collect();
 
                 format!(
-                    "define i32 @{name}({}) {{\n{}\n}}",
+                    "define i32 @{name}({}) {{\n{}\n{}\n}}",
                     arg_defs.join(","),
+                    arg_derefs.join("\n"),
                     statements.join("\n")
                 )
             }
@@ -131,6 +205,10 @@ impl SSAExpression {
                 "%{tmp_name} = load i32, ptr %{name}, align 4\n{}",
                 e2.to_llvm_ir()
             ),
+			SSAExpression::Block(b) => {
+				let statements: Vec<String> = b.iter().map(|s| s.to_llvm_ir()).collect();
+				statements.join("\n")
+			}
         }
     }
 }
@@ -173,12 +251,57 @@ pub fn expression_ssa_transformation(
                 e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
             }
         }
-        Expression::FunctionCall(f) => todo!(),
+        // COPYING
+        // MY EYES
+        // IT HURTS
+        Expression::FunctionCall(f) => {
+            fn aux(
+                args: Vec<Expression>,
+                vals: Vec<SSAValue>,
+                function_name: String,
+                k: Box<dyn FnOnce(SSAValue) -> SSAExpression>,
+            ) -> SSAExpression {
+                match args.as_slice() {
+                    [] => {
+                        let tmp_name = generate_register_name();
+
+                        SSAExpression::RegisterDecl {
+                            name: tmp_name.clone(),
+                            e1: SSAValue::FunctionCall {
+                                name: function_name,
+                                parameters: vals.iter().map(|x| x.fcopy()).collect(),
+                            },
+                            e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
+                        }
+                    }
+                    [head, rest @ ..] => {
+                        let rest_copy: Vec<Expression> = rest.iter().map(|v| v.fcopy()).collect();
+                        let mut val_copy: Vec<SSAValue> = vals.iter().map(|v| v.fcopy()).collect();
+
+                        expression_ssa_transformation(
+                            head.fcopy(),
+                            Box::new(|x| {
+                                val_copy.push(x);
+                                aux(rest_copy, val_copy, function_name, k)
+                            }),
+                        )
+                    }
+                }
+            }
+
+            aux(
+                f.args.iter().map(|(_, exp)| exp.fcopy()).collect(),
+                vec![],
+                f.identifier.0,
+                k,
+            )
+        }
         Expression::IfControlFlow {
             if_block,
             else_ifs,
             else_block,
         } => todo!(),
+        Expression::Block(b) => SSAExpression::Block(parse_block(b)),
     }
 }
 

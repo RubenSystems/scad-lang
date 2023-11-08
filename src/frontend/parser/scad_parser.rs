@@ -98,14 +98,11 @@ impl ParserToAST {
 
     fn parse_block(&self, blk: pest::iterators::Pair<'_, Rule>) -> Vec<Statement> {
         blk.into_inner()
-            .map(|x| {
-                self.parse(x.into_inner())
-            })
+            .map(|x| self.parse(x.into_inner()))
             .collect()
     }
 
     pub fn parse(&self, rules: Pairs<Rule>) -> Statement {
-
         self.parser
             .map_primary(
                 |primary: pest::iterators::Pair<'_, Rule>| match primary.as_rule() {
@@ -181,7 +178,7 @@ impl ParserToAST {
                             _ => None,
                         }
                         .unwrap_or(vec![]);
-                        
+
                         let return_type = match nxt.as_rule() {
                             Rule::r#type | Rule::simple_type | Rule::array_type => {
                                 let res = Some(self.parse_type(nxt));
@@ -202,6 +199,10 @@ impl ParserToAST {
 
                         Statement::FunctionDefinition(def)
                     }
+                    Rule::block | Rule::expression_block | Rule::statement_block => Statement::Expression(Expression::Block(Block {
+                        statements: self.parse_block(primary.into_inner().next().unwrap()),
+                    })),
+
 
                     // Rule::r#loop => {
 
@@ -218,19 +219,7 @@ impl ParserToAST {
                 },
             )
             .map_infix(|lhs, op, rhs| match op.as_rule() {
-                // Rule::infix_operation => {
-                //     let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
-                //     else {
-                //         unreachable!();
-                //     };
-
-                //     Statement::Expression(Expression::InfixOperation(InfixOperation {
-                //         lhs: Box::new(lhs),
-                //         op: InfixOperator(op.as_str().into()),
-                //         rhs: Box::new(rhs),
-                //     }))
-                // }
-                rule => {
+                _ => {
                     let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
                     else {
                         unreachable!();

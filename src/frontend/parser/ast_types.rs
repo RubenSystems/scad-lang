@@ -13,6 +13,11 @@
 
 // Definition of terminal symbols representing basic data types and identifiers
 
+// When you are a failure, you copy. When you are a succes, you move
+pub trait FailureCopy {
+    fn fcopy(&self) -> Self;
+}
+
 #[derive(Debug)]
 pub struct Integer(pub i128); // Terminal symbol for integer values
 
@@ -49,10 +54,32 @@ pub enum Type {
     },
 }
 
+impl FailureCopy for Type {
+    fn fcopy(&self) -> Self {
+        match self {
+            Type::Array { subtype, size } => Type::Array {
+                subtype: Box::new(subtype.fcopy()),
+                size: *size,
+            },
+            Type::SimpleType { identifier } => Type::SimpleType {
+                identifier: TypeName(identifier.0.clone()),
+            },
+        }
+    }
+}
+
 // Definition of a block within the language, containing statements and an optional expression
 #[derive(Debug)]
 pub struct Block {
     pub statements: Vec<Statement>, // List of statements within the block
+}
+
+impl FailureCopy for Block {
+    fn fcopy(&self) -> Self {
+        Block {
+            statements: self.statements.iter().map(|e| e.fcopy()).collect(),
+        }
+    }
 }
 
 // Definition of constant declarations in the language
@@ -129,6 +156,37 @@ pub enum Expression {
         else_block: Option<Box<Block>>,  // Optional else block if no conditions are met
     },
     FunctionCall(FunctionCall),
+    Block(Block),
+}
+
+impl FailureCopy for Expression {
+    fn fcopy(&self) -> Expression {
+        match self {
+            Expression::InfixOperation(i) => Expression::InfixOperation(InfixOperation {
+                lhs: Box::new(i.lhs.fcopy()),
+                op: InfixOperator(i.op.0.clone()),
+                rhs: Box::new(i.rhs.fcopy()),
+            }),
+            Expression::Float(f) => Expression::Float(Float(f.0)),
+            Expression::Integer(i) => Expression::Integer(Integer(i.0)),
+            Expression::CharArray(_) => todo!(),
+            Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
+            Expression::IfControlFlow {
+                if_block,
+                else_ifs,
+                else_block,
+            } => todo!(),
+            Expression::FunctionCall(f) => Expression::FunctionCall(FunctionCall {
+                identifier: FunctionName(f.identifier.0.clone()),
+                args: f
+                    .args
+                    .iter()
+                    .map(|(id, exp)| (Identifier(id.0.clone()), exp.fcopy()))
+                    .collect(),
+            }),
+            Expression::Block(b) => Expression::Block(b.fcopy()),
+        }
+    }
 }
 
 // Enumeration of different types of statements in the language
@@ -139,4 +197,32 @@ pub enum Statement {
     Loop(Loop),
     Expression(Expression), // Expression statement
     FunctionDefinition(FunctionDefinition),
+}
+
+impl FailureCopy for Statement {
+    fn fcopy(&self) -> Self {
+        match self {
+            Statement::ConstDecl(c) => todo!(),
+            Statement::VariableDecl(v) => todo!(),
+            Statement::Loop(_) => todo!(),
+            Statement::Expression(e) => Statement::Expression(e.fcopy()),
+            Statement::FunctionDefinition(f) => {
+                let ret_type = match &f.return_type {
+                    Some(r) => Some(r.fcopy()),
+                    _ => None,
+                };
+
+                Statement::FunctionDefinition(FunctionDefinition {
+                    identifier: FunctionName(f.identifier.0.clone()),
+                    args: f
+                        .args
+                        .iter()
+                        .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
+                        .collect(),
+                    return_type: ret_type,
+                    block: f.block.fcopy(),
+                })
+            }
+        }
+    }
 }
