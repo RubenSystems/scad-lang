@@ -1,15 +1,11 @@
 pub mod frontend;
 
-use crate::frontend::codegen::element_generation::{
-    expression_ssa_transformation, statement_ssa_translation, SSAExpression,
-};
-use crate::frontend::codegen::generatable::Generatable;
-use crate::frontend::parser::ast_types::Statement;
+use crate::frontend::codegen::element_generation::{statement_ssa_translation, SSAExpression};
 use crate::frontend::parser::scad_parser::{ParserToAST, SCADParser};
 use frontend::parser::scad_parser::Rule;
 use pest::Parser;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Write;
 
 use std::process::Command;
 
@@ -66,7 +62,7 @@ fn main() -> std::io::Result<()> {
 
     "#;
 
-    let mut parsed_result = SCADParser::parse(Rule::program, prog).unwrap();
+    let parsed_result = SCADParser::parse(Rule::program, prog).unwrap();
     // println!("{:#?}", x);
     let parser = ParserToAST::new();
 

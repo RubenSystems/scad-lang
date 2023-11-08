@@ -199,10 +199,11 @@ impl ParserToAST {
 
                         Statement::FunctionDefinition(def)
                     }
-                    Rule::block | Rule::expression_block | Rule::statement_block => Statement::Expression(Expression::Block(Block {
-                        statements: self.parse_block(primary.into_inner().next().unwrap()),
-                    })),
-
+                    Rule::block | Rule::expression_block | Rule::statement_block => {
+                        Statement::Expression(Expression::Block(Block {
+                            statements: self.parse_block(primary.into_inner().next().unwrap()),
+                        }))
+                    }
 
                     // Rule::r#loop => {
 
@@ -218,19 +219,16 @@ impl ParserToAST {
                     }
                 },
             )
-            .map_infix(|lhs, op, rhs| match op.as_rule() {
-                _ => {
-                    let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs)
-                    else {
-                        unreachable!();
-                    };
+            .map_infix(|lhs, op, rhs| {
+                let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs) else {
+                    unreachable!();
+                };
 
-                    Statement::Expression(Expression::InfixOperation(InfixOperation {
-                        lhs: Box::new(lhs),
-                        op: InfixOperator(op.as_str().into()),
-                        rhs: Box::new(rhs),
-                    }))
-                } // rule => unreachable!("Can't parse infix operator {:?}", rule),
+                Statement::Expression(Expression::InfixOperation(InfixOperation {
+                    lhs: Box::new(lhs),
+                    op: InfixOperator(op.as_str().into()),
+                    rhs: Box::new(rhs),
+                }))
             })
             .parse(rules)
     }
