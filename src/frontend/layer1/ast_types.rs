@@ -202,8 +202,16 @@ pub enum Statement {
 impl FailureCopy for Statement {
     fn fcopy(&self) -> Self {
         match self {
-            Statement::ConstDecl(c) => todo!(),
-            Statement::VariableDecl(v) => todo!(),
+            Statement::ConstDecl(c) => Statement::ConstDecl(ConstDecl {
+                identifier: VariableName(c.identifier.0.clone()),
+                subtype: c.subtype.fcopy(),
+                expression: c.expression.fcopy(),
+            }),
+            Statement::VariableDecl(v) => Statement::VariableDecl(VariableDecl {
+                identifier: VariableName(v.identifier.0.clone()),
+                subtype: v.subtype.fcopy(),
+                expression: v.expression.fcopy(),
+            }),
             Statement::Loop(_) => todo!(),
             Statement::Expression(e) => Statement::Expression(e.fcopy()),
             Statement::FunctionDefinition(f) => {

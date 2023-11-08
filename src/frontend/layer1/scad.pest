@@ -35,7 +35,7 @@ var_decl = { "let mut" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
 
 
 // block
-block = _{ statement_block | expression_block } 
+block = _{ expression_block | statement_block } 
 
 statement_block = { "{" ~ statements ~ "}" } 
 expression_block = { "{" ~ statements ~ expression ~ "}" } 

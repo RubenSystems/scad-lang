@@ -26,13 +26,12 @@ impl ParserToAST {
         Self {
             parser: PrattParser::new()
                 .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::subtract, Assoc::Left))
-                .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left))
-                .op(Op::infix(Rule::greater, Assoc::Left)
-                    | Op::infix(Rule::greater_equal, Assoc::Left))
-                .op(Op::infix(Rule::equal, Assoc::Left)
-                    | Op::infix(Rule::greater_equal, Assoc::Left))
-                .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
-                .op(Op::prefix(Rule::infix_operator)),
+                .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left)), // .op(Op::infix(Rule::greater, Assoc::Left)
+                                                                                                    //     | Op::infix(Rule::greater_equal, Assoc::Left))
+                                                                                                    // .op(Op::infix(Rule::equal, Assoc::Left)
+                                                                                                    //     | Op::infix(Rule::greater_equal, Assoc::Left))
+                                                                                                    // .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
+                                                                                                    // .op(Op::prefix(Rule::infix_operator)),
         }
     }
 }
@@ -97,6 +96,8 @@ impl ParserToAST {
     }
 
     fn parse_block(&self, blk: pest::iterators::Pair<'_, Rule>) -> Vec<Statement> {
+        // blk.
+
         blk.into_inner()
             .map(|x| self.parse(x.into_inner()))
             .collect()
@@ -199,11 +200,9 @@ impl ParserToAST {
 
                         Statement::FunctionDefinition(def)
                     }
-                    Rule::block | Rule::expression_block | Rule::statement_block => {
-                        Statement::Expression(Expression::Block(Block {
-                            statements: self.parse_block(primary.into_inner().next().unwrap()),
-                        }))
-                    }
+                    Rule::expression_block => Statement::Expression(Expression::Block(Block {
+                        statements: self.parse_block(primary),
+                    })),
                     Rule::expression => self.parse(primary.into_inner()),
                     Rule::statement => self.parse(primary.into_inner()),
                     Rule::statements => self.parse(primary.into_inner()),

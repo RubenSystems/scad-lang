@@ -1,9 +1,9 @@
 pub mod frontend;
 
-use crate::frontend::layer1::scad_parser::{ParserToAST, SCADParser};
+use crate::frontend::layer1::l1_parser::{ParserToAST, SCADParser};
 use frontend::layer2::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
-use frontend::layer1::scad_parser::Rule;
+use frontend::layer1::l1_parser::Rule;
 use pest::Parser;
 use std::fs::File;
 use std::io::Write;
@@ -12,59 +12,73 @@ use std::process::Command;
 
 fn main() -> std::io::Result<()> {
     /*
-    struct Player {
-        age: i32,
-        x_pos: i32,
-        y_pos: i32
-    }
+        struct Player {
+            age: i32,
+            x_pos: i32,
+            y_pos: i32
+        }
 
-    layout PlayerLayout: Player = {age}, {x_pos, y_pos}
+        layout PlayerLayout: Player = {age}, {x_pos, y_pos}
 
-    struct LargePlayerObject {
-        let players : [Player: PlayerLayout; 32] = [Player::default(); 32];
-    }
+        struct LargePlayerObject {
+            let players : [Player: PlayerLayout; 32] = [Player::default(); 32];
+        }
 
-        fn jeff(a: i32, b: i32) i32 {
-        let some_value: i32 = a + 4;
-        some_value + 10
-    };
+            fn jeff(a: i32, b: i32) i32 {
+            let some_value: i32 = a + 4;
+            some_value + 10
+        };
 
-    [alloc]
-    fn something() i32 {
-        alloc(100 * sizeof(i32))[0]
-    }
+        [alloc]
+        fn something() i32 {
+            alloc(100 * sizeof(i32))[0]
+        }
 
-    let number: i32 = alloc(malloc) {
-        something()
-    }
-
-    fn main() {
-
-        let mut value_of_four: i32 = jeff(a: 3 + 4, b: 3);
-        let mut value_of_three: i32 = value_of_four;
-        let mut value_of_two: i32 = 2;
-        print_int(thing_to_print: 4 + 3 + 2);
-
-        value_of_four + value_of_three * value_of_two
-    };
-
-
-    */
-    let prog = r#"
-
-        fn add_two_numbers(a: i32, b: i32) i32 {a + b};
-
+        let number: i32 = alloc(malloc) {
+            something()
+        }
 
         fn main() {
 
-            let adder : i32 = {2 + 4};
-            print_int(thing: add_two_numbers(a: adder, b: 10));
+            let mut value_of_four: i32 = jeff(a: 3 + 4, b: 3);
+            let mut value_of_three: i32 = value_of_four;
+            let mut value_of_two: i32 = 2;
+            print_int(thing_to_print: 4 + 3 + 2);
+
+            value_of_four + value_of_three * value_of_two
         };
+
+    fn main() {
+                let third_element: i32 = {
+                    let bota_jef: i32 = 12;
+                    10 + 11
+                };
+
+                print_int(int: third_element);
+            };
+        */
+    let prog = r#"
+        fn get_res(int: i32) i32 {
+            let res : i32 = {
+                let x : i32 = 4; 
+                let y : i32 = 2; 
+                let z : i32 = 3; 
+                x + y * z
+            };
+            res + int
+        };
+
+        fn main() i32 {
+            let res: i32 = get_res(int: 10);
+            print_int(int: res);
+            0
+        };
+
 
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, prog).unwrap();
-    // println!("{:#?}", x);
+    // println!("{:#?}", parsed_result);
     let parser = ParserToAST::new();
 
     let code: Vec<String> = parsed_result
