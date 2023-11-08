@@ -204,12 +204,6 @@ impl ParserToAST {
                             statements: self.parse_block(primary.into_inner().next().unwrap()),
                         }))
                     }
-
-                    // Rule::r#loop => {
-
-                    // }
-                    // Rule::numeric_atom => self.parse(primary.into_inner()),
-                    // Rule::numeric_expression => self.parse(primary.into_inner()),
                     Rule::expression => self.parse(primary.into_inner()),
                     Rule::statement => self.parse(primary.into_inner()),
                     Rule::statements => self.parse(primary.into_inner()),

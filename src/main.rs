@@ -1,7 +1,8 @@
 pub mod frontend;
 
-use crate::frontend::codegen::element_generation::{statement_ssa_translation, SSAExpression};
 use crate::frontend::parser::scad_parser::{ParserToAST, SCADParser};
+use frontend::codegen::mir_ast_types::SSAExpression;
+use frontend::codegen::mir_translators::statement_ssa_translation;
 use frontend::parser::scad_parser::Rule;
 use pest::Parser;
 use std::fs::File;
