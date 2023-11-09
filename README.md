@@ -26,5 +26,5 @@ The planned development roadmap for SCaD includes:
 
 - **Language Specification:** Finalize the language syntax, features, and behavior.
 - **Compiler Development:** Build a robust and efficient compiler for the SCAD language (hopefully faster than rustc).
-- **Peformance Eval:** Compare the peformance to other well peformaing programming languages. 
+- **Performance Eval:** Compare the peformance to other well peformaing programming languages. 
 
