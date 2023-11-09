@@ -4,7 +4,7 @@ use pest::{
 };
 use pest_derive::Parser;
 
-use crate::frontend::layer1::ast_types::{Block, FunctionDefinition, FunctionName};
+use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName};
 
 use super::ast_types::{
     ConstDecl, Expression, Float, FunctionCall, Identifier, InfixOperation, InfixOperator, Integer,
@@ -14,7 +14,7 @@ use super::ast_types::{
 // use super::ast_types::{Numeric, Expression};
 
 #[derive(Parser)]
-#[grammar = "frontend/layer1/scad.pest"]
+#[grammar = "frontend/high_level_ir/scad.pest"]
 pub struct SCADParser;
 
 pub struct ParserToAST {

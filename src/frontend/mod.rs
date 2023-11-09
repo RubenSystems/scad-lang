@@ -1,2 +1,2 @@
-pub mod layer1;
-pub mod layer2;
+pub mod high_level_ir;
+pub mod mid_level_ir;

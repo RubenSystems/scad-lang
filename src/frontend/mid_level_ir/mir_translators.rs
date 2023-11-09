@@ -1,4 +1,4 @@
-use crate::frontend::layer1::ast_types::{Expression, FailureCopy, Statement};
+use crate::frontend::high_level_ir::ast_types::{Expression, FailureCopy, Statement};
 
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},

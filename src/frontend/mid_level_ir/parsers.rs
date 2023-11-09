@@ -9,9 +9,9 @@
 /// reperesented in AST form and convert it into a L2 (MIR) code
 ///
 //===----------------------------------------------------------------------===//
-use crate::frontend::layer1::ast_types::{Block, Statement};
+use crate::frontend::high_level_ir::ast_types::{Block, Statement};
 
-use crate::frontend::layer1::ast_types::FailureCopy;
+use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},

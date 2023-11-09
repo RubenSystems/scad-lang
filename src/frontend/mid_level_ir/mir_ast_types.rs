@@ -1,4 +1,4 @@
-use crate::frontend::layer1::ast_types::{FailureCopy, Type};
+use crate::frontend::high_level_ir::ast_types::{FailureCopy, Type};
 
 // SSA Definitions
 #[derive(Debug)]

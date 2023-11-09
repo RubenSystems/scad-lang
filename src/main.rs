@@ -1,9 +1,9 @@
 pub mod frontend;
 
-use crate::frontend::layer1::l1_parser::{ParserToAST, SCADParser};
-use frontend::layer2::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
+use crate::frontend::high_level_ir::hir_parser::{ParserToAST, SCADParser};
+use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
-use frontend::layer1::l1_parser::Rule;
+use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
 use std::fs::File;
 use std::io::Write;
@@ -58,20 +58,27 @@ fn main() -> std::io::Result<()> {
             };
         */
     let prog = r#"
-        fn get_res(int: i32) i32 {
-            let res : i32 = {
-                let x : i32 = 4; 
-                let y : i32 = 2; 
-                let z : i32 = 3; 
-                x + y * z
-            };
-            res + int
+
+        fn add_10(a: i32) i32 {
+            a + 10
         };
 
         fn main() i32 {
-            let res: i32 = get_res(int: 10);
-            print_int(int: res);
-            0
+
+            let result: i32 = {
+                let intermediate : i32 = 4 + 3; 
+                print_int(int: intermediate);
+                intermediate * 2
+            };
+            if result >= 10 {
+                print_int(num: 1);
+            } else {
+                print_int(num: 0);
+            }
+
+            print_int(num: add_10(a: result));
+
+            0 
         };
 
 
