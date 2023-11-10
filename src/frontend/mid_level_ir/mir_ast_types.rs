@@ -1,5 +1,11 @@
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Type};
 
+#[derive(Debug)]
+pub struct SSAConditionalBlock {
+    pub condition: SSAValue,
+    pub block: Box<SSAExpression>,
+}
+
 // SSA Definitions
 #[derive(Debug)]
 pub enum SSAExpression {
@@ -33,6 +39,10 @@ pub enum SSAExpression {
         e2: Box<SSAExpression>,
     },
     Block(Vec<SSAExpression>),
+    ConditionalBlock {
+        if_block: Box<SSAConditionalBlock>,
+        e2: Box<SSAExpression>,
+    },
 }
 
 #[derive(Debug)]

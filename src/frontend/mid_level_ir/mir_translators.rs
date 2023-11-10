@@ -1,4 +1,7 @@
-use crate::frontend::high_level_ir::ast_types::{Expression, FailureCopy, Statement};
+use crate::frontend::{
+    high_level_ir::ast_types::{Expression, FailureCopy, Statement},
+    mid_level_ir::mir_ast_types::SSAConditionalBlock,
+};
 
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},
@@ -89,7 +92,25 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             if_block,
             else_ifs,
             else_block,
-        } => todo!(),
+        } => {
+            let tmp_name = generate_register_name();
+
+            // KLet(z, Kop(o, y1, y2), KIf(z, CPS(e1)(k), CPS(e2)(k)))))
+
+            let block_copy = if_block.block.fcopy();
+            expression_l1_to_l2(
+                if_block.condition,
+                Box::new(|cond| SSAExpression::ConditionalBlock {
+                    if_block: Box::new(SSAConditionalBlock {
+                        condition: cond,
+                        block: Box::new(SSAExpression::Block(parse_anonymous_block(
+                            block_copy, k,
+                        ))),
+                    }),
+                    e2: Box::new(SSAExpression::Noop),
+                }),
+            )
+        }
     }
 }
 

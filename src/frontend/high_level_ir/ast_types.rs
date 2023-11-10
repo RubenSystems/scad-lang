@@ -114,8 +114,8 @@ pub struct FunctionCall {
 // Definition of a conditional block in the language
 #[derive(Debug)]
 pub struct ConditionalBlock {
-    condition: Expression, // Condition for the block (boolean expression)
-    block: Block,          // Block of statements to be executed if the condition is met
+    pub condition: Expression, // Condition for the block (boolean expression)
+    pub block: Block,          // Block of statements to be executed if the condition is met
 }
 
 #[derive(Debug)]

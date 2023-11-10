@@ -56,31 +56,33 @@ fn main() -> std::io::Result<()> {
 
                 print_int(int: third_element);
             };
-        */
-    let prog = r#"
 
-        fn add_10(a: i32) i32 {
+            fn add_10(a: i32) i32 {
             a + 10
         };
 
         fn main() i32 {
 
             let result: i32 = {
-                let intermediate : i32 = 4 + 3; 
+                let intermediate : i32 = 4 + 3;
                 print_int(int: intermediate);
                 intermediate * 2
             };
-            if result >= 10 {
-                print_int(num: 1);
-            } else {
-                print_int(num: 0);
-            }
+
 
             print_int(num: add_10(a: result));
 
-            0 
+            0
         };
 
+        */
+    let prog = r#"
+
+        fn main() i32 {
+            if 11 >= 10 {
+                print_int(num: 1000);
+            };
+        };
 
     "#;
 

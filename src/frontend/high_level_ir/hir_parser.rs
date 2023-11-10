@@ -7,8 +7,8 @@ use pest_derive::Parser;
 use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName};
 
 use super::ast_types::{
-    ConstDecl, Expression, Float, FunctionCall, Identifier, InfixOperation, InfixOperator, Integer,
-    Statement, Type, TypeName, VariableDecl, VariableName,
+    ConditionalBlock, ConstDecl, Expression, Float, FunctionCall, Identifier, InfixOperation,
+    InfixOperator, Integer, Statement, Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -26,12 +26,13 @@ impl ParserToAST {
         Self {
             parser: PrattParser::new()
                 .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::subtract, Assoc::Left))
-                .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left)), // .op(Op::infix(Rule::greater, Assoc::Left)
-                                                                                                    //     | Op::infix(Rule::greater_equal, Assoc::Left))
-                                                                                                    // .op(Op::infix(Rule::equal, Assoc::Left)
-                                                                                                    //     | Op::infix(Rule::greater_equal, Assoc::Left))
-                                                                                                    // .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
-                                                                                                    // .op(Op::prefix(Rule::infix_operator)),
+                .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left))
+                .op(Op::infix(Rule::greater, Assoc::Left)
+                    | Op::infix(Rule::greater_equal, Assoc::Left))
+                .op(Op::infix(Rule::equal, Assoc::Left)
+                    | Op::infix(Rule::greater_equal, Assoc::Left))
+                .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
+                .op(Op::prefix(Rule::infix_operator)),
         }
     }
 }
@@ -101,6 +102,25 @@ impl ParserToAST {
         blk.into_inner()
             .map(|x| self.parse(x.into_inner()))
             .collect()
+    }
+
+    fn parse_conditional_block(&self, blk: pest::iterators::Pair<'_, Rule>) -> ConditionalBlock {
+        let mut unparsed_it = blk.into_inner();
+        let a = unparsed_it.next().unwrap().into_inner();
+        let b = unparsed_it.next().unwrap();
+        let parsed_exp = self.parse(a);
+        let parsed_block = self.parse_block(b);
+
+        let Statement::Expression(e) = parsed_exp else {
+            unreachable!("Not expressions")
+        };
+
+        ConditionalBlock {
+            condition: e,
+            block: Block {
+                statements: parsed_block,
+            },
+        }
     }
 
     pub fn parse(&self, rules: Pairs<Rule>) -> Statement {
@@ -200,6 +220,33 @@ impl ParserToAST {
 
                         Statement::FunctionDefinition(def)
                     }
+
+                    Rule::if_control_flow => {
+                        let mut if_block: Option<ConditionalBlock> = None;
+                        let mut else_ifs: Vec<ConditionalBlock> = vec![];
+                        let mut else_block: Option<Box<Block>> = None;
+                        let m = primary.into_inner().for_each(|c| match c.as_rule() {
+                            Rule::if_block if if_block.is_none() => {
+                                let cond_block = self.parse_conditional_block(c);
+                                if_block = Some(cond_block)
+                            }
+                            Rule::else_if_block => {
+                                let cond_block = self.parse_conditional_block(c);
+                                else_ifs.push(cond_block);
+                            }
+                            Rule::else_block => todo!(),
+                            Rule::if_block if if_block.is_some() => {
+                                unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
+                            }
+                            _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
+                        });
+                        Statement::Expression(Expression::IfControlFlow {
+                            if_block: Box::new(if_block.unwrap()),
+                            else_ifs: else_ifs,
+                            else_block: else_block,
+                        })
+                    }
+
                     Rule::expression_block => Statement::Expression(Expression::Block(Block {
                         statements: self.parse_block(primary),
                     })),

@@ -1,3 +1,5 @@
+use crate::frontend::mid_level_ir::parsers::generate_register_name;
+
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},
     parsers::op_to_llvm,
@@ -78,6 +80,15 @@ impl SSAExpression {
             SSAExpression::Block(b) => {
                 let statements: Vec<String> = b.iter().map(|s| s.to_llvm_ir()).collect();
                 statements.join("\n")
+            }
+            SSAExpression::ConditionalBlock { if_block, e2 } => {
+                let if_label = generate_register_name();
+                let else_label = generate_register_name();
+                format!(
+                    "br i1 {}, label %{if_label}, label %{else_label}\n{if_label}:\n{}",
+                    if_block.condition.to_llvm_ir(),
+                    if_block.block.to_llvm_ir()
+                )
             }
         }
     }
