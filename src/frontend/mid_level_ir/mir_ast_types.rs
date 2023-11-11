@@ -69,7 +69,7 @@ impl FailureCopy for SSAValue {
             SSAValue::VariableDereference(v) => SSAValue::VariableDereference(v.clone()),
             SSAValue::Integer(i) => SSAValue::Integer(*i),
             SSAValue::Float(f) => SSAValue::Float(*f),
-            SSAValue::Operation { lhs, op, rhs } => SSAValue::Operation {
+            SSAValue::Operation { lhs, op, rhs: _ } => SSAValue::Operation {
                 lhs: Box::new(lhs.fcopy()),
                 op: op.clone(),
                 rhs: Box::new(lhs.fcopy()),

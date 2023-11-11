@@ -90,10 +90,10 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
         }
         Expression::IfControlFlow {
             if_block,
-            else_ifs,
-            else_block,
+            else_ifs: _,
+            else_block: _,
         } => {
-            let tmp_name = generate_register_name();
+            let _tmp_name = generate_register_name();
 
             let block_copy = if_block.block.fcopy();
             expression_l1_to_l2(
@@ -110,7 +110,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
     }
 }
 
-pub fn statement_l1_to_l2(statement: Statement, k: ContinuationFunction) -> SSAExpression {
+pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSAExpression {
     match statement {
         Statement::ConstDecl(c) => expression_l1_to_l2(
             c.expression,

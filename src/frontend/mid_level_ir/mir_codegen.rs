@@ -53,12 +53,12 @@ impl SSAExpression {
             SSAExpression::FuncDecl { name, args, block } => {
                 let arg_defs: Vec<String> = args
                     .iter()
-                    .map(|(name, tpe)| format!("i32 %{name}.arg"))
+                    .map(|(name, _tpe)| format!("i32 %{name}.arg"))
                     .collect();
 
                 let arg_derefs : Vec<String> = args
 				.iter()
-				.map(|(name, tpe)| format!("%{name} = alloca i32, align 4\nstore i32 %{name}.arg, ptr %{name}, align 4"))
+				.map(|(name, _tpe)| format!("%{name} = alloca i32, align 4\nstore i32 %{name}.arg, ptr %{name}, align 4"))
 				.collect();
 
                 let statements: Vec<String> = block.iter().map(|s| s.to_llvm_ir()).collect();
@@ -81,7 +81,7 @@ impl SSAExpression {
                 let statements: Vec<String> = b.iter().map(|s| s.to_llvm_ir()).collect();
                 statements.join("\n")
             }
-            SSAExpression::ConditionalBlock { if_block, e2 } => {
+            SSAExpression::ConditionalBlock { if_block, e2: _ } => {
                 let if_label = generate_register_name();
                 let done_label = generate_register_name();
                 format!(

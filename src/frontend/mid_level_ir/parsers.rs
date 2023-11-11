@@ -14,7 +14,7 @@ use crate::frontend::high_level_ir::ast_types::{Block, Statement};
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
 use super::{
-    mir_ast_types::{SSAExpression, SSAValue},
+    mir_ast_types::{SSAExpression},
     mir_translators::{expression_l1_to_l2, statement_l1_to_l2, ContinuationFunction},
 };
 
@@ -39,7 +39,7 @@ pub fn op_to_llvm(op: &str) -> String {
 
 pub fn parse_function_block(blk: Block) -> Vec<SSAExpression> {
     let length = blk.statements.len();
-    let mut block_statements: Vec<SSAExpression> = blk
+    let block_statements: Vec<SSAExpression> = blk
         .statements
         .into_iter()
         .enumerate()

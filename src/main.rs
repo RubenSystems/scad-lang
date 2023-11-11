@@ -10,7 +10,7 @@ use std::io::Write;
 
 use std::process::Command;
 
-pub fn compile(prog: String) -> std::io::Result<()> {
+pub fn compile(prog: String, out_name: &str) -> std::io::Result<()> {
 
     let parsed_result = SCADParser::parse(Rule::program, &prog).unwrap();
     // println!("{:#?}", parsed_result);
@@ -85,7 +85,7 @@ pub fn compile(prog: String) -> std::io::Result<()> {
 
     let _ = Command::new("sh")
         .arg("-c")
-        .arg("clang test_opt.o -o program")
+        .arg(format!("clang test_opt.o -o {out_name}"))
         .output()
         .expect("Failed to execute command");
 
@@ -163,7 +163,7 @@ fn main() -> std::io::Result<()> {
     
 
     let prog = std::fs::read_to_string(&args[1]).expect("Error reading file");
-    compile(prog)?;
+    compile(prog, &args[2])?;
 
     Ok(())
 

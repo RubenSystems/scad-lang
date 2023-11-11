@@ -224,8 +224,8 @@ impl ParserToAST {
                     Rule::if_control_flow => {
                         let mut if_block: Option<ConditionalBlock> = None;
                         let mut else_ifs: Vec<ConditionalBlock> = vec![];
-                        let mut else_block: Option<Box<Block>> = None;
-                        let m = primary.into_inner().for_each(|c| match c.as_rule() {
+                        let else_block: Option<Box<Block>> = None;
+                        let _m = primary.into_inner().for_each(|c| match c.as_rule() {
                             Rule::if_block if if_block.is_none() => {
                                 let cond_block = self.parse_conditional_block(c);
                                 if_block = Some(cond_block)

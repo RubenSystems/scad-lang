@@ -172,9 +172,9 @@ impl FailureCopy for Expression {
             Expression::CharArray(_) => todo!(),
             Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
             Expression::IfControlFlow {
-                if_block,
-                else_ifs,
-                else_block,
+                if_block: _,
+                else_ifs: _,
+                else_block: _,
             } => todo!(),
             Expression::FunctionCall(f) => Expression::FunctionCall(FunctionCall {
                 identifier: FunctionName(f.identifier.0.clone()),
