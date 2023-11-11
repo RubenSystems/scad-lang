@@ -83,9 +83,15 @@ impl SSAExpression {
             }
             SSAExpression::ConditionalBlock { if_block, e2 } => {
                 let if_label = generate_register_name();
-                let else_label = generate_register_name();
+                let done_label = generate_register_name();
                 format!(
-                    "br i1 {}, label %{if_label}, label %{else_label}\n{if_label}:\n{}",
+                    r#"
+                    br i1 {}, label %{if_label}, label %{done_label}
+                    {if_label}:
+                    {}
+                    br label %{done_label}
+                    {done_label}:
+                    "#,
                     if_block.condition.to_llvm_ir(),
                     if_block.block.to_llvm_ir()
                 )

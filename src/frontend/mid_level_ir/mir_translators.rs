@@ -95,17 +95,13 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
         } => {
             let tmp_name = generate_register_name();
 
-            // KLet(z, Kop(o, y1, y2), KIf(z, CPS(e1)(k), CPS(e2)(k)))))
-
             let block_copy = if_block.block.fcopy();
             expression_l1_to_l2(
                 if_block.condition,
                 Box::new(|cond| SSAExpression::ConditionalBlock {
                     if_block: Box::new(SSAConditionalBlock {
                         condition: cond,
-                        block: Box::new(SSAExpression::Block(parse_anonymous_block(
-                            block_copy, k,
-                        ))),
+                        block: Box::new(SSAExpression::Block(parse_anonymous_block(block_copy, k))),
                     }),
                     e2: Box::new(SSAExpression::Noop),
                 }),
