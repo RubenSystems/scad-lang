@@ -1,6 +1,8 @@
 pub mod frontend;
+pub mod testing;
 
 use crate::frontend::high_level_ir::hir_parser::{ParserToAST, SCADParser};
+use crate::testing::test;
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -10,8 +12,10 @@ use std::io::Write;
 
 use std::process::Command;
 
-pub fn compile(prog: String, out_name: &str) -> std::io::Result<()> {
 
+
+pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
+    let prog = std::fs::read_to_string(path).expect("Error reading file");
     let parsed_result = SCADParser::parse(Rule::program, &prog).unwrap();
     // println!("{:#?}", parsed_result);
     let parser = ParserToAST::new();
@@ -93,78 +97,27 @@ pub fn compile(prog: String, out_name: &str) -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    /*
-        struct Player {
-            age: i32,
-            x_pos: i32,
-            y_pos: i32
-        }
 
-        layout PlayerLayout: Player = {age}, {x_pos, y_pos}
-
-        struct LargePlayerObject {
-            let players : [Player: PlayerLayout; 32] = [Player::default(); 32];
-        }
-
-            fn jeff(a: i32, b: i32) i32 {
-            let some_value: i32 = a + 4;
-            some_value + 10
-        };
-
-        [alloc]
-        fn something() i32 {
-            alloc(100 * sizeof(i32))[0]
-        }
-
-        let number: i32 = alloc(malloc) {
-            something()
-        }
-
-        fn main() {
-
-            let mut value_of_four: i32 = jeff(a: 3 + 4, b: 3);
-            let mut value_of_three: i32 = value_of_four;
-            let mut value_of_two: i32 = 2;
-            print_int(thing_to_print: 4 + 3 + 2);
-
-            value_of_four + value_of_three * value_of_two
-        };
-
-    fn main() {
-                let third_element: i32 = {
-                    let bota_jef: i32 = 12;
-                    10 + 11
-                };
-
-                print_int(int: third_element);
-            };
-
-            fn add_10(a: i32) i32 {
-            a + 10
-        };
-
-        fn main() i32 {
-
-            let result: i32 = {
-                let intermediate : i32 = 4 + 3;
-                print_int(int: intermediate);
-                intermediate * 2
-            };
-
-
-            print_int(num: add_10(a: result));
-
-            0
-        };
-
-    */
     let args: Vec<String> = std::env::args().collect();
     
     
-
-    let prog = std::fs::read_to_string(&args[1]).expect("Error reading file");
-    compile(prog, &args[2])?;
+    compile(&args[0], &args[2])?;
 
     Ok(())
 
+}
+
+
+fn test_programs(path: &str) {
+    let test_output = test(path);
+    println!("C Speed: {}", test_output.c_test.duration.as_nanos());
+    println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
+    println!("Speed up: {}", (test_output.scad_test.duration - test_output.c_test.duration).as_nanos());
+
+    assert_eq!(test_output.scad_test.output, test_output.c_test.output);
+}
+
+#[test]
+fn basic_program() {
+    test_programs("test_programs/basic");
 }
