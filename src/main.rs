@@ -10,84 +10,9 @@ use std::io::Write;
 
 use std::process::Command;
 
-fn main() -> std::io::Result<()> {
-    /*
-        struct Player {
-            age: i32,
-            x_pos: i32,
-            y_pos: i32
-        }
+pub fn compile(prog: String) -> std::io::Result<()> {
 
-        layout PlayerLayout: Player = {age}, {x_pos, y_pos}
-
-        struct LargePlayerObject {
-            let players : [Player: PlayerLayout; 32] = [Player::default(); 32];
-        }
-
-            fn jeff(a: i32, b: i32) i32 {
-            let some_value: i32 = a + 4;
-            some_value + 10
-        };
-
-        [alloc]
-        fn something() i32 {
-            alloc(100 * sizeof(i32))[0]
-        }
-
-        let number: i32 = alloc(malloc) {
-            something()
-        }
-
-        fn main() {
-
-            let mut value_of_four: i32 = jeff(a: 3 + 4, b: 3);
-            let mut value_of_three: i32 = value_of_four;
-            let mut value_of_two: i32 = 2;
-            print_int(thing_to_print: 4 + 3 + 2);
-
-            value_of_four + value_of_three * value_of_two
-        };
-
-    fn main() {
-                let third_element: i32 = {
-                    let bota_jef: i32 = 12;
-                    10 + 11
-                };
-
-                print_int(int: third_element);
-            };
-
-            fn add_10(a: i32) i32 {
-            a + 10
-        };
-
-        fn main() i32 {
-
-            let result: i32 = {
-                let intermediate : i32 = 4 + 3;
-                print_int(int: intermediate);
-                intermediate * 2
-            };
-
-
-            print_int(num: add_10(a: result));
-
-            0
-        };
-
-        */
-    let prog = r#"
-
-        fn main() i32 {
-            if 4 >= 10 {
-                print_int(num: 1000);
-            };
-            print_int(num: 0);
-        };
-
-    "#;
-
-    let parsed_result = SCADParser::parse(Rule::program, prog).unwrap();
+    let parsed_result = SCADParser::parse(Rule::program, &prog).unwrap();
     // println!("{:#?}", parsed_result);
     let parser = ParserToAST::new();
 
@@ -165,4 +90,81 @@ fn main() -> std::io::Result<()> {
         .expect("Failed to execute command");
 
     Ok(())
+}
+
+fn main() -> std::io::Result<()> {
+    /*
+        struct Player {
+            age: i32,
+            x_pos: i32,
+            y_pos: i32
+        }
+
+        layout PlayerLayout: Player = {age}, {x_pos, y_pos}
+
+        struct LargePlayerObject {
+            let players : [Player: PlayerLayout; 32] = [Player::default(); 32];
+        }
+
+            fn jeff(a: i32, b: i32) i32 {
+            let some_value: i32 = a + 4;
+            some_value + 10
+        };
+
+        [alloc]
+        fn something() i32 {
+            alloc(100 * sizeof(i32))[0]
+        }
+
+        let number: i32 = alloc(malloc) {
+            something()
+        }
+
+        fn main() {
+
+            let mut value_of_four: i32 = jeff(a: 3 + 4, b: 3);
+            let mut value_of_three: i32 = value_of_four;
+            let mut value_of_two: i32 = 2;
+            print_int(thing_to_print: 4 + 3 + 2);
+
+            value_of_four + value_of_three * value_of_two
+        };
+
+    fn main() {
+                let third_element: i32 = {
+                    let bota_jef: i32 = 12;
+                    10 + 11
+                };
+
+                print_int(int: third_element);
+            };
+
+            fn add_10(a: i32) i32 {
+            a + 10
+        };
+
+        fn main() i32 {
+
+            let result: i32 = {
+                let intermediate : i32 = 4 + 3;
+                print_int(int: intermediate);
+                intermediate * 2
+            };
+
+
+            print_int(num: add_10(a: result));
+
+            0
+        };
+
+    */
+    let args: Vec<String> = std::env::args().collect();
+    
+    
+
+    let prog = std::fs::read_to_string(&args[1]).expect("Error reading file");
+    compile(prog)?;
+
+    Ok(())
+
 }
