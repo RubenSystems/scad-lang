@@ -12,7 +12,7 @@ cargo run <INPUT_NAME>.scad <OUTPUT_EXE_NAME>
 Soon it will run as an executable but not yet. 
 
 
-Because this is a cool language, you can also use this as a file extension: 🖥.
+Because SCaD is a cool language, you can also use this as a file extension: 🖥.
 
 ```
 cargo run <INPUT_NAME>.🖥️ <OUTPUT_EXE_NAME>
