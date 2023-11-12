@@ -9,6 +9,16 @@ To run an example program:
 ```
 cargo run <INPUT_NAME>.scad <OUTPUT_EXE_NAME>
 ```
+Soon it will run as an executable but not yet. 
+
+
+Because this is a cool language, you can also use this as a file extension: 🖥.
+
+```
+cargo run <INPUT_NAME>.🖥️ <OUTPUT_EXE_NAME>
+```
+
+This is just another way that SCaD improves developer experience.
 
 ## Architecture 
 1. Conversion from concrete syntax to high level IR
@@ -35,6 +45,7 @@ cargo run <INPUT_NAME>.scad <OUTPUT_EXE_NAME>
 
 The planned development roadmap for SCaD includes:
 
+- **Type Checking:** Improve safety by implementing a type checker.
 - **Language Specification:** Finalize the language syntax, features, and behavior.
 - **Compiler Development:** Build a robust and efficient compiler for the SCAD language (hopefully faster than rustc).
 - **Performance Eval:** Compare the peformance to other well peformaing programming languages. 
