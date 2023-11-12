@@ -2,7 +2,6 @@ pub mod frontend;
 pub mod testing;
 
 use crate::frontend::high_level_ir::hir_parser::{ParserToAST, SCADParser};
-use crate::testing::test;
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -101,23 +100,25 @@ fn main() -> std::io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     
     
-    compile(&args[0], &args[2])?;
+    compile(&args[1], &args[2])?;
 
     Ok(())
 
 }
 
+mod tests {
+    use crate::testing::run_test;
 
-fn test_programs(path: &str) {
-    let test_output = test(path);
-    println!("C Speed: {}", test_output.c_test.duration.as_nanos());
-    println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
-    println!("Speed up: {}", (test_output.scad_test.duration - test_output.c_test.duration).as_nanos());
+    fn test_programs(path: &str) {
+        let test_output = run_test(path);
+        println!("C Speed: {}", test_output.c_test.duration.as_nanos());
+        println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
+        println!("Speed up: {}", (test_output.scad_test.duration - test_output.c_test.duration).as_nanos());
+        assert_eq!(test_output.scad_test.output, test_output.c_test.output);
+    }
 
-    assert_eq!(test_output.scad_test.output, test_output.c_test.output);
-}
-
-#[test]
-fn basic_program() {
-    test_programs("test_programs/basic");
+    #[test]
+    fn basic_program() {
+        test_programs("test_programs/basic");
+    }
 }

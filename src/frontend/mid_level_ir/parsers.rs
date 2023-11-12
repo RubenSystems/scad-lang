@@ -33,6 +33,7 @@ pub fn op_to_llvm(op: &str) -> String {
         "-" => "sub".into(),
         "/" => "sdiv".into(),
         ">=" => "icmp sle".into(),
+        "==" => "icmp eq".into(),
         _ => todo!(),
     }
 }

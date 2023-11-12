@@ -42,7 +42,7 @@ pub fn run(exe: &str) -> TestOutput {
     }
 }
 
-pub fn test(path: &str) -> CompTestOutput {
+pub fn run_test(path: &str) -> CompTestOutput {
     compile_c_program(&path); 
     compile_scad_program(&path);
 

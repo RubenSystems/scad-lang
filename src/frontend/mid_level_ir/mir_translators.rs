@@ -29,9 +29,9 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                         e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
                     }
                 };
-                expression_l1_to_l2(*e.lhs, Box::new(k2))
+                expression_l1_to_l2(*e.rhs, Box::new(k2))
             };
-            expression_l1_to_l2(*e.rhs, Box::new(k1))
+            expression_l1_to_l2(*e.lhs, Box::new(k1))
         }
         Expression::Float(f) => k(SSAValue::Float(f.0)),
         Expression::Integer(i) => k(SSAValue::Integer(i.0)),
