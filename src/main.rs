@@ -11,8 +11,6 @@ use std::io::Write;
 
 use std::process::Command;
 
-
-
 pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
     let prog = std::fs::read_to_string(path).expect("Error reading file");
     let parsed_result = SCADParser::parse(Rule::program, &prog).unwrap();
@@ -96,14 +94,11 @@ pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-
     let args: Vec<String> = std::env::args().collect();
-    
-    
+
     compile(&args[1], &args[2])?;
 
     Ok(())
-
 }
 
 mod tests {
@@ -113,7 +108,10 @@ mod tests {
         let test_output = run_test(path);
         println!("C Speed: {}", test_output.c_test.duration.as_nanos());
         println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
-        println!("Speed up: {}", (test_output.scad_test.duration - test_output.c_test.duration).as_nanos());
+        println!(
+            "Speed up: {}",
+            (test_output.scad_test.duration - test_output.c_test.duration).as_nanos()
+        );
         assert_eq!(test_output.scad_test.output, test_output.c_test.output);
     }
 

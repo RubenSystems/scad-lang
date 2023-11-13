@@ -6,6 +6,15 @@ pub struct SSAConditionalBlock {
     pub block: Box<SSAExpression>,
 }
 
+impl FailureCopy for SSAConditionalBlock {
+    fn fcopy(&self) -> Self {
+        SSAConditionalBlock {
+            condition: self.condition.fcopy(),
+            block: Box::new(self.block.fcopy()),
+        }
+    }
+}
+
 // SSA Definitions
 #[derive(Debug)]
 pub enum SSAExpression {
@@ -43,6 +52,34 @@ pub enum SSAExpression {
         if_block: Box<SSAConditionalBlock>,
         e2: Box<SSAExpression>,
     },
+}
+
+impl FailureCopy for SSAExpression {
+    fn fcopy(&self) -> Self {
+        match self {
+            SSAExpression::RegisterDecl { name, e1, e2 } => SSAExpression::RegisterDecl {
+                name: name.clone(),
+                e1: e1.fcopy(),
+                e2: Box::new(e2.fcopy()),
+            },
+            SSAExpression::VariableDecl { name, e1, e2 } => SSAExpression::VariableDecl {
+                name: name.clone(),
+                e1: e1.fcopy(),
+                e2: Box::new(e2.fcopy()),
+            },
+            SSAExpression::ConstDecl { name, e1, e2 } => SSAExpression::ConstDecl {
+                name: name.clone(),
+                e1: e1.fcopy(),
+                e2: Box::new(e2.fcopy()),
+            },
+            SSAExpression::FuncDecl { name, args, block } => todo!(),
+            SSAExpression::Noop => SSAExpression::Noop,
+            SSAExpression::Return { val } => todo!(),
+            SSAExpression::VariableReference { name, tmp_name, e2 } => SSAExpression::VariableReference { name: name.clone(), tmp_name: tmp_name.clone(), e2: Box::new(e2.fcopy()) },
+            SSAExpression::Block(b) => SSAExpression::Block(b.iter().map(|x| x.fcopy()).collect()),
+            SSAExpression::ConditionalBlock { if_block, e2 } => SSAExpression::ConditionalBlock { if_block: Box::new(if_block.fcopy()), e2: Box::new(e2.fcopy()) },
+        }
+    }
 }
 
 #[derive(Debug)]

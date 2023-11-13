@@ -1,5 +1,5 @@
 use crate::frontend::{
-    high_level_ir::ast_types::{Expression, FailureCopy, Statement},
+    high_level_ir::ast_types::{Block, ConditionalBlock, Expression, FailureCopy, Statement},
     mid_level_ir::mir_ast_types::SSAConditionalBlock,
 };
 
@@ -89,23 +89,65 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             )
         }
         Expression::IfControlFlow {
-            if_block,
-            else_ifs: _,
-            else_block: _,
+            if_blocks,
+            else_block,
         } => {
             let _tmp_name = generate_register_name();
+            // ===== Warning: viewer discression is advised =====
 
-            let block_copy = if_block.block.fcopy();
-            expression_l1_to_l2(
-                if_block.condition,
-                Box::new(|cond| SSAExpression::ConditionalBlock {
-                    if_block: Box::new(SSAConditionalBlock {
-                        condition: cond,
-                        block: Box::new(SSAExpression::Block(parse_anonymous_block(block_copy, k))),
-                    }),
-                    e2: Box::new(SSAExpression::Noop),
-                }),
-            )
+            // let block_copy = if_block.block.fcopy();
+            fn aux(
+                conditionals: Vec<ConditionalBlock>,
+                else_block: Option<Box<Block>>,
+                k: ContinuationFunction,
+            ) -> SSAExpression {
+                let conditionals_copy: Vec<ConditionalBlock> =
+                    conditionals.iter().map(|x| x.fcopy()).collect();
+                match conditionals_copy.as_slice() {
+                    [] => unreachable!("WHAYYYY you can't have a nothing if!"),
+                    [head] => {
+                        let condition_copy = head.condition.fcopy();
+                        let block_copy = head.block.fcopy();
+                        expression_l1_to_l2(
+                            condition_copy,
+                            Box::new(|cond| SSAExpression::ConditionalBlock {
+                                if_block: Box::new(SSAConditionalBlock {
+                                    condition: cond,
+                                    block: Box::new(SSAExpression::Block(parse_anonymous_block(
+                                        block_copy,
+                                        Box::new(|_| SSAExpression::Noop),
+                                    ))),
+                                }),
+                                e2: Box::new(match else_block {
+                                    Some(e) => SSAExpression::Block(parse_anonymous_block(*e, k)),
+                                    _ => SSAExpression::Noop,
+                                }),
+                            }),
+                        )
+                    }
+                    [head, rest @ ..] => {
+                        let condition_copy = head.condition.fcopy();
+                        let block_copy = head.block.fcopy();
+                        let rest_copy: Vec<ConditionalBlock> =
+                            rest.iter().map(|x| x.fcopy()).collect();
+                        expression_l1_to_l2(
+                            condition_copy,
+                            Box::new(|cond| SSAExpression::ConditionalBlock {
+                                if_block: Box::new(SSAConditionalBlock {
+                                    condition: cond,
+                                    block: Box::new(SSAExpression::Block(parse_anonymous_block(
+                                        block_copy,
+                                        Box::new(|_| SSAExpression::Noop),
+                                    ))),
+                                }),
+                                e2: Box::new(aux(rest_copy, else_block, k)),
+                            }),
+                        )
+                    }
+                }
+            }
+
+            aux(if_blocks, else_block, k)
         }
     }
 }

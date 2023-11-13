@@ -1,7 +1,11 @@
-use crate::frontend::mid_level_ir::parsers::generate_register_name;
+use std::fmt::format;
+
+use crate::frontend::{
+    high_level_ir::ast_types::FailureCopy, mid_level_ir::parsers::generate_register_name,
+};
 
 use super::{
-    mir_ast_types::{SSAExpression, SSAValue},
+    mir_ast_types::{SSAConditionalBlock, SSAExpression, SSAValue},
     parsers::op_to_llvm,
 };
 
@@ -81,21 +85,43 @@ impl SSAExpression {
                 let statements: Vec<String> = b.iter().map(|s| s.to_llvm_ir()).collect();
                 statements.join("\n")
             }
-            SSAExpression::ConditionalBlock { if_block, e2: _ } => {
-                let if_label = generate_register_name();
-                let done_label = generate_register_name();
-                format!(
-                    r#"
-                    br i1 {}, label %{if_label}, label %{done_label}
-                    {if_label}:
-                    {}
-                    br label %{done_label}
-                    {done_label}:
-                    "#,
-                    if_block.condition.to_llvm_ir(),
-                    if_block.block.to_llvm_ir()
-                )
+            SSAExpression::ConditionalBlock { if_block, e2 } => {
+                let start_label = generate_register_name();
+                let done_label = generate_register_name(); 
+                render_if_statement(if_block.fcopy(), e2.fcopy(), start_label, done_label)
             }
         }
     }
+}
+
+fn render_if_statement(
+    blocks: SSAConditionalBlock,
+    e2: SSAExpression,
+    this_label: String,
+    done_label: String,
+) -> String {
+    let next_label = generate_register_name();
+
+    let next = match e2 {
+        SSAExpression::ConditionalBlock { if_block, e2 } => render_if_statement(*if_block, *e2, next_label.clone(), done_label.clone()),
+        a => format!(r#"
+            {done_label}:
+            {}
+        "#,
+        a.to_llvm_ir())
+    };
+
+    format!(
+        r#"
+        br i1 {}, label %{this_label}, label %{next_label}
+        {this_label}:
+        {}
+        br label %{done_label}
+        {next_label}:
+        {}
+        "#,
+        blocks.condition.to_llvm_ir(),
+        blocks.block.to_llvm_ir(),
+        next
+    )
 }

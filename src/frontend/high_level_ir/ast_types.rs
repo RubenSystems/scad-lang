@@ -118,6 +118,15 @@ pub struct ConditionalBlock {
     pub block: Block,          // Block of statements to be executed if the condition is met
 }
 
+impl FailureCopy for ConditionalBlock {
+    fn fcopy(&self) -> Self {
+        ConditionalBlock {
+            condition: self.condition.fcopy(),
+            block: self.block.fcopy(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Loop {
     Conditional(ConditionalLoop),
@@ -151,9 +160,8 @@ pub enum Expression {
     CharArray(CharArray),           // Character arrays
     Identifier(Identifier),         // Identifiers
     IfControlFlow {
-        if_block: Box<ConditionalBlock>, // If condition block
-        else_ifs: Vec<ConditionalBlock>, // List of else-if condition blocks
-        else_block: Option<Box<Block>>,  // Optional else block if no conditions are met
+        if_blocks: Vec<ConditionalBlock>, // List of else-if condition blocks
+        else_block: Option<Box<Block>>,   // Optional else block if no conditions are met
     },
     FunctionCall(FunctionCall),
     Block(Block),
@@ -172,8 +180,7 @@ impl FailureCopy for Expression {
             Expression::CharArray(_) => todo!(),
             Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
             Expression::IfControlFlow {
-                if_block: _,
-                else_ifs: _,
+                if_blocks: _,
                 else_block: _,
             } => todo!(),
             Expression::FunctionCall(f) => Expression::FunctionCall(FunctionCall {

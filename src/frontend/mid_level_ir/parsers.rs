@@ -14,7 +14,7 @@ use crate::frontend::high_level_ir::ast_types::{Block, Statement};
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
 use super::{
-    mir_ast_types::{SSAExpression},
+    mir_ast_types::SSAExpression,
     mir_translators::{expression_l1_to_l2, statement_l1_to_l2, ContinuationFunction},
 };
 

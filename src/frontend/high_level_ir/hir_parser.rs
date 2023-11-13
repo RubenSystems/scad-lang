@@ -222,28 +222,26 @@ impl ParserToAST {
                     }
 
                     Rule::if_control_flow => {
-                        let mut if_block: Option<ConditionalBlock> = None;
-                        let mut else_ifs: Vec<ConditionalBlock> = vec![];
+                        let mut if_blocks: Vec<ConditionalBlock> = vec![];
                         let else_block: Option<Box<Block>> = None;
                         let _m = primary.into_inner().for_each(|c| match c.as_rule() {
-                            Rule::if_block if if_block.is_none() => {
+                            Rule::if_block if if_blocks.is_empty() => {
                                 let cond_block = self.parse_conditional_block(c);
-                                if_block = Some(cond_block)
+                                if_blocks.push(cond_block)
                             }
                             Rule::else_if_block => {
                                 let cond_block = self.parse_conditional_block(c);
-                                else_ifs.push(cond_block);
+                                if_blocks.push(cond_block);
                             }
                             Rule::else_block => todo!(),
-                            Rule::if_block if if_block.is_some() => {
+                            Rule::if_block if !if_blocks.is_empty() => {
                                 unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
                             }
                             _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
                         });
                         Statement::Expression(Expression::IfControlFlow {
-                            if_block: Box::new(if_block.unwrap()),
-                            else_ifs: else_ifs,
-                            else_block: else_block,
+                            if_blocks,
+                            else_block,
                         })
                     }
 
