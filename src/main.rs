@@ -26,7 +26,7 @@ pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
             }
         })
         .map(|s| statement_l1_to_l2(s, Box::new(|_| SSAExpression::Noop)))
-        .map(|ssa| ssa.to_llvm_ir())
+        .map(|ssa| ssa.to_llvm_ir(None, false))
         .collect();
 
     let tmp_builtins = r#"

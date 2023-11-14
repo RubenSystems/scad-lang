@@ -3,14 +3,14 @@ use crate::frontend::high_level_ir::ast_types::{FailureCopy, Type};
 #[derive(Debug)]
 pub struct SSAConditionalBlock {
     pub condition: SSAValue,
-    pub block: Box<SSAExpression>,
+    pub block: Vec<SSAExpression>,
 }
 
 impl FailureCopy for SSAConditionalBlock {
     fn fcopy(&self) -> Self {
         SSAConditionalBlock {
             condition: self.condition.fcopy(),
-            block: Box::new(self.block.fcopy()),
+            block: self.block.iter().map(|x| x.fcopy()).collect(),
         }
     }
 }
@@ -38,6 +38,7 @@ pub enum SSAExpression {
         args: Vec<(String, Type)>,
         block: Vec<SSAExpression>,
     },
+
     Noop,
     Return {
         val: SSAValue,
@@ -49,9 +50,10 @@ pub enum SSAExpression {
     },
     Block(Vec<SSAExpression>),
     ConditionalBlock {
-        if_block: Box<SSAConditionalBlock>,
-        e2: Box<SSAExpression>,
+        conditionals: Vec<SSAExpression>,
+        else_block: Option<Vec<SSAExpression>>,
     },
+    Conditional(SSAConditionalBlock),
 }
 
 impl FailureCopy for SSAExpression {
@@ -72,12 +74,28 @@ impl FailureCopy for SSAExpression {
                 e1: e1.fcopy(),
                 e2: Box::new(e2.fcopy()),
             },
-            SSAExpression::FuncDecl { name, args, block } => todo!(),
+            SSAExpression::FuncDecl {
+                name: _,
+                args: _,
+                block: _,
+            } => todo!(),
             SSAExpression::Noop => SSAExpression::Noop,
-            SSAExpression::Return { val } => todo!(),
-            SSAExpression::VariableReference { name, tmp_name, e2 } => SSAExpression::VariableReference { name: name.clone(), tmp_name: tmp_name.clone(), e2: Box::new(e2.fcopy()) },
+            SSAExpression::Return { val: _ } => todo!(),
+            SSAExpression::VariableReference { name, tmp_name, e2 } => {
+                SSAExpression::VariableReference {
+                    name: name.clone(),
+                    tmp_name: tmp_name.clone(),
+                    e2: Box::new(e2.fcopy()),
+                }
+            }
             SSAExpression::Block(b) => SSAExpression::Block(b.iter().map(|x| x.fcopy()).collect()),
-            SSAExpression::ConditionalBlock { if_block, e2 } => SSAExpression::ConditionalBlock { if_block: Box::new(if_block.fcopy()), e2: Box::new(e2.fcopy()) },
+            SSAExpression::ConditionalBlock { conditionals, else_block } => todo!(),
+            SSAExpression::Conditional(c) => SSAExpression::Conditional(c.fcopy())
+            // SSAExpression::ConditionalBlock { if_block, e2 } => SSAExpression::ConditionalBlock {
+            //     if_block: Box::new(if_block.fcopy()),
+            //     e2: Box::new(e2.fcopy()),
+            // },
+
         }
     }
 }

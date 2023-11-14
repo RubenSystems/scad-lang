@@ -4,13 +4,18 @@ fn do_math(x: i32, y: i32) i32 {
 };
 
 fn main() i32 {
-	let x : i32 = 2 + 4; 
-	if x == 6 {
-		let m : i32 = do_math(x: x, y: x + 2);
-		print_int(num: m);
-	} else if x == 7 {
-		print_int(num: 7);
+	let x : i32 = {
+		let j : i32 = 100; 
+		j + 2
+	}; 
+
+	if x == 1024 {
+		print_int(num: 10000);
+	} else if x == 102 {
+		print_int(num: 30000);
 	};
+
+	print_int(num: x);
 	
 	0
 };
