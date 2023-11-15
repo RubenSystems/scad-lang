@@ -222,10 +222,7 @@ impl FailureCopy for Statement {
             Statement::Loop(_) => todo!(),
             Statement::Expression(e) => Statement::Expression(e.fcopy()),
             Statement::FunctionDefinition(f) => {
-                let ret_type = match &f.return_type {
-                    Some(r) => Some(r.fcopy()),
-                    _ => None,
-                };
+                let ret_type = f.return_type.as_ref().map(|r| r.fcopy());
 
                 Statement::FunctionDefinition(FunctionDefinition {
                     identifier: FunctionName(f.identifier.0.clone()),

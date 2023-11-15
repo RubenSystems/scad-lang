@@ -46,11 +46,11 @@ impl ParserToAST {
             },
             Rule::array_type => {
                 let mut p = tpe.into_inner();
-                let typename = self.parse_type(p.next().unwrap().into());
+                let typename = self.parse_type(p.next().unwrap());
                 let size = p.next().unwrap().as_str().parse::<usize>().unwrap();
                 Type::Array {
                     subtype: Box::new(typename),
-                    size: size,
+                    size,
                 }
             }
             _ => unreachable!("PANICCCCCCCC invalid type"),
@@ -146,9 +146,9 @@ impl ParserToAST {
                         };
 
                         Statement::ConstDecl(ConstDecl {
-                            identifier: identifier,
+                            identifier,
                             subtype: parsed_stype,
-                            expression: expression,
+                            expression,
                         })
                     }
                     Rule::var_decl => {
@@ -164,9 +164,9 @@ impl ParserToAST {
                         };
 
                         Statement::VariableDecl(VariableDecl {
-                            identifier: identifier,
+                            identifier,
                             subtype: parsed_stype,
-                            expression: expression,
+                            expression,
                         })
                     }
                     Rule::infix_operation => self.parse(primary.into_inner()),
@@ -211,8 +211,8 @@ impl ParserToAST {
 
                         let def = FunctionDefinition {
                             identifier: FunctionName(name),
-                            args: args,
-                            return_type: return_type,
+                            args,
+                            return_type,
                             block: Block {
                                 statements: self.parse_block(nxt),
                             },
@@ -224,7 +224,7 @@ impl ParserToAST {
                     Rule::if_control_flow => {
                         let mut if_blocks: Vec<ConditionalBlock> = vec![];
                         let else_block: Option<Box<Block>> = None;
-                        let _m = primary.into_inner().for_each(|c| match c.as_rule() {
+                        primary.into_inner().for_each(|c| match c.as_rule() {
                             Rule::if_block if if_blocks.is_empty() => {
                                 let cond_block = self.parse_conditional_block(c);
                                 if_blocks.push(cond_block)

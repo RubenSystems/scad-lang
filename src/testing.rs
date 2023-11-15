@@ -59,8 +59,8 @@ pub fn run(exe: &str) -> TestOutput {
 }
 
 pub fn run_test(path: &str) -> CompTestOutput {
-    compile_c_program(&path);
-    compile_scad_program(&path);
+    compile_c_program(path);
+    compile_scad_program(path);
 
     let c_out = run(&format!("{path}/testc"));
     let scad_out = run(&format!("{path}/testscad"));

@@ -20,7 +20,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     let tmp_name = generate_register_name();
                     let operation = SSAValue::Operation {
                         lhs: Box::new(y1),
-                        op: op,
+                        op,
                         rhs: Box::new(y2),
                     };
                     SSAExpression::RegisterDecl {
@@ -111,10 +111,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     )
                 })
                 .collect();
-            let el = match else_block {
-                Some(e) => Some(parse_anonymous_block(*e, k)),
-                _ => None,
-            };
+            let el = else_block.map(|e| parse_anonymous_block(*e, k));
 
             SSAExpression::ConditionalBlock {
                 conditionals: ifs,

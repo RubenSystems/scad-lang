@@ -73,7 +73,7 @@ pub fn parse_anonymous_block(blk: Block, k: ContinuationFunction) -> Vec<SSAExpr
 
     let last_blk_stmt = blk.statements[length - 1].fcopy();
     let last_expression = match last_blk_stmt {
-        Statement::Expression(e) => expression_l1_to_l2(e.fcopy(), Box::new(|e| k(e))),
+        Statement::Expression(e) => expression_l1_to_l2(e.fcopy(), Box::new(k)),
         _ => statement_l1_to_l2(last_blk_stmt, Box::new(|_| SSAExpression::Noop)),
     };
     block_statements.push(last_expression);
