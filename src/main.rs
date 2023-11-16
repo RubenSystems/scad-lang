@@ -1,7 +1,7 @@
 pub mod frontend;
 pub mod testing;
 
-use crate::frontend::high_level_ir::hir_parser::{SCADParser, parse};
+use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;

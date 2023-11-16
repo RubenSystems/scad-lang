@@ -9,8 +9,8 @@ use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, Funct
 
 use super::ast_types::{
     ConditionalExpressionBlock, ConditionalStatementBlock, ConstDecl, Expression, ExpressionBlock,
-    Float, FunctionCall, Identifier, InfixOperation, InfixOperator, Integer, Statement, Type,
-    TypeName, VariableDecl, VariableName, ProcedureDefinition,
+    Float, FunctionCall, Identifier, InfixOperation, InfixOperator, Integer, ProcedureDefinition,
+    Statement, Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -36,6 +36,12 @@ impl HIRParser {
                 .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
                 .op(Op::prefix(Rule::infix_operator)),
         }
+    }
+}
+
+impl Default for HIRParser {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -71,9 +77,7 @@ fn parse_function_def_arg(arg: pest::iterators::Pair<'_, Rule>) -> (Identifier, 
 }
 
 fn parse_function_def_args(tpe: pest::iterators::Pair<'_, Rule>) -> Vec<(Identifier, Type)> {
-    tpe.into_inner()
-        .map(|x| parse_function_def_arg(x))
-        .collect()
+    tpe.into_inner().map(parse_function_def_arg).collect()
 }
 
 fn parse_function_call_arg(arg: pest::iterators::Pair<'_, Rule>) -> (Identifier, Expression) {
@@ -88,9 +92,7 @@ fn parse_function_call_arg(arg: pest::iterators::Pair<'_, Rule>) -> (Identifier,
 }
 
 fn parse_function_call_args(tpe: pest::iterators::Pair<'_, Rule>) -> Vec<(Identifier, Expression)> {
-    tpe.into_inner()
-        .map(|x| parse_function_call_arg(x))
-        .collect()
+    tpe.into_inner().map(parse_function_call_arg).collect()
 }
 
 fn parse_block(blk: pest::iterators::Pair<'_, Rule>) -> Block {
@@ -130,7 +132,7 @@ fn parse_conditional_block(blk: pest::iterators::Pair<'_, Rule>) -> ConditionalS
 
     ConditionalStatementBlock {
         condition: e,
-        block: block,
+        block,
     }
 }
 
@@ -289,6 +291,29 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                         else_block,
                     }
                 }
+                Rule::if_expression_block => {
+                    let mut if_blocks: Vec<ConditionalExpressionBlock> = vec![];
+                    let else_block: Option<Box<ExpressionBlock>> = None;
+                    primary.into_inner().for_each(|c| match c.as_rule() {
+                        Rule::if_expression_block if if_blocks.is_empty() => {
+                            let cond_block = parse_expression_conditional_block(c);
+                            if_blocks.push(cond_block)
+                        }
+                        Rule::else_if_expression_block => {
+                            let cond_block = parse_expression_conditional_block(c);
+                            if_blocks.push(cond_block);
+                        }
+                        Rule::else_expression_block => todo!(),
+                        Rule::if_expression_block if !if_blocks.is_empty() => {
+                            unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
+                        }
+                        _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
+                    });
+                    Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
+                        if_blocks,
+                        else_block,
+                    })
+                }
 
                 Rule::statement | Rule::top_level_statement | Rule::expression => {
                     parse(primary.into_inner())
@@ -299,16 +324,17 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                 }
             },
         )
-        .map_infix(|lhs, op, rhs| {
+        .map_infix(|lhs, _, rhs| {
             let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs) else {
                 unreachable!();
             };
 
-            Statement::Expression(Expression::InfixOperation(InfixOperation {
-                lhs: Box::new(lhs),
-                op: InfixOperator(op.as_str().into()),
-                rhs: Box::new(rhs),
-            }))
+            let func_call = FunctionCall {
+                identifier: FunctionName("scad.inbuilts.add".into()),
+                args: vec![(Identifier("a".into()), lhs), (Identifier("a".into()), rhs)],
+            };
+
+            Statement::Expression(Expression::FunctionCall(func_call))
         })
         .parse(rules)
 }
