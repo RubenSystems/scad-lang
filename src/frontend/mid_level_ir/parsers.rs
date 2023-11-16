@@ -9,7 +9,7 @@
 /// reperesented in AST form and convert it into a L2 (MIR) code
 ///
 //===----------------------------------------------------------------------===//
-use crate::frontend::high_level_ir::ast_types::{Block, ExpressionBlock, Statement};
+use crate::frontend::high_level_ir::ast_types::{Block, ExpressionBlock};
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
@@ -38,17 +38,14 @@ pub fn op_to_llvm(op: &str) -> String {
     }
 }
 
-pub fn parse_block(blk: Block, k: ContinuationFunction) -> Vec<SSAExpression> {
+pub fn parse_block(blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> {
     blk.statements
         .iter()
         .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
         .collect()
 }
 
-pub fn parse_expression_block(
-    blk: ExpressionBlock,
-    k: ContinuationFunction,
-) -> Vec<SSAExpression> {
+pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> Vec<SSAExpression> {
     let mut ssa_expressions: Vec<SSAExpression> = blk
         .statements
         .iter()
