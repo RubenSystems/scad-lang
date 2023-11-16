@@ -38,29 +38,6 @@ pub fn op_to_llvm(op: &str) -> String {
     }
 }
 
-// pub fn parse_function_block(blk: Block) -> Vec<SSAExpression> {
-//     let length = blk.statements.len();
-//     let block_statements: Vec<SSAExpression> = blk
-//         .statements
-//         .into_iter()
-//         .enumerate()
-//         .map(|(idx, statement)| {
-//             if idx == length - 1 {
-//                 match statement {
-//                     Statement::Expression(e) => {
-//                         expression_l1_to_l2(e, Box::new(|e| SSAExpression::Return { val: e }))
-//                     }
-//                     _ => statement_l1_to_l2(statement, Box::new(|_| SSAExpression::Noop)),
-//                 }
-//             } else {
-//                 statement_l1_to_l2(statement, Box::new(|_| SSAExpression::Noop))
-//             }
-//         })
-//         .collect();
-
-//     block_statements
-// }
-
 pub fn parse_block(blk: Block, k: ContinuationFunction) -> Vec<SSAExpression> {
     blk.statements
         .iter()
