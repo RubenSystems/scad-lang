@@ -9,7 +9,7 @@
 /// reperesented in AST form and convert it into a L2 (MIR) code
 ///
 //===----------------------------------------------------------------------===//
-use crate::frontend::high_level_ir::ast_types::{Block, Statement};
+use crate::frontend::high_level_ir::ast_types::{Block, ExpressionBlock, Statement};
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
@@ -38,45 +38,47 @@ pub fn op_to_llvm(op: &str) -> String {
     }
 }
 
-pub fn parse_function_block(blk: Block) -> Vec<SSAExpression> {
-    let length = blk.statements.len();
-    let block_statements: Vec<SSAExpression> = blk
-        .statements
-        .into_iter()
-        .enumerate()
-        .map(|(idx, statement)| {
-            if idx == length - 1 {
-                match statement {
-                    Statement::Expression(e) => {
-                        expression_l1_to_l2(e, Box::new(|e| SSAExpression::Return { val: e }))
-                    }
-                    _ => statement_l1_to_l2(statement, Box::new(|_| SSAExpression::Noop)),
-                }
-            } else {
-                statement_l1_to_l2(statement, Box::new(|_| SSAExpression::Noop))
-            }
-        })
-        .collect();
+// pub fn parse_function_block(blk: Block) -> Vec<SSAExpression> {
+//     let length = blk.statements.len();
+//     let block_statements: Vec<SSAExpression> = blk
+//         .statements
+//         .into_iter()
+//         .enumerate()
+//         .map(|(idx, statement)| {
+//             if idx == length - 1 {
+//                 match statement {
+//                     Statement::Expression(e) => {
+//                         expression_l1_to_l2(e, Box::new(|e| SSAExpression::Return { val: e }))
+//                     }
+//                     _ => statement_l1_to_l2(statement, Box::new(|_| SSAExpression::Noop)),
+//                 }
+//             } else {
+//                 statement_l1_to_l2(statement, Box::new(|_| SSAExpression::Noop))
+//             }
+//         })
+//         .collect();
 
-    block_statements
+//     block_statements
+// }
+
+pub fn parse_block(blk: Block, k: ContinuationFunction) -> Vec<SSAExpression> {
+    blk.statements
+        .iter()
+        .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
+        .collect()
 }
 
-pub fn parse_anonymous_block(blk: Block, k: ContinuationFunction) -> Vec<SSAExpression> {
-    let length = blk.statements.len();
-    let mut block_statements: Vec<SSAExpression> = blk.statements[..length - 1]
+pub fn parse_expression_block(
+    blk: ExpressionBlock,
+    k: ContinuationFunction,
+) -> Vec<SSAExpression> {
+    let mut ssa_expressions: Vec<SSAExpression> = blk
+        .statements
         .iter()
-        .enumerate()
-        .map(|(_, statement)| {
-            statement_l1_to_l2(statement.fcopy(), Box::new(|_| SSAExpression::Noop))
-        })
+        .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
         .collect();
 
-    let last_blk_stmt = blk.statements[length - 1].fcopy();
-    let last_expression = match last_blk_stmt {
-        Statement::Expression(e) => expression_l1_to_l2(e.fcopy(), Box::new(k)),
-        _ => statement_l1_to_l2(last_blk_stmt, Box::new(|_| SSAExpression::Noop)),
-    };
-    block_statements.push(last_expression);
+    ssa_expressions.push(expression_l1_to_l2(*blk.expression, Box::new(k)));
 
-    block_statements
+    ssa_expressions
 }

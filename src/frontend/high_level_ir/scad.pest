@@ -42,20 +42,37 @@ expression_block = { "{" ~ statements ~ expression ~ "}" }
 
 
 // if statement
-if_control_flow = {
-	if_block ~ else_if_block* ~ else_block?
+if_statement_control_flow = {
+	if_statement_block ~ else_if_statement_block* ~ else_statement_block?
 }
 
-if_block = {
+if_statement_block = {
 	"if" ~ expression ~ block
 }
 
-else_if_block = {
+else_if_statement_block = {
 	"else if" ~ expression ~ block
 }
 
-else_block = {
+else_statement_block = {
 	"else" ~ block
+}
+
+// if exp
+if_expression_control_flow = {
+	if_expression_block ~ else_if_expression_block* ~ else_expression_block?
+}
+
+if_expression_block = {
+	"if" ~ expression ~ expression_block
+}
+
+else_if_expression_block = {
+	"else if" ~ expression ~ expression_block
+}
+
+else_expression_block = {
+	"else" ~ expression_block
 }
 
 // loopz
@@ -71,7 +88,11 @@ conditional_loop = {
 
 // Functios
 function_definition = {
-	"fn" ~ function_name ~ "(" ~ function_def_params? ~ ")" ~ type? ~ block 
+	"fn" ~ function_name ~ "(" ~ function_def_params? ~ ")" ~ type ~ expression_block 
+}
+
+procedure_definition = {
+	"fn" ~ function_name ~ "(" ~ function_def_params? ~ ")" ~ statement_block 
 }
 
 function_call = {
@@ -122,9 +143,12 @@ equal = { "==" }
 
 // Major building blocks
 
-non_infix_expressions = _{ function_call | if_control_flow | "(" ~ expression ~ ")" | expression_block | float | integer | char_array | identifier }
+non_infix_expressions = _{ function_call | if_expression_control_flow | "(" ~ expression ~ ")" | expression_block | float | integer | char_array | identifier }
 expression = { binary_infix_operation | infix_operation | non_infix_expressions  }
 
-statement = {  function_definition | var_decl | const_decl | loop | expression }
+statement = { var_decl | const_decl | loop | if_statement_control_flow | expression }
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
-program = _{ SOI ~ statements ~ EOI }
+
+top_level_statement = { function_definition | procedure_definition }
+top_level_statements = _{ (top_level_statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }
+program = _{ SOI ~ top_level_statements ~ EOI }

@@ -5,7 +5,7 @@ use crate::frontend::{
 
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},
-    parsers::{generate_register_name, parse_anonymous_block, parse_function_block},
+    parsers::{generate_register_name, parse_block, parse_expression_block},
 };
 
 pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
@@ -45,7 +45,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
             }
         }
-        Expression::Block(b) => SSAExpression::Block(parse_anonymous_block(b, k)),
+        Expression::Block(b) => SSAExpression::Block(parse_block(b, k)),
         Expression::FunctionCall(f) => {
             fn aux(
                 args: Vec<Expression>,
@@ -88,7 +88,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 k,
             )
         }
-        Expression::IfControlFlow {
+        Expression::ConditionalExpressionControlFlowControl {
             if_blocks,
             else_block,
         } => {
@@ -102,7 +102,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                         Box::new(|cond_val| {
                             SSAExpression::Conditional(SSAConditionalBlock {
                                 condition: cond_val,
-                                block: parse_anonymous_block(
+                                block: parse_expression_block(
                                     block,
                                     Box::new(|_| SSAExpression::Noop),
                                 ),
@@ -111,7 +111,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     )
                 })
                 .collect();
-            let el = else_block.map(|e| parse_anonymous_block(*e, k));
+            let el = else_block.map(|e| parse_expression_block(*e, k));
 
             SSAExpression::ConditionalBlock {
                 conditionals: ifs,
@@ -139,12 +139,17 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 e2: Box::new(SSAExpression::Noop),
             }),
         ),
-        Statement::Loop(_) => todo!(),
         Statement::Expression(exp) => expression_l1_to_l2(exp, Box::new(|_| SSAExpression::Noop)),
         Statement::FunctionDefinition(f) => SSAExpression::FuncDecl {
             name: f.identifier.0,
             args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            block: parse_function_block(f.block),
+            block: parse_expression_block(f.block, Box::new(|v| SSAExpression::Return { val: v })),
         },
+        Statement::ProcedureDefinition(f) => SSAExpression::FuncDecl {
+            name: f.identifier.0,
+            args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
+            block: parse_block(f.block, Box::new(|_| SSAExpression::Noop)),
+        },
+        Statement::ConditionalStatementControlFlow { if_blocks, else_block } => todo!(),
     }
 }

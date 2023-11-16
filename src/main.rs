@@ -1,7 +1,7 @@
 pub mod frontend;
 pub mod testing;
 
-use crate::frontend::high_level_ir::hir_parser::{ParserToAST, SCADParser};
+use crate::frontend::high_level_ir::hir_parser::{SCADParser, parse};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -17,15 +17,13 @@ pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
 
     let prog = std::fs::read_to_string(prog_path).expect("Error reading file");
     let parsed_result = SCADParser::parse(Rule::program, &prog).unwrap();
-    // println!("{:#?}", parsed_result);
-    let parser = ParserToAST::new();
 
     let code: Vec<String> = parsed_result
         .flat_map(|pair| {
             if let Rule::EOI = pair.as_rule() {
                 None
             } else {
-                Some(parser.parse(pair.into_inner()))
+                Some(parse(pair.into_inner()))
             }
         })
         .map(|s| statement_l1_to_l2(s, Box::new(|_| SSAExpression::Noop)))

@@ -82,6 +82,22 @@ impl FailureCopy for Block {
     }
 }
 
+// Definition of a block within the language, containing statements and an optional expression
+#[derive(Debug)]
+pub struct ExpressionBlock {
+    pub statements: Vec<Statement>, // List of statements within the block
+    pub expression: Box<Expression>,
+}
+
+impl FailureCopy for ExpressionBlock {
+    fn fcopy(&self) -> Self {
+        ExpressionBlock {
+            statements: self.statements.iter().map(|e| e.fcopy()).collect(),
+            expression: Box::new(self.expression.fcopy()),
+        }
+    }
+}
+
 // Definition of constant declarations in the language
 #[derive(Debug)]
 pub struct ConstDecl {
@@ -101,7 +117,14 @@ pub struct VariableDecl {
 pub struct FunctionDefinition {
     pub identifier: FunctionName,
     pub args: Vec<(Identifier, Type)>,
-    pub return_type: Option<Type>,
+    pub return_type: Type,
+    pub block: ExpressionBlock,
+}
+
+#[derive(Debug)]
+pub struct ProcedureDefinition {
+    pub identifier: FunctionName,
+    pub args: Vec<(Identifier, Type)>,
     pub block: Block,
 }
 
@@ -113,14 +136,14 @@ pub struct FunctionCall {
 
 // Definition of a conditional block in the language
 #[derive(Debug)]
-pub struct ConditionalBlock {
-    pub condition: Expression, // Condition for the block (boolean expression)
-    pub block: Block,          // Block of statements to be executed if the condition is met
+pub struct ConditionalExpressionBlock {
+    pub condition: Expression,  // Condition for the block (boolean expression)
+    pub block: ExpressionBlock, // Block of statements to be executed if the condition is met
 }
 
-impl FailureCopy for ConditionalBlock {
+impl FailureCopy for ConditionalExpressionBlock {
     fn fcopy(&self) -> Self {
-        ConditionalBlock {
+        ConditionalExpressionBlock {
             condition: self.condition.fcopy(),
             block: self.block.fcopy(),
         }
@@ -128,20 +151,18 @@ impl FailureCopy for ConditionalBlock {
 }
 
 #[derive(Debug)]
-pub enum Loop {
-    Conditional(ConditionalLoop),
-    NonconditionalLoop(NonconditionalLoop),
+pub struct ConditionalStatementBlock {
+    pub condition: Expression, // Condition for the block (boolean expression)
+    pub block: Block,          // Block of statements to be executed if the condition is met
 }
 
-#[derive(Debug)]
-pub struct NonconditionalLoop {
-    pub block: Block,
-}
-
-#[derive(Debug)]
-pub struct ConditionalLoop {
-    pub block: Block,
-    pub conditional: Expression,
+impl FailureCopy for ConditionalStatementBlock {
+    fn fcopy(&self) -> Self {
+        ConditionalStatementBlock {
+            condition: self.condition.fcopy(),
+            block: self.block.fcopy(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -159,9 +180,9 @@ pub enum Expression {
     Integer(Integer),               // Integer values
     CharArray(CharArray),           // Character arrays
     Identifier(Identifier),         // Identifiers
-    IfControlFlow {
-        if_blocks: Vec<ConditionalBlock>, // List of else-if condition blocks
-        else_block: Option<Box<Block>>,   // Optional else block if no conditions are met
+    ConditionalExpressionControlFlowControl {
+        if_blocks: Vec<ConditionalExpressionBlock>, // List of else-if condition blocks
+        else_block: Option<Box<ExpressionBlock>>,   // Optional else block if no conditions are met
     },
     FunctionCall(FunctionCall),
     Block(Block),
@@ -179,7 +200,7 @@ impl FailureCopy for Expression {
             Expression::Integer(i) => Expression::Integer(Integer(i.0)),
             Expression::CharArray(_) => todo!(),
             Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
-            Expression::IfControlFlow {
+            Expression::ConditionalExpressionControlFlowControl {
                 if_blocks: _,
                 else_block: _,
             } => todo!(),
@@ -201,30 +222,37 @@ impl FailureCopy for Expression {
 pub enum Statement {
     ConstDecl(ConstDecl),       // Constant declaration statement
     VariableDecl(VariableDecl), // Constant declaration statement
-    Loop(Loop),
-    Expression(Expression), // Expression statement
+    Expression(Expression),     // Expression statement
+    ConditionalStatementControlFlow {
+        if_blocks: Vec<ConditionalStatementBlock>, // List of else-if condition blocks
+        else_block: Option<Box<Block>>,            // Optional else block if no conditions are met
+    },
     FunctionDefinition(FunctionDefinition),
+    ProcedureDefinition(ProcedureDefinition),
 }
 
 impl FailureCopy for Statement {
     fn fcopy(&self) -> Self {
         match self {
-            Statement::ConstDecl(c) => Statement::ConstDecl(ConstDecl {
+            Self::ConstDecl(c) => Statement::ConstDecl(ConstDecl {
                 identifier: VariableName(c.identifier.0.clone()),
                 subtype: c.subtype.fcopy(),
                 expression: c.expression.fcopy(),
             }),
-            Statement::VariableDecl(v) => Statement::VariableDecl(VariableDecl {
+            Self::VariableDecl(v) => Statement::VariableDecl(VariableDecl {
                 identifier: VariableName(v.identifier.0.clone()),
                 subtype: v.subtype.fcopy(),
                 expression: v.expression.fcopy(),
             }),
-            Statement::Loop(_) => todo!(),
-            Statement::Expression(e) => Statement::Expression(e.fcopy()),
-            Statement::FunctionDefinition(f) => {
-                let ret_type = f.return_type.as_ref().map(|r| r.fcopy());
+            Self::Expression(e) => Statement::Expression(e.fcopy()),
+            Self::ConditionalStatementControlFlow {
+                if_blocks: _,
+                else_block: _,
+            } => todo!(),
+            Self::FunctionDefinition(f) => {
+                let ret_type = f.return_type.fcopy();
 
-                Statement::FunctionDefinition(FunctionDefinition {
+                Self::FunctionDefinition(FunctionDefinition {
                     identifier: FunctionName(f.identifier.0.clone()),
                     args: f
                         .args
@@ -235,6 +263,15 @@ impl FailureCopy for Statement {
                     block: f.block.fcopy(),
                 })
             }
+            Self::ProcedureDefinition(p) => Self::ProcedureDefinition(ProcedureDefinition {
+                identifier: FunctionName(p.identifier.0.clone()),
+                args: p
+                    .args
+                    .iter()
+                    .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
+                    .collect(),
+                block: p.block.fcopy(),
+            }),
         }
     }
 }
