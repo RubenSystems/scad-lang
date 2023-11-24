@@ -5,12 +5,15 @@ use pest::{
 };
 use pest_derive::Parser;
 
-use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName};
+use crate::frontend::{
+    high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName},
+    type_system::type_engine::{self, Context},
+};
 
 use super::ast_types::{
     ConditionalExpressionBlock, ConditionalStatementBlock, ConstDecl, Expression, ExpressionBlock,
-    Float, FunctionCall, Identifier, InfixOperation, InfixOperator, Integer, ProcedureDefinition,
-    Statement, Type, TypeName, VariableDecl, VariableName,
+    Float, FunctionCall, Identifier, Integer, ProcedureDefinition, Statement, Type, TypeName,
+    VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -48,6 +51,7 @@ impl Default for HIRParser {
 lazy_static! {
     /// This is an example for using doc comment attributes
     static ref PARSER: HIRParser = HIRParser::new();
+
 }
 
 fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
@@ -311,7 +315,9 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                     });
                     Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
                         if_blocks,
-                        else_block,
+                        else_block: else_block.unwrap_or_else(|| {
+                            unreachable!("Expression if must be paired with else!")
+                        }),
                     })
                 }
 

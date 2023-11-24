@@ -45,7 +45,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
             }
         }
-        Expression::Block(b) => SSAExpression::Block(parse_block(b, k)),
+        Expression::Block(b) => SSAExpression::Block(parse_expression_block(b, k)),
         Expression::FunctionCall(f) => {
             fn aux(
                 args: Vec<Expression>,
@@ -111,17 +111,17 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     )
                 })
                 .collect();
-            let el = else_block.map(|e| parse_expression_block(*e, k));
+            let el = parse_expression_block(*else_block, k);
 
             SSAExpression::ConditionalBlock {
                 conditionals: ifs,
-                else_block: el,
+                else_block: Some(el),
             }
         }
     }
 }
 
-pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSAExpression {
+pub fn statement_l1_to_l2(statement: Statement, k: ContinuationFunction) -> SSAExpression {
     match statement {
         Statement::ConstDecl(c) => expression_l1_to_l2(
             c.expression,
@@ -154,5 +154,6 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             if_blocks: _,
             else_block: _,
         } => todo!(),
+        Statement::Block(blk) => SSAExpression::Block(parse_block(blk, k)),
     }
 }
