@@ -129,16 +129,16 @@ fn main() -> std::io::Result<()> {
 
     let (sub, tpe) = w_algo(
         &ctx,
-        &TIRExpression::FunctionDefinition {
-            arg_name: "x".into(),
-            e1: Box::new(TIRExpression::FunctionDefinition {
-                arg_name: "y".into(),
-                e1: Box::new(TIRExpression::VariableReference { name: "jeff".into() }),
+        &TIRExpression::VariableDecl {
+            name: "kevin".into(),
+            e1: Box::new(TIRExpression::VariableReference {
+                name: "jeff".into(),
+            }),
+            e2: Box::new(TIRExpression::VariableReference {
+                name: "kevin".into(),
             }),
         },
     );
-
-
 
     println!("{tpe:?}");
     println!("{sub:?}");
