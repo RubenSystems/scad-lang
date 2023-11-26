@@ -2,7 +2,7 @@ pub mod frontend;
 pub mod testing;
 
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::type_system::type_engine::{w_algo, TIRExpression};
+use crate::frontend::type_system::type_engine::{w_algo, MonoType, TIRExpression};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -120,22 +120,25 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let mut ctx = Context::new();
+
     ctx.add_type_for_name(
-        "jeff".into(),
-        frontend::type_system::type_engine::TIRType::MonoType(
-            frontend::type_system::type_engine::MonoType::Variable("Int".into()),
-        ),
+        "jim".into(),
+        frontend::type_system::type_engine::TIRType::MonoType(MonoType::Variable("Int".into())),
     );
 
     let (sub, tpe) = w_algo(
         &ctx,
         &TIRExpression::VariableDecl {
             name: "kevin".into(),
-            e1: Box::new(TIRExpression::VariableReference {
-                name: "jeff".into(),
+            e1: Box::new(TIRExpression::FunctionDefinition {
+                arg_name: "x".into(),
+                e1: Box::new(TIRExpression::VariableReference { name: "x".into() }),
             }),
-            e2: Box::new(TIRExpression::VariableReference {
-                name: "kevin".into(),
+            e2: Box::new(TIRExpression::FunctionCall {
+                e1: Box::new(TIRExpression::VariableReference {
+                    name: "kevin".into(),
+                }),
+                e2: Box::new(TIRExpression::VariableReference { name: "jim".into() }),
             }),
         },
     );
