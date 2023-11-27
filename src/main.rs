@@ -125,7 +125,7 @@ fn main() -> std::io::Result<()> {
 
     ctx.add_type_for_name(
         "jim".into(),
-        TIRType::MonoType(MonoType::Variable("Leffff".into())),
+        TIRType::MonoType(MonoType::Application { c: "Int".into(), types: vec![] }),
     );
 
     let (sub, tpe) = w_algo(
@@ -134,7 +134,7 @@ fn main() -> std::io::Result<()> {
             name: "kevin".into(),
             e1: Box::new(TIRExpression::FunctionDefinition {
                 arg_name: "x".into(),
-                e1: Box::new(TIRExpression::VariableReference { name: "x".into() }),
+                e1: Box::new(TIRExpression::FunctionDefinition { arg_name: "y".into(), e1: Box::new(TIRExpression::VariableReference { name: "jim".into() }) }),
             }),
             e2: Box::new(TIRExpression::FunctionCall {
                 e1: Box::new(TIRExpression::VariableReference {

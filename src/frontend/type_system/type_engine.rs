@@ -72,9 +72,7 @@ pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType
         }
         TIRExpression::FunctionCall { e1, e2 } => {
             let (s1, t1) = w_algo(context, e1);
-
             let (s2, t2) = w_algo(&context.applying_substitution(&s1), e2);
-
             let b = generate_type_name();
 
             let s3 = unify(
@@ -84,7 +82,6 @@ pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType
                     types: vec![t2, MonoType::Variable(b.clone())],
                 },
             );
-
             (
                 s3.merge(&s2.merge(&s1)),
                 s3.substitute_mono(&MonoType::Variable(b)),
