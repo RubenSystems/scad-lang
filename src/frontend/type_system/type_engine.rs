@@ -4,6 +4,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::frontend::mid_level_ir::mir_ast_types::{SSAExpression, SSAValue};
+
 use super::{
     tir_ast_expressions::TIRExpression,
     tir_types::{MonoType, PolyType, TIRType, generate_type_name},
@@ -13,8 +15,41 @@ use super::{
 };
 
 
+pub fn transform_mir_value_to_tir(mir: SSAValue) -> TIRExpression {
+    match mir {
+        SSAValue::RegisterReference(r) => TIRExpression::VariableReference { name: r },
+        SSAValue::VariableDereference(r) => TIRExpression::VariableReference { name: r },
+        SSAValue::Integer(_) => todo!(),
+        SSAValue::Float(_) => todo!(),
+        SSAValue::Operation { lhs, op, rhs } => todo!(),
+        SSAValue::FunctionCall { name, parameters } => todo!(),
+    }
+}
+
+pub fn transform_mir_to_tir (mir: SSAExpression) -> TIRExpression {
+    match mir {
+        SSAExpression::RegisterDecl { name, e1, e2 } => todo!(),
+        SSAExpression::VariableDecl { name, e1, e2 } => todo!(),
+        SSAExpression::ConstDecl { name, e1, e2 } => todo!(),
+        SSAExpression::FuncDecl { name, args, block } => todo!(),
+        SSAExpression::Noop => todo!(),
+        SSAExpression::Return { val } => todo!(),
+        SSAExpression::VariableReference { name, tmp_name, e2 } => todo!(),
+        SSAExpression::Block(_) => todo!(),
+        SSAExpression::ConditionalBlock { conditionals, else_block } => todo!(),
+        SSAExpression::Conditional(_) => todo!(),
+    }
+}
+
+
 pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType) {
     match exp {
+        TIRExpression::Integer(_) => {
+            (Substitution::new(), MonoType::Variable("int".into()))
+        },
+        TIRExpression::Float(_) => {
+            (Substitution::new(), MonoType::Variable("float".into()))
+        }
         TIRExpression::VariableReference { name } => {
             let Some(tpe) = context.get_type_for_name(name) else {
                 unreachable!("Undefined variable reference - epic fail")

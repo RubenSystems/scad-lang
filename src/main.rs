@@ -125,7 +125,7 @@ fn main() -> std::io::Result<()> {
 
     ctx.add_type_for_name(
         "jim".into(),
-        TIRType::MonoType(MonoType::Variable("Int".into())),
+        TIRType::MonoType(MonoType::Variable("Leffff".into())),
     );
 
     let (sub, tpe) = w_algo(

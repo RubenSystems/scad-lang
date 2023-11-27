@@ -1,4 +1,7 @@
 pub enum TIRExpression {
+
+	Integer(i128),
+	Float(f64),
     VariableReference {
         name: String,
     },
