@@ -33,6 +33,7 @@ This is just another way that SCaD improves developer experience.
 - **Programmer Control:** The language prioritises maximum control for programmers, enabling them to manage and manipulate system resources explicitly.
 - **Zero-Cost Abstractions:** SCaD ensures that abstractions do not incur additional costs, meaning developers can create efficient code without sacrificing performance.
 - **No Hidden Allocations:** The language eliminates hidden memory allocations, providing complete transparency and control over memory usage.
+- **Type system:** SCaD uses the Hindly Milner for type inference and checking which will allow for cool features
 
 ## Key Goals
 
