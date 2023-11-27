@@ -2,144 +2,16 @@
 
 // define TIR(tm) (typed intermediate repr)
 
-use std::{
-    clone,
-    collections::{HashMap, HashSet},
-    string,
+use std::collections::{HashMap, HashSet};
+
+use super::{
+    tir_ast_expressions::TIRExpression,
+    tir_types::{MonoType, PolyType, TIRType, generate_type_name},
+    traits::{FreeVarsGettable, Instantiatable},
+    context::Context,
+    substitution::Substitution
 };
 
-static mut CURRENT_TMP_INDEX: u128 = 0;
-
-pub fn generate_type_name() -> String {
-    let val = unsafe { CURRENT_TMP_INDEX };
-    unsafe { CURRENT_TMP_INDEX += 1 };
-    format!("t{val}")
-}
-
-trait FreeVarsGettable {
-    fn free_vars(&self) -> Vec<String>;
-}
-
-#[derive(Debug, Clone)]
-pub struct Substitution {
-    from_to: HashMap<String, MonoType>,
-}
-
-impl Substitution {
-    pub fn new() -> Self {
-        Self {
-            from_to: HashMap::new(),
-        }
-    }
-
-    pub fn add_sub(&mut self, from: String, to: MonoType) {
-        self.from_to.insert(from, to);
-    }
-
-    pub fn merge(&self, other: &Substitution) -> Self {
-        let mut self_copy = self.from_to.clone();
-        self_copy.extend(other.from_to.clone());
-        Substitution { from_to: self_copy }
-    }
-
-    pub fn substitute(&self, tpe: &TIRType) -> TIRType {
-        match tpe {
-            TIRType::MonoType(m) => TIRType::MonoType(self.substitute_mono(m)),
-            TIRType::PolyType(p) => TIRType::PolyType(self.substitute_poly(p)),
-        }
-    }
-
-    fn substitute_mono(&self, tpe: &MonoType) -> MonoType {
-        match tpe {
-            MonoType::Variable(v) => match self.from_to.get(v) {
-                Some(s) => s.clone(),
-                None => MonoType::Variable(v.clone()),
-            },
-            MonoType::Application { c, types } => MonoType::Application {
-                c: c.clone(),
-                types: types.iter().map(|x| self.substitute_mono(x)).collect(),
-            },
-        }
-    }
-
-    fn substitute_poly(&self, tpe: &PolyType) -> PolyType {
-        match tpe {
-            PolyType::MonoType(m) => PolyType::MonoType(self.substitute_mono(m)),
-            PolyType::TypeQuantifier { alpha, sigma } => PolyType::TypeQuantifier {
-                alpha: alpha.clone(),
-                sigma: Box::new(self.substitute_poly(&sigma)),
-            },
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum MonoType {
-    Variable(String),
-    Application { c: String, types: Vec<MonoType> },
-}
-
-#[derive(Debug, Clone)]
-pub enum PolyType {
-    MonoType(MonoType),
-    TypeQuantifier { alpha: String, sigma: Box<PolyType> },
-}
-
-#[derive(Debug, Clone)]
-pub enum TIRType {
-    MonoType(MonoType),
-    PolyType(PolyType),
-}
-
-pub enum TIRExpression {
-    VariableReference {
-        name: String,
-    },
-    VariableDecl {
-        name: String,
-        e1: Box<TIRExpression>,
-        e2: Box<TIRExpression>,
-    },
-    FunctionCall {
-        e1: Box<TIRExpression>,
-        e2: Box<TIRExpression>,
-    },
-    FunctionDefinition {
-        arg_name: String,
-        e1: Box<TIRExpression>,
-    },
-}
-
-#[derive(Clone, Debug)]
-pub struct Context {
-    env: HashMap<String, TIRType>,
-}
-
-impl Context {
-    pub fn new() -> Self {
-        Self {
-            env: HashMap::new(),
-        }
-    }
-
-    pub fn add_type_for_name(&mut self, name: String, tpe: TIRType) {
-        self.env.insert(name, tpe);
-    }
-
-    pub fn get_type_for_name(&self, name: &String) -> Option<&TIRType> {
-        self.env.get(name)
-    }
-
-    pub fn applying_substitution(&self, sub: &Substitution) -> Self {
-        Self {
-            env: self
-                .env
-                .iter()
-                .map(|(k, v)| (k.clone(), sub.substitute(v)))
-                .collect(),
-        }
-    }
-}
 
 pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType) {
     match exp {
@@ -165,11 +37,9 @@ pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType
         }
         TIRExpression::FunctionCall { e1, e2 } => {
             let (s1, t1) = w_algo(context, e1);
-            println!("S1: {:?}", s1);
-            println!("T1: {:?}", t1);
+
             let (s2, t2) = w_algo(&context.applying_substitution(&s1), e2);
-            println!("S2: {:?}", s2);
-            println!("T2: {:?}", t2);
+
             let b = generate_type_name();
 
             let s3 = unify(
@@ -190,10 +60,7 @@ pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType
             let tir_new_type = MonoType::Variable(new_type);
 
             let mut new_context = context.clone();
-            new_context.add_type_for_name(
-                name.into(),
-                TIRType::MonoType(tir_new_type.clone()),
-            );
+            new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
             let (sub, tpe) = w_algo(&new_context, e1);
 
             (
@@ -268,10 +135,7 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Substitution {
         let mut s = Substitution::new();
         t1.iter()
             .zip(t2.iter())
-            .for_each(|(a, b)| {
-
-                s = s.merge(&unify(&s.substitute_mono(a), &s.substitute_mono(b)))
-            } );
+            .for_each(|(a, b)| s = s.merge(&unify(&s.substitute_mono(a), &s.substitute_mono(b))));
         return s;
     }
 
@@ -283,185 +147,10 @@ fn diff(a: Vec<String>, b: Vec<String>) -> Vec<String> {
     b.into_iter().filter(|x| !vars.contains(x)).collect()
 }
 
-fn instantiate_mono(mt: MonoType, map: &HashMap<String, String>) -> MonoType {
-    match mt {
-        MonoType::Variable(vn) => match map.get(&vn) {
-            Some(s) => MonoType::Variable(s.clone()),
-            None => MonoType::Variable(vn),
-        },
-        MonoType::Application { c: C, types } => MonoType::Application {
-            c: C,
-            types: types
-                .iter()
-                .map(|x| instantiate_mono(x.clone(), map))
-                .collect(),
-        },
-    }
-}
-
-fn instantiate_poly(pt: PolyType, map: &mut HashMap<String, String>) -> MonoType {
-    match pt {
-        PolyType::MonoType(m) => instantiate_mono(m, &map),
-        PolyType::TypeQuantifier { alpha, sigma } => {
-            map.insert(alpha, generate_type_name());
-            instantiate_poly(*sigma, map)
-        }
-    }
-}
-
 fn instantiate(tpe: TIRType) -> MonoType {
     let mut map = HashMap::new();
     match tpe {
-        TIRType::MonoType(m) => instantiate_mono(m, &mut map),
-        TIRType::PolyType(p) => instantiate_poly(p, &mut map),
+        TIRType::MonoType(m) => m.instantiate(&mut map),
+        TIRType::PolyType(p) => p.instantiate(&mut map),
     }
 }
-
-impl FreeVarsGettable for TIRType {
-    fn free_vars(&self) -> Vec<String> {
-        match self {
-            TIRType::MonoType(m) => m.free_vars(),
-            TIRType::PolyType(p) => p.free_vars(),
-        }
-    }
-}
-
-impl FreeVarsGettable for Context {
-    fn free_vars(&self) -> Vec<String> {
-        self.env.iter().flat_map(|(_, v)| v.free_vars()).collect()
-    }
-}
-
-impl FreeVarsGettable for MonoType {
-    fn free_vars(&self) -> Vec<String> {
-        match self {
-            MonoType::Variable(v) => vec![v.to_string()],
-            MonoType::Application { c: _, types } => {
-                types.iter().flat_map(|x| x.free_vars()).collect()
-            }
-        }
-    }
-}
-
-impl FreeVarsGettable for PolyType {
-    fn free_vars(&self) -> Vec<String> {
-        match self {
-            PolyType::MonoType(mt) => mt.free_vars(),
-            PolyType::TypeQuantifier { alpha, sigma } => sigma
-                .free_vars()
-                .into_iter()
-                .filter(|x| x != alpha)
-                .collect(),
-        }
-    }
-}
-
-/*
-    unify(a: MonoType, b: MonoType) → Substitution:
-        if a is a type variable:
-        if bis the same type variable:
-        return {}
-        if b contains a:
-        throw error "occurs check failed, cannot create infinite type"
-        return { a → b } if b is a type variable:
-        return unify(b, a)
-        if a and b are both type function applications:
-        if a and b have different type functions:
-        throw error "failed to unify, different type functions"
-        let S = 13
-        for i in range (number of type function arguments):
-        S = combine(S, unify(S(a.arguments[il), S(b.arguments[il)))
-        return S
-
-*/
-
-/*
-use std::collections::HashMap;
-use crate::frontend::high_level_ir::ast_types::{VariableDecl, Expression, Statement};
-
-pub struct Context {
-    pub variables: HashMap<String, Types>,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Types {
-    Unknown,
-    Integer,
-    Float,
-}
-
-
-fn type_check_program(program: Vec<Statement>, upper_context: &Context, layer: i32) {
-
-}
-
-fn type_check_statement(statement: Statement, upper_context: &Context, layer_context: &mut Context, layer: i32) -> bool {
-
-    match statement {
-        Statement::ConstDecl(c) => {
-
-        },
-        Statement::VariableDecl(_) => todo!(),
-        Statement::Expression(_) => todo!(),
-        Statement::ConditionalStatementControlFlow { if_blocks, else_block } => todo!(),
-        Statement::FunctionDefinition(f) => todo!(),
-        Statement::ProcedureDefinition(_) => todo!(),
-        Statement::Block(_) => todo!(),
-    }
-}
-
-impl Context {
-
-    pub fn new () -> Self {
-        Self {
-            variables: HashMap::<String, Types>::new(),
-        }
-    }
-
-    pub fn merge(&self, other: &Context) -> Self {
-        let mut new_ctx = self.variables.clone();
-        new_ctx.extend(other.variables.clone());
-        Self {
-            variables: new_ctx
-        }
-    }
-
-    pub fn set_type_for_variable(&mut self, variable_name: String, type_name: String) {
-        self.variables.insert(variable_name, Types::Integer);
-    }
-
-    pub fn type_check_expression(&self, expression: &Expression) -> Option<Types> {
-
-        match expression {
-            Expression::InfixOperation(_) => todo!(),// Going to be removed later
-            Expression::Float(_) => Some(Types::Float),
-            Expression::Integer(_) => Some(Types::Integer),
-            Expression::CharArray(_) => todo!(),
-            Expression::Identifier(id) => {
-                match self.variables.get(&id.0) {
-                    Some(t) => Some(t.clone()),
-                    _ => None
-                }
-            },
-            Expression::ConditionalExpressionControlFlowControl { if_blocks, else_block } => {
-                let mut types: Vec<Option<Types>> = if_blocks.iter().map(|i| {
-                    self.type_check_expression(&i.block.expression)
-                }).collect();
-
-                types.push(self.type_check_expression(&else_block.expression));
-
-                // make sure all types are equal otherwise thats just wrong
-                if !types.is_empty() && types.windows(2).all(|w| w[0] == w[1]) {
-                    types[0].clone()
-                } else {
-                    unreachable!("Expression if statements must all be of the same type dumbo")
-                }
-            },
-            Expression::FunctionCall(f) => todo!(),
-            Expression::Block(b) => self.type_check_expression(&b.expression),
-        }
-
-    }
-}
-
-*/

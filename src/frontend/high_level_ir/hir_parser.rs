@@ -5,10 +5,7 @@ use pest::{
 };
 use pest_derive::Parser;
 
-use crate::frontend::{
-    high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName},
-    type_system::type_engine::{self, Context},
-};
+use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName};
 
 use super::ast_types::{
     ConditionalExpressionBlock, ConditionalStatementBlock, ConstDecl, Expression, ExpressionBlock,

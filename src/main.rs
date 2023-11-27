@@ -2,11 +2,13 @@ pub mod frontend;
 pub mod testing;
 
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::type_system::type_engine::{w_algo, MonoType, TIRExpression};
+use crate::frontend::type_system::context::Context;
+use crate::frontend::type_system::tir_ast_expressions::TIRExpression;
+use crate::frontend::type_system::tir_types::{TIRType, MonoType};
+use crate::frontend::type_system::type_engine::w_algo;
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
-use frontend::type_system::type_engine::Context;
 use pest::Parser;
 use std::fs::File;
 use std::io::Write;
@@ -123,7 +125,7 @@ fn main() -> std::io::Result<()> {
 
     ctx.add_type_for_name(
         "jim".into(),
-        frontend::type_system::type_engine::TIRType::MonoType(MonoType::Variable("Int".into())),
+        TIRType::MonoType(MonoType::Variable("Int".into())),
     );
 
     let (sub, tpe) = w_algo(
