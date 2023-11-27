@@ -182,10 +182,10 @@ pub enum Expression {
     Identifier(Identifier),         // Identifiers
     ConditionalExpressionControlFlowControl {
         if_blocks: Vec<ConditionalExpressionBlock>, // List of else-if condition blocks
-        else_block: Option<Box<ExpressionBlock>>,   // Optional else block if no conditions are met
+        else_block: Box<ExpressionBlock>,           // Optional else block if no conditions are met
     },
     FunctionCall(FunctionCall),
-    Block(Block),
+    Block(ExpressionBlock),
 }
 
 impl FailureCopy for Expression {
@@ -229,6 +229,7 @@ pub enum Statement {
     },
     FunctionDefinition(FunctionDefinition),
     ProcedureDefinition(ProcedureDefinition),
+    Block(Block),
 }
 
 impl FailureCopy for Statement {
@@ -271,6 +272,9 @@ impl FailureCopy for Statement {
                     .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
                     .collect(),
                 block: p.block.fcopy(),
+            }),
+            Statement::Block(b) => Statement::Block(Block {
+                statements: b.statements.iter().map(|s| s.fcopy()).collect(),
             }),
         }
     }

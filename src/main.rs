@@ -2,6 +2,10 @@ pub mod frontend;
 pub mod testing;
 
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
+use crate::frontend::type_system::context::Context;
+use crate::frontend::type_system::tir_ast_expressions::TIRExpression;
+use crate::frontend::type_system::tir_types::{TIRType, MonoType};
+use crate::frontend::type_system::type_engine::w_algo;
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -66,6 +70,11 @@ pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
             call i32 (i8*, ...) @printf(i8* %t0, i32 %x) 
             ret void
         }
+
+        define i32 @scad.inbuilts.add(i32 noundef %a, i32 noundef %b) {
+            %add = add nsw i32 %b, %a
+            ret i32 %add
+        }
     "#;
 
     let parent_dir = prog_path.parent().unwrap().to_string_lossy();
@@ -110,8 +119,34 @@ pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
-    compile(&args[1], &args[2])?;
+    // compile(&args[1], &args[2])?;
 
+    let mut ctx = Context::new();
+
+    ctx.add_type_for_name(
+        "jim".into(),
+        TIRType::MonoType(MonoType::Variable("Int".into())),
+    );
+
+    let (sub, tpe) = w_algo(
+        &ctx,
+        &TIRExpression::VariableDecl {
+            name: "kevin".into(),
+            e1: Box::new(TIRExpression::FunctionDefinition {
+                arg_name: "x".into(),
+                e1: Box::new(TIRExpression::VariableReference { name: "x".into() }),
+            }),
+            e2: Box::new(TIRExpression::FunctionCall {
+                e1: Box::new(TIRExpression::VariableReference {
+                    name: "kevin".into(),
+                }),
+                e2: Box::new(TIRExpression::VariableReference { name: "jim".into() }),
+            }),
+        },
+    );
+
+    println!("{tpe:?}");
+    println!("{sub:?}");
     Ok(())
 }
 
