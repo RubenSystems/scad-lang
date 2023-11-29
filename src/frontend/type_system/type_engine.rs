@@ -7,13 +7,12 @@ use std::collections::{HashMap, HashSet};
 use crate::frontend::mid_level_ir::mir_ast_types::{SSAExpression, SSAValue};
 
 use super::{
-    tir_ast_expressions::TIRExpression,
-    tir_types::{MonoType, PolyType, TIRType, generate_type_name},
-    traits::{FreeVarsGettable, Instantiatable},
     context::Context,
-    substitution::Substitution
+    substitution::Substitution,
+    tir_ast_expressions::TIRExpression,
+    tir_types::{generate_type_name, MonoType, PolyType, TIRType},
+    traits::{FreeVarsGettable, Instantiatable},
 };
-
 
 pub fn transform_mir_value_to_tir(mir: SSAValue) -> TIRExpression {
     match mir {
@@ -26,7 +25,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue) -> TIRExpression {
     }
 }
 
-pub fn transform_mir_to_tir (mir: SSAExpression) -> TIRExpression {
+pub fn transform_mir_to_tir(mir: SSAExpression) -> TIRExpression {
     match mir {
         SSAExpression::RegisterDecl { name, e1, e2 } => todo!(),
         SSAExpression::VariableDecl { name, e1, e2 } => todo!(),
@@ -36,23 +35,21 @@ pub fn transform_mir_to_tir (mir: SSAExpression) -> TIRExpression {
         SSAExpression::Return { val } => todo!(),
         SSAExpression::VariableReference { name, tmp_name, e2 } => todo!(),
         SSAExpression::Block(_) => todo!(),
-        SSAExpression::ConditionalBlock { conditionals, else_block } => todo!(),
+        SSAExpression::ConditionalBlock {
+            conditionals,
+            else_block,
+        } => todo!(),
         SSAExpression::Conditional(_) => todo!(),
     }
 }
 
-
 pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType) {
     match exp {
-        TIRExpression::Integer(_) => {
-            (Substitution::new(), MonoType::Variable("int".into()))
-        },
-        TIRExpression::Float(_) => {
-            (Substitution::new(), MonoType::Variable("float".into()))
-        }
+        TIRExpression::Integer(_) => (Substitution::new(), MonoType::Variable("int".into())),
+        TIRExpression::Float(_) => (Substitution::new(), MonoType::Variable("float".into())),
         TIRExpression::VariableReference { name } => {
             let Some(tpe) = context.get_type_for_name(name) else {
-                unreachable!("Undefined variable reference - epic fail")
+                unreachable!("Undefined variable reference {name} - epic fail")
             };
 
             (Substitution::new(), instantiate(tpe.clone()))

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use super::tir_types::MonoType;
 
-
 pub trait FreeVarsGettable {
     fn free_vars(&self) -> Vec<String>;
 }
