@@ -118,7 +118,7 @@ pub fn compile(path: &str, out_name: &str) -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+    let _args: Vec<String> = std::env::args().collect();
 
     // compile(&args[1], &args[2])?;
 
@@ -252,15 +252,19 @@ fn main() -> std::io::Result<()> {
         },
     );
 
+    // let (sub, tpe) = w_algo(&ctx, &TIRExpression::VariableDecl { name: "x".into(),
+    // e1: ,
+    // e2: () })
+
     /*
         let x : i32 = ( add(a, a) ==> add_i32_i32ri32(a, a))
 
     */
 
     println!("{tpe:?}");
-    println!("{sub:?}");
+    // println!("{sub:?}");
 
-    let mut new_substitution = Substitution::new();
+    let _new_substitution = Substitution::new();
 
     Ok(())
 }
