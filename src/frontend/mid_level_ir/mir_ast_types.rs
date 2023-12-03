@@ -20,22 +20,26 @@ impl FailureCopy for SSAConditionalBlock {
 pub enum SSAExpression {
     RegisterDecl {
         name: String,
+        vtype: Type,
         e1: SSAValue,
         e2: Box<SSAExpression>,
     },
     VariableDecl {
         name: String,
+        vtype: Type,
         e1: SSAValue,
         e2: Box<SSAExpression>,
     },
     ConstDecl {
         name: String,
+        vtype: Type,
         e1: SSAValue,
         e2: Box<SSAExpression>,
     },
     FuncDecl {
         name: String,
         args: Vec<(String, Type)>,
+        ret_type: Type,
         block: Box<SSAExpression>,
     },
 
@@ -59,28 +63,13 @@ pub enum SSAExpression {
 impl FailureCopy for SSAExpression {
     fn fcopy(&self) -> Self {
         match self {
-            SSAExpression::RegisterDecl { name, e1, e2 } => SSAExpression::RegisterDecl {
-                name: name.clone(),
-                e1: e1.fcopy(),
-                e2: Box::new(e2.fcopy()),
-            },
-            SSAExpression::VariableDecl { name, e1, e2 } => SSAExpression::VariableDecl {
-                name: name.clone(),
-                e1: e1.fcopy(),
-                e2: Box::new(e2.fcopy()),
-            },
-            SSAExpression::ConstDecl { name, e1, e2 } => SSAExpression::ConstDecl {
-                name: name.clone(),
-                e1: e1.fcopy(),
-                e2: Box::new(e2.fcopy()),
-            },
-            SSAExpression::FuncDecl {
-                name,
-                args,
-                block,
-            } => SSAExpression::FuncDecl {
+            Self::RegisterDecl { name, vtype, e1, e2 } => Self::RegisterDecl { name: name.clone(), vtype: vtype.fcopy(), e1: e1.fcopy(), e2: Box::new(e2.fcopy()) },
+            Self::VariableDecl { name, vtype, e1, e2 } => todo!(),
+            Self::ConstDecl { name, vtype, e1, e2 } => todo!(),
+            Self::FuncDecl { name, args, ret_type, block } => Self::FuncDecl {
                 name: name.clone(),
                 args: args.iter().map(|(n, t)| (n.clone(), t.fcopy())).collect(),
+                ret_type: ret_type.fcopy(),
                 block: Box::new(block.fcopy()),
             },
             SSAExpression::Noop => SSAExpression::Noop,

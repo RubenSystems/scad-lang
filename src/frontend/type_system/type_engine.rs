@@ -68,7 +68,12 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 
 pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression, Context) {
     match mir {
-        SSAExpression::RegisterDecl { name, e1, e2 } => {
+        SSAExpression::RegisterDecl {
+            name,
+            vtype,
+            e1,
+            e2,
+        } => {
             let (xp, ctx) = transform_mir_value_to_tir(e1, ctx);
             let (xp2, ctx) = transform_mir_to_tir(*e2, ctx);
 
@@ -81,17 +86,12 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                 ctx,
             )
         }
-        SSAExpression::VariableDecl {
-            name: _,
-            e1: _,
-            e2: _,
-        } => todo!(),
-        SSAExpression::ConstDecl {
-            name: _,
-            e1: _,
-            e2: _,
-        } => todo!(),
-        SSAExpression::FuncDecl { name, args, block } => {
+        SSAExpression::FuncDecl {
+            name,
+            args,
+            ret_type,
+            block,
+        } => {
             if args.len() == 1 {
                 let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);
                 (
@@ -118,6 +118,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                             .iter()
                             .map(|(x, y)| (x.clone(), y.fcopy()))
                             .collect(),
+                        ret_type,
                         block,
                     },
                     ctx,
@@ -145,6 +146,18 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             else_block: _,
         } => todo!(),
         SSAExpression::Conditional(_) => todo!(),
+        SSAExpression::VariableDecl {
+            name,
+            vtype,
+            e1,
+            e2,
+        } => todo!(),
+        SSAExpression::ConstDecl {
+            name,
+            vtype,
+            e1,
+            e2,
+        } => todo!(),
     }
 }
 

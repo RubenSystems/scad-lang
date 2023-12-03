@@ -68,7 +68,10 @@ pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> 
                 }),
             )
         }
-        _ => unreachable!("Empty block"),
+        [] => {
+            let expression_clone = blk.expression.fcopy();
+            expression_l1_to_l2(expression_clone, k)
+        }
     }
 
     // let mut ssa_expressions: Vec<SSAExpression> = blk

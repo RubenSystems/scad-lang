@@ -124,8 +124,7 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32) i32 {
-            let m : i32 = a; 
-            scad_core_arithmetic_add_i32(x: m , y: 20)
+            scad_core_arithmetic_add_i32(x: 1000.0 , y: 20)
         };
     "#;
 
