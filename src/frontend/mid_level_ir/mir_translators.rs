@@ -1,4 +1,4 @@
-use crate::frontend::high_level_ir::ast_types::{Expression, FailureCopy, Statement, Type};
+use crate::frontend::high_level_ir::ast_types::{Expression, FailureCopy, Statement};
 
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},
@@ -9,7 +9,7 @@ pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
 pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpression {
     match exp {
-        Expression::InfixOperation(e) => {
+        Expression::InfixOperation(_e) => {
             todo!()
             // let op = e.op.0.clone();
 
@@ -138,7 +138,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 }),
             )
         }
-        Statement::VariableDecl(v) => todo!(),
+        Statement::VariableDecl(_v) => todo!(),
         Statement::Expression(exp) => expression_l1_to_l2(exp, Box::new(|_| SSAExpression::Noop)),
         Statement::FunctionDefinition(f) => SSAExpression::FuncDecl {
             name: f.identifier.0,

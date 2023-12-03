@@ -64,8 +64,8 @@ impl FailureCopy for SSAExpression {
     fn fcopy(&self) -> Self {
         match self {
             Self::RegisterDecl { name, vtype, e1, e2 } => Self::RegisterDecl { name: name.clone(), vtype: vtype.as_ref().map(|x| x.fcopy()), e1: e1.fcopy(), e2: Box::new(e2.fcopy()) },
-            Self::VariableDecl { name, vtype, e1, e2 } => todo!(),
-            Self::ConstDecl { name, vtype, e1, e2 } => todo!(),
+            Self::VariableDecl { name: _, vtype: _, e1: _, e2: _ } => todo!(),
+            Self::ConstDecl { name: _, vtype: _, e1: _, e2: _ } => todo!(),
             Self::FuncDecl { name, args, ret_type, block } => Self::FuncDecl {
                 name: name.clone(),
                 args: args.iter().map(|(n, t)| (n.clone(), t.fcopy())).collect(),

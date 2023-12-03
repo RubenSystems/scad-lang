@@ -70,7 +70,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
     match mir {
         SSAExpression::RegisterDecl {
             name,
-            vtype,
+            vtype: _,
             e1,
             e2,
         } => {
@@ -147,16 +147,16 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
         } => todo!(),
         SSAExpression::Conditional(_) => todo!(),
         SSAExpression::VariableDecl {
-            name,
-            vtype,
-            e1,
-            e2,
+            name: _,
+            vtype: _,
+            e1: _,
+            e2: _,
         } => todo!(),
         SSAExpression::ConstDecl {
-            name,
-            vtype,
-            e1,
-            e2,
+            name: _,
+            vtype: _,
+            e1: _,
+            e2: _,
         } => todo!(),
     }
 }

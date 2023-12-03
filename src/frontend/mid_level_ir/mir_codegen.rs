@@ -34,7 +34,7 @@ impl SSAExpression {
         match self {
             Self::VariableDecl {
                 name,
-                vtype,
+                vtype: _,
                 e1,
                 e2,
             } => {
@@ -46,7 +46,7 @@ impl SSAExpression {
             }
             Self::ConstDecl {
                 name,
-                vtype,
+                vtype: _,
                 e1,
                 e2,
             } => {
@@ -58,7 +58,7 @@ impl SSAExpression {
             }
             Self::RegisterDecl {
                 name,
-                vtype,
+                vtype: _,
                 e1,
                 e2,
             } => {
@@ -72,7 +72,7 @@ impl SSAExpression {
             Self::FuncDecl {
                 name,
                 args,
-                ret_type,
+                ret_type: _,
                 block,
             } => {
                 let arg_defs: Vec<String> = args
