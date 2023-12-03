@@ -123,8 +123,11 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-        fn add_two_numbers(a: i32) i32 {
-            scad_core_arithmetic_add_i32(x: 1000.0 , y: 20)
+        fn add_two_numbers(a: i32, b: i32) i32 {
+            let m: i32 = scad_core_arithmetic_add_i32(x: a, y: 20);
+            let k: i32 = scad_core_arithmetic_add_i32(x: b, y: 50);
+
+            scad_core_arithmetic_add_i32(x: m, y: k)
         };
     "#;
 
@@ -144,6 +147,15 @@ fn main() -> std::io::Result<()> {
     println!("{:#?}\n\n", code);
 
     let mut consumable_context = Context::new();
+
+    consumable_context.add_type_for_name(
+        "m".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "f32".into(),
+            types: vec![],
+        }),
+    );
+
     consumable_context.add_type_for_name(
         "scad_core_arithmetic_add_i32".into(),
         TIRType::MonoType(MonoType::Application {

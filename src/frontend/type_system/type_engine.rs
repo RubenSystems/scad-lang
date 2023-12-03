@@ -173,7 +173,17 @@ pub fn w_algo(context: &Context, exp: &TIRExpression) -> (Substitution, MonoType
             (Substitution::new(), instantiate(tpe.clone()))
         }
         TIRExpression::VariableDecl { name, e1, e2 } => {
+
             let (s1, t1) = w_algo(context, &e1);
+            match context.get_type_for_name(name) {
+                Some(x) => match x {
+                    TIRType::MonoType(m) if format!("{m:?}") == format!("{t1:?}") => {},
+                    _ => {
+                        unreachable!("attempting to assign {name} to type {t1:?}, when {name} is already of type {x:?} - epic fail")
+                    }
+                },
+                None => {},
+            }
 
             let mut sub_context = context.applying_substitution(&s1).clone();
 
