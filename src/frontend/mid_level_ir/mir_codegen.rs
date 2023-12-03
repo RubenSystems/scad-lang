@@ -65,16 +65,14 @@ impl SSAExpression {
 				.map(|(name, _tpe)| format!("%{name} = alloca i32, align 4\nstore i32 %{name}.arg, ptr %{name}, align 4"))
 				.collect();
 
-                let statements: Vec<String> = block
-                    .iter()
-                    .map(|s| s.to_llvm_ir(end_conditional_block.clone(), is_last_block))
-                    .collect();
+                let statements: String =
+                    block.to_llvm_ir(end_conditional_block.clone(), is_last_block);
 
                 format!(
                     "define i32 @{name}({}) {{\n{}\n{}\n}}",
                     arg_defs.join(","),
                     arg_derefs.join("\n"),
-                    statements.join("\n")
+                    statements
                 )
             }
             SSAExpression::Return { val } => {
@@ -84,27 +82,20 @@ impl SSAExpression {
                 "%{tmp_name} = load i32, ptr %{name}, align 4\n{}",
                 e2.to_llvm_ir(end_conditional_block, is_last_block)
             ),
-            SSAExpression::Block(b) => {
-                let statements: Vec<String> = b
-                    .iter()
-                    .map(|s| s.to_llvm_ir(end_conditional_block.clone(), is_last_block))
-                    .collect();
-                statements.join("\n")
-            }
+            SSAExpression::Block(b) => b.to_llvm_ir(end_conditional_block.clone(), is_last_block),
             SSAExpression::Conditional(c) => {
                 let true_branch_name = generate_register_name();
                 let false_branch_name = generate_register_name();
 
-                let rendered_blocks: Vec<String> = c
+                let rendered_blocks: String = c
                     .block
-                    .iter()
-                    .map(|x| x.to_llvm_ir(end_conditional_block.clone(), is_last_block))
-                    .collect();
+                    .to_llvm_ir(end_conditional_block.clone(), is_last_block);
+
                 if is_last_block {
                     let ecbn = end_conditional_block.clone().unwrap();
-                    format!("br i1 {}, label %{true_branch_name}, label %{ecbn}\n{true_branch_name}:\n{}\nbr label %{ecbn}\n{ecbn}:", c.condition.to_llvm_ir(), rendered_blocks.join("\n"))
+                    format!("br i1 {}, label %{true_branch_name}, label %{ecbn}\n{true_branch_name}:\n{}\nbr label %{ecbn}\n{ecbn}:", c.condition.to_llvm_ir(), rendered_blocks)
                 } else {
-                    format!("br i1 {}, label %{true_branch_name}, label %{false_branch_name}\n{true_branch_name}:\n{}\nbr label %{}\n{false_branch_name}:", c.condition.to_llvm_ir(), rendered_blocks.join("\n"), end_conditional_block.unwrap())
+                    format!("br i1 {}, label %{true_branch_name}, label %{false_branch_name}\n{true_branch_name}:\n{}\nbr label %{}\n{false_branch_name}:", c.condition.to_llvm_ir(), rendered_blocks, end_conditional_block.unwrap())
                 }
             }
             SSAExpression::ConditionalBlock {

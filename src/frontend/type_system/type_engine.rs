@@ -131,7 +131,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             tmp_name: _,
             e2: _,
         } => todo!(),
-        SSAExpression::Block(eb) => transform_mir_to_tir(eb.last().unwrap().fcopy(), ctx),
+        SSAExpression::Block(eb) => transform_mir_to_tir(*eb, ctx),
         SSAExpression::ConditionalBlock {
             conditionals: _,
             else_block: _,

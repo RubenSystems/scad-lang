@@ -44,9 +44,10 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             //     tmp_name: tmp_name.clone(),
             //     e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
             // }
+            println!("{id}");
             k(SSAValue::RegisterReference(id))
         }
-        Expression::Block(b) => SSAExpression::Block(parse_expression_block(b, k)),
+        Expression::Block(b) => SSAExpression::Block(Box::new(parse_expression_block(b, k))),
         Expression::FunctionCall(f) => {
             fn aux(
                 args: Vec<Expression>,
@@ -93,31 +94,32 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             if_blocks,
             else_block,
         } => {
-            let ifs: Vec<SSAExpression> = if_blocks
-                .iter()
-                .map(|x| {
-                    let cond = x.condition.fcopy();
-                    let block = x.block.fcopy();
-                    expression_l1_to_l2(
-                        cond,
-                        Box::new(|cond_val| {
-                            SSAExpression::Conditional(SSAConditionalBlock {
-                                condition: cond_val,
-                                block: parse_expression_block(
-                                    block,
-                                    Box::new(|_| SSAExpression::Noop),
-                                ),
-                            })
-                        }),
-                    )
-                })
-                .collect();
-            let el = parse_expression_block(*else_block, k);
+            todo!()
+            // let ifs: Vec<SSAExpression> = if_blocks
+            //     .iter()
+            //     .map(|x| {
+            //         let cond = x.condition.fcopy();
+            //         let block = x.block.fcopy();
+            //         expression_l1_to_l2(
+            //             cond,
+            //             Box::new(|cond_val| {
+            //                 SSAExpression::Conditional(SSAConditionalBlock {
+            //                     condition: cond_val,
+            //                     block: parse_expression_block(
+            //                         block,
+            //                         Box::new(|_| SSAExpression::Noop),
+            //                     ),
+            //                 })
+            //             }),
+            //         )
+            //     })
+            //     .collect();
+            // let el = parse_expression_block(*else_block, k);
 
-            SSAExpression::ConditionalBlock {
-                conditionals: ifs,
-                else_block: Some(el),
-            }
+            // SSAExpression::ConditionalBlock {
+            //     conditionals: ifs,
+            //     else_block: Some(el),
+            // }
         }
     }
 }
@@ -126,7 +128,7 @@ pub fn statement_l1_to_l2(statement: Statement, k: ContinuationFunction) -> SSAE
     match statement {
         Statement::ConstDecl(c) => expression_l1_to_l2(
             c.expression,
-            Box::new(|val| SSAExpression::ConstDecl {
+            Box::new(|val| SSAExpression::RegisterDecl {
                 name: c.identifier.0,
                 e1: val,
                 e2: Box::new(SSAExpression::Noop),
@@ -144,17 +146,23 @@ pub fn statement_l1_to_l2(statement: Statement, k: ContinuationFunction) -> SSAE
         Statement::FunctionDefinition(f) => SSAExpression::FuncDecl {
             name: f.identifier.0,
             args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            block: parse_expression_block(f.block, Box::new(|v| SSAExpression::Return { val: v })),
+            block: Box::new(parse_expression_block(
+                f.block,
+                Box::new(|v| SSAExpression::Return { val: v }),
+            )),
         },
-        Statement::ProcedureDefinition(f) => SSAExpression::FuncDecl {
-            name: f.identifier.0,
-            args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            block: parse_block(f.block, Box::new(|_| SSAExpression::Noop)),
-        },
+        Statement::ProcedureDefinition(f) => {
+            //     SSAExpression::FuncDecl {
+            //     name: f.identifier.0,
+            //     args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
+            //     block: parse_block(f.block, Box::new(|_| SSAExpression::Noop)),
+            // };
+            todo!()
+        }
         Statement::ConditionalStatementControlFlow {
             if_blocks: _,
             else_block: _,
         } => todo!(),
-        Statement::Block(blk) => SSAExpression::Block(parse_block(blk, k)),
+        Statement::Block(blk) => todo!(),
     }
 }

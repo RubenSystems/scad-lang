@@ -125,7 +125,8 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32) i32 {
-            scad_core_arithmetic_add_i32(x: a, y: 20)
+            let m : i32 = 100; 
+            scad_core_arithmetic_add_i32(x: m, y: 20)
         };
     "#;
 
@@ -173,10 +174,9 @@ fn main() -> std::io::Result<()> {
 
     let (xp, ctx) = transform_mir_to_tir(code[0].fcopy(), consumable_context);
 
-    let (sub, tpe) = w_algo(
-        &ctx,
-        &xp,
-    );
+    println!("{:#?}\n\n", xp);
+
+    let (sub, tpe) = w_algo(&ctx, &xp);
 
     println!("{tpe:?}");
 
