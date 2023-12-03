@@ -4,9 +4,8 @@ pub mod testing;
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::type_system::context::Context;
-use crate::frontend::type_system::substitution::Substitution;
-use crate::frontend::type_system::tir_ast_expressions::TIRExpression;
-use crate::frontend::type_system::tir_types::{MonoType, PolyType, TIRType};
+
+use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{transform_mir_to_tir, w_algo};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
@@ -125,8 +124,8 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32) i32 {
-            let m : i32 = 100; 
-            scad_core_arithmetic_add_i32(x: m, y: 20)
+            let m : i32 = a; 
+            scad_core_arithmetic_add_i32(x: m , y: 20)
         };
     "#;
 
@@ -176,7 +175,7 @@ fn main() -> std::io::Result<()> {
 
     println!("{:#?}\n\n", xp);
 
-    let (sub, tpe) = w_algo(&ctx, &xp);
+    let (_sub, tpe) = w_algo(&ctx, &xp);
 
     println!("{tpe:?}");
 

@@ -81,8 +81,16 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                 ctx,
             )
         }
-        SSAExpression::VariableDecl { name, e1, e2 } => todo!(),
-        SSAExpression::ConstDecl { name, e1, e2 } => todo!(),
+        SSAExpression::VariableDecl {
+            name: _,
+            e1: _,
+            e2: _,
+        } => todo!(),
+        SSAExpression::ConstDecl {
+            name: _,
+            e1: _,
+            e2: _,
+        } => todo!(),
         SSAExpression::FuncDecl { name, args, block } => {
             if args.len() == 1 {
                 let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);

@@ -38,7 +38,7 @@ pub fn op_to_llvm(op: &str) -> String {
     }
 }
 
-pub fn parse_block(blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> {
+pub fn parse_block(_blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> {
     // blk.statements
     //     .iter()
     //     .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
