@@ -51,7 +51,6 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 args: Vec<Expression>,
                 vals: Vec<SSAValue>,
                 function_name: String,
-                function_type: Type,
                 k: Box<dyn FnOnce(SSAValue) -> SSAExpression>,
             ) -> SSAExpression {
                 match args.as_slice() {
@@ -60,7 +59,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 
                         SSAExpression::RegisterDecl {
                             name: tmp_name.clone(),
-                            vtype: function_type,
+                            vtype: None,
                             e1: SSAValue::FunctionCall {
                                 name: function_name,
                                 parameters: vals.iter().map(|x| x.fcopy()).collect(),
@@ -76,7 +75,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                             head.fcopy(),
                             Box::new(|x| {
                                 val_copy.push(x);
-                                aux(rest_copy, val_copy, function_name, function_type, k)
+                                aux(rest_copy, val_copy, function_name, k)
                             }),
                         )
                     }
@@ -87,7 +86,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 f.args.iter().map(|(_, exp)| exp.fcopy()).collect(),
                 vec![],
                 f.identifier.0,
-                f.k,
+                k,
             )
         }
         Expression::ConditionalExpressionControlFlowControl {
@@ -133,7 +132,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 c.expression,
                 Box::new(|val| SSAExpression::RegisterDecl {
                     name: c.identifier.0,
-                    vtype: c.subtype,
+                    vtype: Some(c.subtype),
                     e1: val.fcopy(),
                     e2: Box::new(gen(val)),
                 }),
@@ -144,7 +143,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         Statement::FunctionDefinition(f) => SSAExpression::FuncDecl {
             name: f.identifier.0,
             args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            ret_type: f.return_type,
+            ret_type: Some(f.return_type),
             block: Box::new(parse_expression_block(
                 f.block,
                 Box::new(|v| SSAExpression::Return { val: v }),
