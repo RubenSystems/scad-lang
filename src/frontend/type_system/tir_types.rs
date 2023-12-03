@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use super::traits::{Instantiatable, FreeVarsGettable};
-
+use super::traits::{FreeVarsGettable, Instantiatable};
 
 static mut CURRENT_TMP_INDEX: u128 = 0;
 
@@ -28,7 +27,6 @@ pub enum TIRType {
     MonoType(MonoType),
     PolyType(PolyType),
 }
-
 
 impl Instantiatable for MonoType {
     fn instantiate(&self, map: &mut HashMap<String, String>) -> Self {

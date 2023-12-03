@@ -1,4 +1,7 @@
+#[derive(Debug)]
 pub enum TIRExpression {
+    Integer,
+    Float,
     VariableReference {
         name: String,
     },

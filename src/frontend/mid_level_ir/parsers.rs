@@ -38,21 +38,46 @@ pub fn op_to_llvm(op: &str) -> String {
     }
 }
 
-pub fn parse_block(blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> {
-    blk.statements
-        .iter()
-        .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
-        .collect()
+pub fn parse_block(_blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> {
+    // blk.statements
+    //     .iter()
+    //     .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
+    //     .collect()
+    todo!()
 }
 
-pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> Vec<SSAExpression> {
-    let mut ssa_expressions: Vec<SSAExpression> = blk
-        .statements
-        .iter()
-        .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
-        .collect();
+pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> SSAExpression {
+    match blk.statements.as_slice() {
+        [head] => {
+            let expression_clone = blk.expression.fcopy();
+            statement_l1_to_l2(
+                head.fcopy(),
+                Box::new(|_| expression_l1_to_l2(expression_clone, k)),
+            )
+        }
+        [head, rest @ ..] => {
+            let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
+            statement_l1_to_l2(
+                head.fcopy(),
+                Box::new(|_| {
+                    let new_blk = ExpressionBlock {
+                        statements: rest_clone,
+                        expression: blk.expression,
+                    };
+                    parse_expression_block(new_blk, k)
+                }),
+            )
+        }
+        _ => unreachable!("Empty block"),
+    }
 
-    ssa_expressions.push(expression_l1_to_l2(*blk.expression, Box::new(k)));
+    // let mut ssa_expressions: Vec<SSAExpression> = blk
+    //     .statements
+    //     .iter()
+    //     .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
+    //     .collect();
 
-    ssa_expressions
+    // ssa_expressions.push(expression_l1_to_l2(*blk.expression, Box::new(k)));
+
+    // ssa_expressions
 }

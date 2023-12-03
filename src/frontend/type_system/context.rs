@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{tir_types::TIRType, substitution::Substitution, traits::FreeVarsGettable};
+use super::{substitution::Substitution, tir_types::TIRType, traits::FreeVarsGettable};
 
 #[derive(Clone, Debug)]
 pub struct Context {
@@ -32,7 +32,6 @@ impl Context {
         }
     }
 }
-
 
 impl FreeVarsGettable for Context {
     fn free_vars(&self) -> Vec<String> {

@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use super::tir_types::{MonoType, TIRType, PolyType};
-
-
-
+use super::tir_types::{MonoType, PolyType, TIRType};
 
 #[derive(Debug, Clone)]
 pub struct Substitution {
@@ -57,4 +54,3 @@ impl Substitution {
         }
     }
 }
-
