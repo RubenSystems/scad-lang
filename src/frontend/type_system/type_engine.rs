@@ -17,12 +17,12 @@ use super::{
     traits::{FreeVarsGettable, Instantiatable},
 };
 
-pub fn transform_mir_value_to_tir(mir: SSAValue) -> TIRExpression {
+pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
     match mir {
-        SSAValue::RegisterReference(r) => TIRExpression::VariableReference { name: r },
-        SSAValue::VariableDereference(r) => TIRExpression::VariableReference { name: r },
-        SSAValue::Integer(_) => TIRExpression::Integer,
-        SSAValue::Float(_) => TIRExpression::Float,
+        SSAValue::RegisterReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
+        SSAValue::VariableDereference(r) => (TIRExpression::VariableReference { name: r }, ctx),
+        SSAValue::Integer(_) => (TIRExpression::Integer, ctx),
+        SSAValue::Float(_) => (TIRExpression::Float, ctx),
         SSAValue::Operation {
             lhs: _,
             op: _,
@@ -30,73 +30,108 @@ pub fn transform_mir_value_to_tir(mir: SSAValue) -> TIRExpression {
         } => todo!(),
         SSAValue::FunctionCall { name, parameters } => {
             if parameters.len() == 1 {
-                TIRExpression::FunctionCall {
-                    e1: Box::new(TIRExpression::VariableReference { name: name.clone() }),
-                    e2: Box::new(transform_mir_value_to_tir(parameters[0].fcopy())),
-                }
+                let (xp, ctx) = transform_mir_value_to_tir(parameters[0].fcopy(), ctx);
+
+                (
+                    TIRExpression::FunctionCall {
+                        e1: Box::new(TIRExpression::VariableReference { name: name.clone() }),
+                        e2: Box::new(xp),
+                    },
+                    ctx,
+                )
             } else {
-                TIRExpression::FunctionCall {
-                    e1: Box::new(transform_mir_value_to_tir(SSAValue::FunctionCall {
+                let (xp, ctx) = transform_mir_value_to_tir(
+                    SSAValue::FunctionCall {
                         name: name.clone(),
                         parameters: parameters[..parameters.len() - 1]
                             .iter()
                             .map(|x| x.fcopy())
                             .collect(),
-                    })),
-                    e2: Box::new(transform_mir_value_to_tir(
-                        parameters.last().unwrap().fcopy(),
-                    )),
-                }
+                    },
+                    ctx,
+                );
+
+                let (xp2, ctx2) =
+                    transform_mir_value_to_tir(parameters.last().unwrap().fcopy(), ctx);
+
+                (
+                    TIRExpression::FunctionCall {
+                        e1: Box::new(xp),
+                        e2: Box::new(xp2),
+                    },
+                    ctx2,
+                )
             }
         }
     }
 }
 
-pub fn transform_mir_to_tir(mir: SSAExpression) -> TIRExpression {
+pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression, Context) {
     match mir {
-        SSAExpression::RegisterDecl { name, e1, e2 } => TIRExpression::VariableDecl {
-            name: name,
-            e1: Box::new(transform_mir_value_to_tir(e1)),
-            e2: Box::new(transform_mir_to_tir(*e2)),
-        },
-        SSAExpression::VariableDecl { name, e1, e2 } => TIRExpression::VariableDecl {
-            name: name,
-            e1: Box::new(transform_mir_value_to_tir(e1)),
-            e2: Box::new(transform_mir_to_tir(*e2)),
-        },
-        SSAExpression::ConstDecl { name, e1, e2 } => TIRExpression::VariableDecl {
-            name: name,
-            e1: Box::new(transform_mir_value_to_tir(e1)),
-            e2: Box::new(transform_mir_to_tir(*e2)),
-        },
+        SSAExpression::RegisterDecl { name, e1, e2 } => {
+            let (xp, ctx) = transform_mir_value_to_tir(e1, ctx);
+            let (xp2, ctx) = transform_mir_to_tir(*e2, ctx);
+
+            (
+                TIRExpression::VariableDecl {
+                    name: name,
+                    e1: Box::new(xp),
+                    e2: Box::new(xp2),
+                },
+                ctx,
+            )
+        }
+        SSAExpression::VariableDecl { name, e1, e2 } => todo!(),
+        SSAExpression::ConstDecl { name, e1, e2 } => todo!(),
         SSAExpression::FuncDecl { name, args, block } => {
             if args.len() == 1 {
-                TIRExpression::FunctionDefinition {
-                    arg_name: args[0].0.clone(),
-                    e1: Box::new(transform_mir_to_tir(SSAExpression::Block(block))),
-                }
+                let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);
+                (
+                    TIRExpression::FunctionDefinition {
+                        arg_name: args[0].0.clone(),
+                        e1: Box::new(xp),
+                    },
+                    ctx,
+                )
+            } else if args.len() == 0 {
+                let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);
+                (
+                    TIRExpression::FunctionDefinition {
+                        arg_name: "void".into(),
+                        e1: Box::new(xp),
+                    },
+                    ctx,
+                )
             } else {
-                TIRExpression::FunctionDefinition {
-                    arg_name: args[0].0.clone(),
-                    e1: Box::new(transform_mir_to_tir(SSAExpression::FuncDecl {
+                let (xp, ctx) = transform_mir_to_tir(
+                    SSAExpression::FuncDecl {
                         name,
                         args: args[1..]
                             .iter()
                             .map(|(x, y)| (x.clone(), y.fcopy()))
                             .collect(),
                         block,
-                    })),
-                }
+                    },
+                    ctx,
+                );
+
+                (
+                    TIRExpression::FunctionDefinition {
+                        arg_name: args[0].0.clone(),
+                        e1: Box::new(xp),
+                    },
+                    ctx,
+                )
             }
         }
         SSAExpression::Noop => todo!(),
-        SSAExpression::Return { val: _ } => todo!(),
+        SSAExpression::Return { val: _ } => (TIRExpression::Integer, ctx),
         SSAExpression::VariableReference {
             name: _,
             tmp_name: _,
             e2: _,
         } => todo!(),
-        SSAExpression::Block(eb) => transform_mir_to_tir(eb.last().unwrap().fcopy()),
+        SSAExpression::Block(eb) => transform_mir_to_tir(eb.last().unwrap().fcopy(), ctx),
         SSAExpression::ConditionalBlock {
             conditionals: _,
             else_block: _,

@@ -38,12 +38,13 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
         Expression::CharArray(_) => todo!(),
         Expression::Identifier(x) => {
             let id = x.0;
-            let tmp_name = generate_register_name();
-            SSAExpression::VariableReference {
-                name: id,
-                tmp_name: tmp_name.clone(),
-                e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
-            }
+            // let tmp_name = generate_register_name();
+            // SSAExpression::VariableReference {
+            //     name: id,
+            //     tmp_name: tmp_name.clone(),
+            //     e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
+            // }
+            k(SSAValue::RegisterReference(id))
         }
         Expression::Block(b) => SSAExpression::Block(parse_expression_block(b, k)),
         Expression::FunctionCall(f) => {

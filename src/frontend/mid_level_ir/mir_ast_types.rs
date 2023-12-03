@@ -75,12 +75,16 @@ impl FailureCopy for SSAExpression {
                 e2: Box::new(e2.fcopy()),
             },
             SSAExpression::FuncDecl {
-                name: _,
-                args: _,
-                block: _,
-            } => todo!(),
+                name,
+                args,
+                block,
+            } => SSAExpression::FuncDecl {
+                name: name.clone(),
+                args: args.iter().map(|(n, t)| (n.clone(), t.fcopy())).collect(),
+                block: block.iter().map(|x| x.fcopy()).collect(),
+            },
             SSAExpression::Noop => SSAExpression::Noop,
-            SSAExpression::Return { val: _ } => todo!(),
+            SSAExpression::Return { val } => SSAExpression::Return { val: val.fcopy() },
             SSAExpression::VariableReference { name, tmp_name, e2 } => {
                 SSAExpression::VariableReference {
                     name: name.clone(),
