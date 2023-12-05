@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // Definition of terminal symbols representing basic data types and identifiers
+use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 
 // When you are a failure, you copy. When you are a succes, you move
 pub trait FailureCopy {
@@ -39,11 +40,11 @@ pub struct VariableName(pub String);
 #[derive(Debug)]
 pub struct FunctionName(pub String);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TypeName(pub String);
 
 // Definition of types within the language, including arrays and simple types
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Type {
     Array {
         subtype: Box<Type>, // Array type with its subtype (element type)
@@ -52,6 +53,22 @@ pub enum Type {
     SimpleType {
         identifier: TypeName, // Simple type identified by a name (identifier)
     },
+}
+
+impl Type {
+    pub fn to_string(&self) -> String {
+        match self {
+            Type::Array { subtype, size } => format!("{};{}", subtype.to_string(), size),
+            Type::SimpleType { identifier } => identifier.0.clone(),
+        }
+    }
+
+    pub fn to_tir_type(&self) -> TIRType {
+        TIRType::MonoType(MonoType::Application {
+            c: self.to_string(),
+            types: vec![],
+        })
+    }
 }
 
 impl FailureCopy for Type {
@@ -223,10 +240,6 @@ pub enum Statement {
     ConstDecl(ConstDecl),       // Constant declaration statement
     VariableDecl(VariableDecl), // Constant declaration statement
     Expression(Expression),     // Expression statement
-    ConditionalStatementControlFlow {
-        if_blocks: Vec<ConditionalStatementBlock>, // List of else-if condition blocks
-        else_block: Option<Box<Block>>,            // Optional else block if no conditions are met
-    },
     FunctionDefinition(FunctionDefinition),
     ProcedureDefinition(ProcedureDefinition),
     Block(Block),
@@ -246,10 +259,6 @@ impl FailureCopy for Statement {
                 expression: v.expression.fcopy(),
             }),
             Self::Expression(e) => Statement::Expression(e.fcopy()),
-            Self::ConditionalStatementControlFlow {
-                if_blocks: _,
-                else_block: _,
-            } => todo!(),
             Self::FunctionDefinition(f) => {
                 let ret_type = f.return_type.fcopy();
 

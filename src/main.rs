@@ -1,9 +1,10 @@
 pub mod frontend;
 pub mod testing;
 
-use crate::frontend::high_level_ir::ast_types::FailureCopy;
+use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::type_system::context::Context;
+use crate::frontend::mid_level_ir::parsers::{parse_expression_block, parse_program};
+use crate::frontend::type_system::context::{Context, self};
 
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{transform_mir_to_tir, w_algo};
@@ -124,16 +125,17 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32, b: i32) i32 {
-            let m: i32 = scad_core_arithmetic_add_i32(x: a, y: 20);
-            let k: i32 = scad_core_arithmetic_add_i32(x: b, y: 50);
+            scad_core_arithmetic_add_i32(x: 2, y: 2)
+        };
 
-            scad_core_arithmetic_add_i32(x: m, y: k)
+        fn add_two_numbers_pt_two(a: i32, b: i32) i32 {
+            scad_core_arithmetic_add_i32(x: 1, y: 1)
         };
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
 
-    let code: Vec<SSAExpression> = parsed_result
+    let code: Vec<Statement> = parsed_result
         .flat_map(|pair| {
             if let Rule::EOI = pair.as_rule() {
                 None
@@ -141,20 +143,12 @@ fn main() -> std::io::Result<()> {
                 Some(parse(pair.into_inner()))
             }
         })
-        .map(|s| statement_l1_to_l2(s, Box::new(|_| SSAExpression::Noop)))
         .collect();
+    let code = parse_program(code, Box::new(|_| SSAExpression::Noop));
 
-    println!("{:#?}\n\n", code);
+    // println!("{:#?}\n\n", code);
 
     let mut consumable_context = Context::new();
-
-    consumable_context.add_type_for_name(
-        "m".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "f32".into(),
-            types: vec![],
-        }),
-    );
 
     consumable_context.add_type_for_name(
         "scad_core_arithmetic_add_i32".into(),
@@ -182,157 +176,13 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
-    let (xp, ctx) = transform_mir_to_tir(code[0].fcopy(), consumable_context);
+    let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
+    println!("{:#?}\n\n", tir);
 
-    println!("{:#?}\n\n", xp);
-
-    let (_sub, tpe) = w_algo(&ctx, &xp);
+    let (_, tpe, context) = w_algo(ctx, &tir);
 
     println!("{tpe:?}");
-
-    // let mut ctx = Context::new();
-
-    // ctx.add_type_for_name(
-    //     "egany".into(),
-    //     TIRType::PolyType(PolyType::TypeQuantifier {
-    //         alpha: "egany".into(),
-    //         sigma: Box::new(PolyType::MonoType(MonoType::Variable("egany".into()))),
-    //     }),
-    // );
-
-    // ctx.add_type_for_name(
-    //     "eg32".into(),
-    //     TIRType::MonoType(MonoType::Application {
-    //         c: "i32".into(),
-    //         types: vec![],
-    //     }),
-    // );
-    // ctx.add_type_for_name(
-    //     "eg64".into(),
-    //     TIRType::MonoType(MonoType::Application {
-    //         c: "i64".into(),
-    //         types: vec![],
-    //     }),
-    // );
-
-    // ctx.add_type_for_name(
-    //     "2".into(),
-    //     TIRType::PolyType(PolyType::TypeQuantifier {
-    //         alpha: "any_float".into(),
-    //         sigma: Box::new(PolyType::MonoType(MonoType::Variable("any_float".into()))),
-    //     }),
-    // );
-
-    // ctx.add_type_for_name(
-    //     "add32".into(),
-    //     TIRType::MonoType(MonoType::Application {
-    //         c: "->".into(),
-    //         types: vec![
-    //             MonoType::Application {
-    //                 c: "i32".into(),
-    //                 types: vec![],
-    //             },
-    //             MonoType::Application {
-    //                 c: "->".into(),
-    //                 types: vec![
-    //                     MonoType::Application {
-    //                         c: "i32".into(),
-    //                         types: vec![],
-    //                     },
-    //                     MonoType::Application {
-    //                         c: "i32".into(),
-    //                         types: vec![],
-    //                     },
-    //                 ],
-    //             },
-    //         ],
-    //     }),
-    // );
-
-    // ctx.add_type_for_name(
-    //     "add64".into(),
-    //     TIRType::MonoType(MonoType::Application {
-    //         c: "->".into(),
-    //         types: vec![
-    //             MonoType::Application {
-    //                 c: "i64".into(),
-    //                 types: vec![],
-    //             },
-    //             MonoType::Application {
-    //                 c: "->".into(),
-    //                 types: vec![
-    //                     MonoType::Application {
-    //                         c: "i64".into(),
-    //                         types: vec![],
-    //                     },
-    //                     MonoType::Application {
-    //                         c: "i64".into(),
-    //                         types: vec![],
-    //                     },
-    //                 ],
-    //             },
-    //         ],
-    //     }),
-    // );
-
-    // ctx.add_type_for_name(
-    //     "add_generic".into(),
-    //     TIRType::PolyType(PolyType::TypeQuantifier {
-    //         alpha: "a".into(),
-    //         sigma: Box::new(PolyType::MonoType(MonoType::Variable("a".into()))),
-    //     }),
-    // );
-
-    // ctx.add_type_for_name(
-    //     "add_generic".into(),
-    //     TIRType::PolyType(PolyType::TypeQuantifier {
-    //         alpha: "any_int".into(),
-    //         sigma: Box::new(PolyType::MonoType(MonoType::Application {
-    //             c: "->".into(),
-    //             types: vec![
-    //                 MonoType::Variable("any_int".into()),
-    //                 MonoType::Application {
-    //                     c: "->".into(),
-    //                     types: vec![
-    //                         MonoType::Variable("any_int".into()),
-    //                         MonoType::Variable("any_int".into()),
-    //                     ],
-    //                 },
-    //             ],
-    //         })),
-    //     }),
-    // );
-
-    // let (sub, tpe) = w_algo(
-    //     &ctx,
-    //     &TIRExpression::FunctionCall {
-    //         e1: Box::new(TIRExpression::FunctionCall {
-    //             e1: Box::new(TIRExpression::VariableReference {
-    //                 name: "addi64".into(),
-    //             }),
-    //             e2: Box::new(TIRExpression::VariableReference {
-    //                 name: "egany".into(),
-    //             }),
-    //         }),
-    //         e2: Box::new(TIRExpression::VariableReference {
-    //             name: "egany".into(),
-    //         }),
-    //     },
-    // );
-
-    // let (sub, tpe) = w_algo(&ctx, &TIRExpression::VariableDecl { name: "x".into(),
-    // e1: ,
-    // e2: () })
-
-    /*
-        let x : i32 = ( add(a, a) ==> add_i32_i32ri32(a, a))
-
-    */
-
-    // println!("{tpe:?}");
-    // println!("{sub:?}");
-
-    // let _new_substitution = Substitution::new();
+    println!("{context:#?}");
 
     Ok(())
 }

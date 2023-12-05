@@ -140,15 +140,19 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         }
         Statement::VariableDecl(_v) => todo!(),
         Statement::Expression(exp) => expression_l1_to_l2(exp, Box::new(|_| SSAExpression::Noop)),
-        Statement::FunctionDefinition(f) => SSAExpression::FuncDecl {
-            name: f.identifier.0,
-            args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            ret_type: Some(f.return_type),
-            block: Box::new(parse_expression_block(
-                f.block,
-                Box::new(|v| SSAExpression::Return { val: v }),
-            )),
-        },
+        Statement::FunctionDefinition(f) => {
+            let gen = |x| _k(x);
+            SSAExpression::FuncDecl {
+                name: f.identifier.0,
+                args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
+                ret_type: Some(f.return_type),
+                block: Box::new(parse_expression_block(
+                    f.block,
+                    Box::new(|v| SSAExpression::Return { val: v }),
+                )),
+                e2: Box::new(gen(SSAValue::Nothing)),
+            }
+        }
         Statement::ProcedureDefinition(_f) => {
             //     SSAExpression::FuncDecl {
             //     name: f.identifier.0,
@@ -157,10 +161,6 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             // };
             todo!()
         }
-        Statement::ConditionalStatementControlFlow {
-            if_blocks: _,
-            else_block: _,
-        } => todo!(),
         Statement::Block(_blk) => todo!(),
     }
 }

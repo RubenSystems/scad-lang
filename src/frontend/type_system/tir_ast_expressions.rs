@@ -1,3 +1,5 @@
+use crate::frontend::high_level_ir::ast_types::Type;
+
 #[derive(Debug)]
 pub enum TIRExpression {
     Integer,
@@ -7,6 +9,7 @@ pub enum TIRExpression {
     },
     VariableDecl {
         name: String,
+        type_hint: Option<Type>,
         e1: Box<TIRExpression>,
         e2: Box<TIRExpression>,
     },

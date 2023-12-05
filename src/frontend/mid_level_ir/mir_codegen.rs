@@ -25,6 +25,7 @@ impl SSAValue {
                     .collect();
                 format!("call i32 @{name}({})", parsed_params.join(","))
             }
+            SSAValue::Nothing => "".into(),
         }
     }
 }
@@ -72,8 +73,9 @@ impl SSAExpression {
             Self::FuncDecl {
                 name,
                 args,
-                ret_type: _,
+                ret_type,
                 block,
+                e2,
             } => {
                 let arg_defs: Vec<String> = args
                     .iter()

@@ -41,6 +41,7 @@ pub enum SSAExpression {
         args: Vec<(String, Type)>,
         ret_type: Option<Type>,
         block: Box<SSAExpression>,
+        e2: Box<SSAExpression>,
     },
 
     Noop,
@@ -66,11 +67,12 @@ impl FailureCopy for SSAExpression {
             Self::RegisterDecl { name, vtype, e1, e2 } => Self::RegisterDecl { name: name.clone(), vtype: vtype.as_ref().map(|x| x.fcopy()), e1: e1.fcopy(), e2: Box::new(e2.fcopy()) },
             Self::VariableDecl { name: _, vtype: _, e1: _, e2: _ } => todo!(),
             Self::ConstDecl { name: _, vtype: _, e1: _, e2: _ } => todo!(),
-            Self::FuncDecl { name, args, ret_type, block } => Self::FuncDecl {
+            Self::FuncDecl { name, args, ret_type, block , e2 }=> Self::FuncDecl {
                 name: name.clone(),
                 args: args.iter().map(|(n, t)| (n.clone(), t.fcopy())).collect(),
                 ret_type: ret_type.as_ref().map(|x| x.fcopy()),
                 block: Box::new(block.fcopy()),
+                e2: Box::new(e2.fcopy())
             },
             SSAExpression::Noop => SSAExpression::Noop,
             SSAExpression::Return { val } => SSAExpression::Return { val: val.fcopy() },
@@ -108,11 +110,13 @@ pub enum SSAValue {
         name: String,
         parameters: Vec<SSAValue>,
     },
+    Nothing,
 }
 
 impl FailureCopy for SSAValue {
     fn fcopy(&self) -> SSAValue {
         match self {
+            SSAValue::Nothing => SSAValue::Nothing,
             SSAValue::RegisterReference(r) => SSAValue::RegisterReference(r.clone()),
             SSAValue::VariableDereference(v) => SSAValue::VariableDereference(v.clone()),
             SSAValue::Integer(i) => SSAValue::Integer(*i),
