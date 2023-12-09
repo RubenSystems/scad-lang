@@ -10,22 +10,23 @@ pub fn generate_type_name() -> String {
     format!("t{val}")
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MonoType {
     Variable(String),
     Application { c: String, types: Vec<MonoType> },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PolyType {
     MonoType(MonoType),
     TypeQuantifier { alpha: String, sigma: Box<PolyType> },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TIRType {
     MonoType(MonoType),
     PolyType(PolyType),
+    ForwardDecleration(MonoType),
 }
 
 impl Instantiatable for MonoType {
@@ -60,6 +61,7 @@ impl FreeVarsGettable for TIRType {
         match self {
             TIRType::MonoType(m) => m.free_vars(),
             TIRType::PolyType(p) => p.free_vars(),
+            TIRType::ForwardDecleration(fd) => fd.free_vars(),
         }
     }
 }

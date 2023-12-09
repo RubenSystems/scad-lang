@@ -9,7 +9,7 @@
 /// reperesented in AST form and convert it into a L2 (MIR) code
 ///
 //===----------------------------------------------------------------------===//
-use crate::frontend::high_level_ir::ast_types::{Block, ExpressionBlock};
+use crate::frontend::high_level_ir::ast_types::{Block, ExpressionBlock, Statement};
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
@@ -35,6 +35,28 @@ pub fn op_to_llvm(op: &str) -> String {
         ">=" => "icmp sle".into(),
         "==" => "icmp eq".into(),
         _ => todo!(),
+    }
+}
+
+pub fn parse_program(prog: Vec<Statement>, k: ContinuationFunction) -> SSAExpression {
+    match prog.as_slice() {
+        [head] => {
+            match head {
+                // currently can only render functions
+                Statement::FunctionDefinition(_) | Statement::FunctionDecleration(_) => {
+                    statement_l1_to_l2(head.fcopy(), k)
+                }
+                _ => todo!(),
+            }
+        }
+        [head, rest @ ..] => match head {
+            Statement::FunctionDefinition(_) | Statement::FunctionDecleration(_) => {
+                let rest_clone: Vec<Statement> = rest.iter().map(|x| x.fcopy()).collect();
+                statement_l1_to_l2(head.fcopy(), Box::new(|_| parse_program(rest_clone, k)))
+            }
+            _ => todo!(),
+        },
+        [] => SSAExpression::Noop,
     }
 }
 
@@ -68,7 +90,10 @@ pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> 
                 }),
             )
         }
-        _ => unreachable!("Empty block"),
+        [] => {
+            let expression_clone = blk.expression.fcopy();
+            expression_l1_to_l2(expression_clone, k)
+        }
     }
 
     // let mut ssa_expressions: Vec<SSAExpression> = blk

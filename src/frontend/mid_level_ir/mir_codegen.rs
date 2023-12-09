@@ -25,6 +25,7 @@ impl SSAValue {
                     .collect();
                 format!("call i32 @{name}({})", parsed_params.join(","))
             }
+            SSAValue::Nothing => "".into(),
         }
     }
 }
@@ -32,21 +33,36 @@ impl SSAValue {
 impl SSAExpression {
     pub fn to_llvm_ir(&self, end_conditional_block: Option<String>, is_last_block: bool) -> String {
         match self {
-            SSAExpression::VariableDecl { name, e1, e2 } => {
+            SSAExpression::VariableDecl {
+                name,
+                vtype: _,
+                e1,
+                e2,
+            } => {
                 format!(
                     "%{name} = alloca i32, align 4\nstore i32 {}, ptr %{name}, align 4\n{}",
                     e1.to_llvm_ir(),
                     e2.to_llvm_ir(end_conditional_block, is_last_block)
                 )
             }
-            SSAExpression::ConstDecl { name, e1, e2 } => {
+            SSAExpression::ConstDecl {
+                name,
+                vtype: _,
+                e1,
+                e2,
+            } => {
                 format!(
                     "%{name} = alloca i32, align 4\nstore i32 {}, ptr %{name}, align 4\n{}",
                     e1.to_llvm_ir(),
                     e2.to_llvm_ir(end_conditional_block, is_last_block)
                 )
             }
-            SSAExpression::RegisterDecl { name, e1, e2 } => {
+            SSAExpression::RegisterDecl {
+                name,
+                vtype: _,
+                e1,
+                e2,
+            } => {
                 format!(
                     "%{name} = {} \n{}",
                     e1.to_llvm_ir(),
@@ -54,7 +70,13 @@ impl SSAExpression {
                 )
             }
             SSAExpression::Noop => "".into(),
-            SSAExpression::FuncDecl { name, args, block } => {
+            SSAExpression::FuncDecl {
+                name,
+                args,
+                ret_type,
+                block,
+                e2,
+            } => {
                 let arg_defs: Vec<String> = args
                     .iter()
                     .map(|(name, _tpe)| format!("i32 %{name}.arg"))
@@ -115,6 +137,12 @@ impl SSAExpression {
                     .collect();
                 rendered_blocks.join("\n")
             }
+            SSAExpression::FuncForwardDecl {
+                name,
+                args,
+                ret_type,
+                e2,
+            } => todo!(),
         }
     }
 }

@@ -9,26 +9,27 @@ pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
 pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpression {
     match exp {
-        Expression::InfixOperation(e) => {
-            let op = e.op.0.clone();
+        Expression::InfixOperation(_e) => {
+            todo!()
+            // let op = e.op.0.clone();
 
-            let k1 = |y1| {
-                let k2 = |y2| {
-                    let tmp_name = generate_register_name();
-                    let operation = SSAValue::Operation {
-                        lhs: Box::new(y1),
-                        op,
-                        rhs: Box::new(y2),
-                    };
-                    SSAExpression::RegisterDecl {
-                        name: tmp_name.clone(),
-                        e1: operation,
-                        e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
-                    }
-                };
-                expression_l1_to_l2(*e.rhs, Box::new(k2))
-            };
-            expression_l1_to_l2(*e.lhs, Box::new(k1))
+            // let k1 = |y1| {
+            //     let k2 = |y2| {
+            //         let tmp_name = generate_register_name();
+            //         let operation = SSAValue::Operation {
+            //             lhs: Box::new(y1),
+            //             op,
+            //             rhs: Box::new(y2),
+            //         };
+            //         SSAExpression::RegisterDecl {
+            //             name: tmp_name.clone(),
+            //             e1: operation,
+            //             e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
+            //         }
+            //     };
+            //     expression_l1_to_l2(*e.rhs, Box::new(k2))
+            // };
+            // expression_l1_to_l2(*e.lhs, Box::new(k1))
         }
         Expression::Float(f) => k(SSAValue::Float(f.0)),
         Expression::Integer(i) => k(SSAValue::Integer(i.0)),
@@ -58,6 +59,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 
                         SSAExpression::RegisterDecl {
                             name: tmp_name.clone(),
+                            vtype: None,
                             e1: SSAValue::FunctionCall {
                                 name: function_name,
                                 parameters: vals.iter().map(|x| x.fcopy()).collect(),
@@ -127,30 +129,30 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             let gen = |x| _k(x);
 
             expression_l1_to_l2(
-            c.expression,
-            Box::new(|val| SSAExpression::RegisterDecl {
-                name: c.identifier.0,
-                e1: val.fcopy(),
-                e2: Box::new(gen(val)),
-            }),
-        )},
-        Statement::VariableDecl(v) => expression_l1_to_l2(
-            v.expression,
-            Box::new(|val| SSAExpression::VariableDecl {
-                name: v.identifier.0,
-                e1: val,
-                e2: Box::new(SSAExpression::Noop),
-            }),
-        ),
+                c.expression,
+                Box::new(|val| SSAExpression::RegisterDecl {
+                    name: c.identifier.0,
+                    vtype: Some(c.subtype),
+                    e1: val.fcopy(),
+                    e2: Box::new(gen(val)),
+                }),
+            )
+        }
+        Statement::VariableDecl(_v) => todo!(),
         Statement::Expression(exp) => expression_l1_to_l2(exp, Box::new(|_| SSAExpression::Noop)),
-        Statement::FunctionDefinition(f) => SSAExpression::FuncDecl {
-            name: f.identifier.0,
-            args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            block: Box::new(parse_expression_block(
-                f.block,
-                Box::new(|v| SSAExpression::Return { val: v }),
-            )),
-        },
+        Statement::FunctionDefinition(f) => {
+            let gen = |x| _k(x);
+            SSAExpression::FuncDecl {
+                name: f.identifier.0,
+                args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
+                ret_type: Some(f.return_type),
+                block: Box::new(parse_expression_block(
+                    f.block,
+                    Box::new(|v| SSAExpression::Return { val: v }),
+                )),
+                e2: Box::new(gen(SSAValue::Nothing)),
+            }
+        }
         Statement::ProcedureDefinition(_f) => {
             //     SSAExpression::FuncDecl {
             //     name: f.identifier.0,
@@ -159,10 +161,16 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             // };
             todo!()
         }
-        Statement::ConditionalStatementControlFlow {
-            if_blocks: _,
-            else_block: _,
-        } => todo!(),
         Statement::Block(_blk) => todo!(),
+        Statement::FunctionDecleration(f) => {
+            let gen = |x| _k(x);
+            SSAExpression::FuncForwardDecl {
+                name: f.identifier.0,
+                args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
+                ret_type: Some(f.return_type),
+                e2: Box::new(gen(SSAValue::Nothing)),
+            }
+        }
+        Statement::ProcedureDecleration(_) => todo!(),
     }
 }
