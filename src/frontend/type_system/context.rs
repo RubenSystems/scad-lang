@@ -18,6 +18,10 @@ impl Context {
         self.env.insert(name, tpe);
     }
 
+    pub fn remove_type_for_name(&mut self, name: &String) {
+        self.env.remove(name);
+    }
+
     pub fn get_type_for_name(&self, name: &String) -> Option<&TIRType> {
         self.env.get(name)
     }

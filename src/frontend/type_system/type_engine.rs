@@ -10,7 +10,7 @@ use crate::frontend::{
 };
 
 use super::{
-    context::{Context, self},
+    context::Context,
     substitution::Substitution,
     tir_ast_expressions::TIRExpression,
     tir_types::{generate_type_name, MonoType, PolyType, TIRType},
@@ -110,6 +110,72 @@ pub fn transform_mir_function_decl_to_tir(
     }
 }
 
+pub fn transform_mir_function_forward_decl_to_tir(
+    args: Vec<Type>,
+    ret_type: Option<Type>,
+) -> MonoType {
+    match args.as_slice() {
+        [tpe] => {
+            let arg_type = if let TIRType::MonoType(m) = tpe.to_tir_type() {
+                m
+            } else {
+                unreachable!("how did you do that")
+            };
+            let return_type = match ret_type {
+                Some(dt) => {
+                    if let TIRType::MonoType(m) = dt.to_tir_type() {
+                        m
+                    } else {
+                        unreachable!("how did you do that")
+                    }
+                }
+                None => MonoType::Application {
+                    c: "void".into(),
+                    types: vec![],
+                },
+            };
+            MonoType::Application {
+                c: "->".into(),
+                types: vec![arg_type, return_type],
+            }
+        }
+        [tpe, rest @ ..] => {
+            let arg_type = if let TIRType::MonoType(m) = tpe.to_tir_type() {
+                m
+            } else {
+                unreachable!("how did you do that")
+            };
+            let rest: Vec<Type> = rest.iter().map(|arg| arg.fcopy()).collect();
+            let rest_decl = transform_mir_function_forward_decl_to_tir(rest, ret_type);
+
+            MonoType::Application {
+                c: "->".into(),
+                types: vec![arg_type, rest_decl],
+            }
+        }
+        [] => {
+            let return_type = match ret_type {
+                Some(dt) => {
+                    if let TIRType::MonoType(m) = dt.to_tir_type() {
+                        m
+                    } else {
+                        unreachable!("how did you do that")
+                    }
+                }
+                None => MonoType::Application {
+                    c: "void".into(),
+                    types: vec![],
+                },
+            };
+
+            MonoType::Application {
+                c: "->".into(),
+                types: vec![MonoType::Variable("*".into()), return_type],
+            }
+        }
+    }
+}
+
 pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression, Context) {
     match mir {
         SSAExpression::RegisterDecl {
@@ -123,7 +189,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
 
             (
                 TIRExpression::VariableDecl {
-                    name: name,
+                    name,
                     type_hint: vtype,
                     e1: Box::new(xp),
                     e2: Box::new(xp2),
@@ -176,13 +242,53 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             e1: _,
             e2: _,
         } => todo!(),
+        SSAExpression::FuncForwardDecl {
+            name,
+            args,
+            ret_type,
+            e2,
+        } => {
+            // let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, ctx);
+            // let (e2xp, ctx) = transform_mir_to_tir(*e2, ctx);
+            let mut new_ctx = ctx;
+            let tpe = transform_mir_function_forward_decl_to_tir(
+                args.into_iter().map(|(_, a)| a).collect(),
+                ret_type,
+            );
+
+            new_ctx.add_type_for_name(name, TIRType::ForwardDecleration(tpe));
+            let (e2tir, e2ctx) = transform_mir_to_tir(*e2, new_ctx);
+
+            (
+                TIRExpression::Void {
+                    e2: Box::new(e2tir),
+                },
+                e2ctx,
+            )
+        }
     }
 }
 
 pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType, Context) {
     match exp {
-        TIRExpression::Integer => (Substitution::new(), MonoType::Variable("any_int".into()), context),
-        TIRExpression::Float => (Substitution::new(), MonoType::Variable("any_float".into()), context),
+        TIRExpression::Integer => (
+            Substitution::new(),
+            MonoType::Variable("any_int".into()),
+            context,
+        ),
+        TIRExpression::Void { e2 } => {
+            let (s2, t2, sub_context) = w_algo(context, &e2);
+            (
+                Substitution::new(),
+                MonoType::Variable("void".into()),
+                sub_context,
+            )
+        }
+        TIRExpression::Float => (
+            Substitution::new(),
+            MonoType::Variable("any_float".into()),
+            context,
+        ),
         TIRExpression::VariableReference { name } => {
             let Some(tpe) = context.get_type_for_name(name) else {
                 unreachable!("Undefined variable reference {name} - epic fail")
@@ -196,20 +302,34 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             e1,
             e2,
         } => {
-            let (s1, t1, context) = w_algo(context, &e1);
-            match context.get_type_for_name(name) {
-                Some(x) => unreachable!("whoopsies: Attempting to reassign {name} to type: {t1:?} when it already exists as {x:?}"),
-                None => {},
+            let (s1, t1, mut context) = w_algo(context, &e1);
+
+            if let Some(x) = context.get_type_for_name(name) {
+                match x {
+                    TIRType::ForwardDecleration(_) => {
+                        context.remove_type_for_name(name);
+                    },
+                    TIRType::MonoType(m) => {
+                        let unification = unify(m, &t1);
+                        let Ok(sub) = unification else {
+                            unreachable!("butthead you tried to trick me but i am smarter then you");
+                        };
+
+                        context.add_type_for_name(name.clone(), sub.substitute(&TIRType::MonoType(t1.clone())));
+
+                    }
+                    _  => unreachable!("whoopsies: Attempting to reassign {name} to type: \n\n{t1:#?}\n\n when it already exists as \n\n{x:#?}")
+                }
             }
 
             if let Some(t) = type_hint {
                 let tir_t = match t.to_tir_type() {
                     TIRType::MonoType(x) => x,
-                    TIRType::PolyType(_) => unreachable!("POLY TYPES ARE NOT USERSPECIFIABLE YET!"),
+                    _ => unreachable!("How did you not typehint a monotype lol?"),
                 };
 
                 if tir_t != t1 {
-                    unreachable!("skill issue: attempting to assign expression of type: {t1:?} to variable of specified_type {tir_t:?}")
+                    unreachable!("skill issue: attempting to assign expression of type: \n\n{t1:#?} to variable of specified_type \n\n{tir_t:#?}")
                 }
             }
 
@@ -235,10 +355,12 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                     types: vec![t2, MonoType::Variable(b.clone())],
                 },
             );
+
+            let s3u = s3.unwrap();
             (
-                s3.merge(&s2.merge(&s1)),
-                s3.substitute_mono(&MonoType::Variable(b)),
-                context
+                s3u.merge(&s2.merge(&s1)),
+                s3u.substitute_mono(&MonoType::Variable(b)),
+                context,
             )
         }
         TIRExpression::FunctionDefinition { arg_name: name, e1 } => {
@@ -255,7 +377,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                     c: "->".into(),
                     types: vec![tir_new_type, tpe],
                 }),
-                new_context
+                new_context,
             )
         }
     }
@@ -288,19 +410,26 @@ fn contains(v: &MonoType, tpe: &String) -> bool {
     }
 }
 
-fn unify(t1: &MonoType, t2: &MonoType) -> Substitution {
+#[derive(Debug)]
+enum UnificationError {
+    InfiniteUnification,
+    UnifyingDifferentFunctions,
+    UnifyingSameFunctionDifferentArgCount,
+}
+
+fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError> {
     if let (MonoType::Variable(a), MonoType::Variable(b)) = (&t1, &t2) {
         if a == b {
-            return Substitution::new();
+            return Ok(Substitution::new());
         }
     };
     if let MonoType::Variable(a) = &t1 {
         if contains(&t2, a) {
-            unreachable!("infiniteee waaaaaaa")
+            return Err(UnificationError::InfiniteUnification);
         };
         let mut new_sub = Substitution::new();
         new_sub.add_sub(a.clone(), t2.clone());
-        return new_sub;
+        return Ok(new_sub);
     }
 
     if let MonoType::Variable(_) = &t2 {
@@ -313,17 +442,17 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Substitution {
     ) = (t1, t2)
     {
         if c1 != c2 {
-            unreachable!("Can't unify different functions")
+            return Err(UnificationError::UnifyingDifferentFunctions);
         }
         if t1.len() != t2.len() {
-            unreachable!("Can't unify functions with different numbers of args")
+            return Err(UnificationError::UnifyingSameFunctionDifferentArgCount);
         }
 
         let mut s = Substitution::new();
-        t1.iter()
-            .zip(t2.iter())
-            .for_each(|(a, b)| s = s.merge(&unify(&s.substitute_mono(a), &s.substitute_mono(b))));
-        return s;
+        for (a, b) in t1.iter().zip(t2.iter()) {
+            s = s.merge(&unify(&s.substitute_mono(a), &s.substitute_mono(b))?)
+        }
+        return Ok(s);
     }
 
     todo!()
@@ -339,5 +468,6 @@ fn instantiate(tpe: TIRType) -> MonoType {
     match tpe {
         TIRType::MonoType(m) => m.instantiate(&mut map),
         TIRType::PolyType(p) => p.instantiate(&mut map),
+        TIRType::ForwardDecleration(fd) => instantiate(TIRType::MonoType(fd)),
     }
 }

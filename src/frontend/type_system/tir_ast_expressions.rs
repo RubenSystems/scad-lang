@@ -3,6 +3,9 @@ use crate::frontend::high_level_ir::ast_types::Type;
 #[derive(Debug)]
 pub enum TIRExpression {
     Integer,
+    Void {
+        e2: Box<TIRExpression>,
+    },
     Float,
     VariableReference {
         name: String,

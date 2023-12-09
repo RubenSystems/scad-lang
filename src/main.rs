@@ -1,10 +1,10 @@
 pub mod frontend;
 pub mod testing;
 
-use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
+use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::mid_level_ir::parsers::{parse_expression_block, parse_program};
-use crate::frontend::type_system::context::{Context, self};
+use crate::frontend::mid_level_ir::parsers::parse_program;
+use crate::frontend::type_system::context::Context;
 
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{transform_mir_to_tir, w_algo};
@@ -124,8 +124,11 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
+        fn add_two_numbers(a: i32, b: i32) i32;
+        fn add_two_numbers_pt_two(a: i32, b: i32) i32;
+
         fn add_two_numbers(a: i32, b: i32) i32 {
-            scad_core_arithmetic_add_i32(x: 2, y: 2)
+            add_two_numbers(x: 1, y: 1)
         };
 
         fn add_two_numbers_pt_two(a: i32, b: i32) i32 {

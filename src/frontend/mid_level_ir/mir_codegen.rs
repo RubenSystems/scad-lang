@@ -33,7 +33,7 @@ impl SSAValue {
 impl SSAExpression {
     pub fn to_llvm_ir(&self, end_conditional_block: Option<String>, is_last_block: bool) -> String {
         match self {
-            Self::VariableDecl {
+            SSAExpression::VariableDecl {
                 name,
                 vtype: _,
                 e1,
@@ -45,7 +45,7 @@ impl SSAExpression {
                     e2.to_llvm_ir(end_conditional_block, is_last_block)
                 )
             }
-            Self::ConstDecl {
+            SSAExpression::ConstDecl {
                 name,
                 vtype: _,
                 e1,
@@ -57,7 +57,7 @@ impl SSAExpression {
                     e2.to_llvm_ir(end_conditional_block, is_last_block)
                 )
             }
-            Self::RegisterDecl {
+            SSAExpression::RegisterDecl {
                 name,
                 vtype: _,
                 e1,
@@ -70,7 +70,7 @@ impl SSAExpression {
                 )
             }
             SSAExpression::Noop => "".into(),
-            Self::FuncDecl {
+            SSAExpression::FuncDecl {
                 name,
                 args,
                 ret_type,
@@ -137,6 +137,12 @@ impl SSAExpression {
                     .collect();
                 rendered_blocks.join("\n")
             }
+            SSAExpression::FuncForwardDecl {
+                name,
+                args,
+                ret_type,
+                e2,
+            } => todo!(),
         }
     }
 }

@@ -146,6 +146,19 @@ pub struct ProcedureDefinition {
 }
 
 #[derive(Debug)]
+pub struct FunctionDecleration {
+    pub identifier: FunctionName,
+    pub args: Vec<(Identifier, Type)>,
+    pub return_type: Type,
+}
+
+#[derive(Debug)]
+pub struct ProcedureDecleration {
+    pub identifier: FunctionName,
+    pub args: Vec<(Identifier, Type)>,
+}
+
+#[derive(Debug)]
 pub struct FunctionCall {
     pub identifier: FunctionName,
     pub args: Vec<(Identifier, Expression)>,
@@ -242,6 +255,9 @@ pub enum Statement {
     Expression(Expression),     // Expression statement
     FunctionDefinition(FunctionDefinition),
     ProcedureDefinition(ProcedureDefinition),
+
+    FunctionDecleration(FunctionDecleration),
+    ProcedureDecleration(ProcedureDecleration),
     Block(Block),
 }
 
@@ -285,6 +301,20 @@ impl FailureCopy for Statement {
             Statement::Block(b) => Statement::Block(Block {
                 statements: b.statements.iter().map(|s| s.fcopy()).collect(),
             }),
+            Statement::FunctionDecleration(f) => {
+                let ret_type = f.return_type.fcopy();
+
+                Self::FunctionDecleration(FunctionDecleration {
+                    identifier: FunctionName(f.identifier.0.clone()),
+                    args: f
+                        .args
+                        .iter()
+                        .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
+                        .collect(),
+                    return_type: ret_type,
+                })
+            }
+            Statement::ProcedureDecleration(_) => todo!(),
         }
     }
 }

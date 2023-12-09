@@ -43,12 +43,14 @@ pub fn parse_program(prog: Vec<Statement>, k: ContinuationFunction) -> SSAExpres
         [head] => {
             match head {
                 // currently can only render functions
-                Statement::FunctionDefinition(_) => statement_l1_to_l2(head.fcopy(), k),
+                Statement::FunctionDefinition(_) | Statement::FunctionDecleration(_) => {
+                    statement_l1_to_l2(head.fcopy(), k)
+                }
                 _ => todo!(),
             }
         }
         [head, rest @ ..] => match head {
-            Statement::FunctionDefinition(_) => {
+            Statement::FunctionDefinition(_) | Statement::FunctionDecleration(_) => {
                 let rest_clone: Vec<Statement> = rest.iter().map(|x| x.fcopy()).collect();
                 statement_l1_to_l2(head.fcopy(), Box::new(|_| parse_program(rest_clone, k)))
             }

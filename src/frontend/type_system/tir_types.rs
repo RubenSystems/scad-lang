@@ -26,6 +26,7 @@ pub enum PolyType {
 pub enum TIRType {
     MonoType(MonoType),
     PolyType(PolyType),
+    ForwardDecleration(MonoType),
 }
 
 impl Instantiatable for MonoType {
@@ -60,6 +61,7 @@ impl FreeVarsGettable for TIRType {
         match self {
             TIRType::MonoType(m) => m.free_vars(),
             TIRType::PolyType(p) => p.free_vars(),
+            TIRType::ForwardDecleration(fd) => fd.free_vars(),
         }
     }
 }

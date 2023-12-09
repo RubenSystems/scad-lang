@@ -9,8 +9,8 @@ use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, Funct
 
 use super::ast_types::{
     ConditionalExpressionBlock, ConditionalStatementBlock, ConstDecl, Expression, ExpressionBlock,
-    Float, FunctionCall, Identifier, Integer, ProcedureDefinition, Statement, Type, TypeName,
-    VariableDecl, VariableName,
+    Float, FunctionCall, FunctionDecleration, Identifier, Integer, ProcedureDefinition, Statement,
+    Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -292,6 +292,30 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                     //     if_blocks,
                     //     else_block,
                     // }
+                }
+                Rule::forward_function_decleration => {
+                    let mut it: Pairs<'_, Rule> = primary.into_inner();
+                    let name: String = it.next().unwrap().as_str().into();
+                    let mut nxt = it.next().unwrap();
+                    let args = match nxt.as_rule() {
+                        Rule::function_def_params => {
+                            let res = Some(parse_function_def_args(nxt));
+                            nxt = it.next().unwrap();
+                            res
+                        }
+                        _ => None,
+                    }
+                    .unwrap_or(vec![]);
+
+                    let return_type = parse_type(nxt);
+
+                    let def = FunctionDecleration {
+                        identifier: FunctionName(name),
+                        args,
+                        return_type,
+                    };
+
+                    Statement::FunctionDecleration(def)
                 }
                 Rule::if_expression_block => {
                     let mut if_blocks: Vec<ConditionalExpressionBlock> = vec![];

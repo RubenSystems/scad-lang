@@ -28,6 +28,7 @@ impl Substitution {
         match tpe {
             TIRType::MonoType(m) => TIRType::MonoType(self.substitute_mono(m)),
             TIRType::PolyType(p) => TIRType::PolyType(self.substitute_poly(p)),
+            TIRType::ForwardDecleration(fd) => TIRType::MonoType(self.substitute_mono(fd)),
         }
     }
 
