@@ -18,12 +18,16 @@ impl Context {
         self.env.insert(name, tpe);
     }
 
-    pub fn remove_type_for_name(&mut self, name: &String) {
+    pub fn remove_type_for_name(&mut self, name: &str) {
         self.env.remove(name);
     }
 
-    pub fn get_type_for_name(&self, name: &String) -> Option<&TIRType> {
+    pub fn get_type_for_name(&self, name: &str) -> Option<&TIRType> {
         self.env.get(name)
+    }
+
+    pub fn has_type_for_name(&self, name: &str) -> bool {
+        self.env.contains_key(name)
     }
 
     pub fn applying_substitution(&self, sub: &Substitution) -> Self {

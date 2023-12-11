@@ -273,7 +273,10 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
     match exp {
         TIRExpression::Integer => (
             Substitution::new(),
-            MonoType::Variable("any_int".into()),
+            MonoType::Application {
+                c: "i32".into(),
+                types: vec![],
+            },
             context,
         ),
         TIRExpression::Void { e2 } => {
@@ -286,7 +289,10 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
         }
         TIRExpression::Float => (
             Substitution::new(),
-            MonoType::Variable("any_float".into()),
+            MonoType::Application {
+                c: "f32".into(),
+                types: vec![],
+            },
             context,
         ),
         TIRExpression::VariableReference { name } => {
@@ -311,11 +317,12 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                     },
                     TIRType::MonoType(m) => {
                         let unification = unify(m, &t1);
+
                         let Ok(sub) = unification else {
                             unreachable!("butthead you tried to trick me but i am smarter then you");
                         };
-
-                        context.add_type_for_name(name.clone(), sub.substitute(&TIRType::MonoType(t1.clone())));
+                        let substituted_val = sub.substitute(&TIRType::MonoType(t1.clone()));
+                        context.add_type_for_name(name.clone(), substituted_val);
 
                     }
                     _  => unreachable!("whoopsies: Attempting to reassign {name} to type: \n\n{t1:#?}\n\n when it already exists as \n\n{x:#?}")
@@ -334,11 +341,13 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             }
 
             let mut sub_context = context.applying_substitution(&s1).clone();
+            if !sub_context.has_type_for_name(name) {
+                sub_context.add_type_for_name(
+                    name.clone(),
+                    s1.substitute(&TIRType::PolyType(generalise(&context, t1))),
+                );
+            }
 
-            sub_context.add_type_for_name(
-                name.clone(),
-                s1.substitute(&TIRType::PolyType(generalise(&context, t1))),
-            );
             let (s2, t2, sub_context) = w_algo(sub_context, &e2);
 
             (s2.merge(&s1), t2, sub_context)
@@ -357,6 +366,8 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             );
 
             let s3u = s3.unwrap();
+
+
             (
                 s3u.merge(&s2.merge(&s1)),
                 s3u.substitute_mono(&MonoType::Variable(b)),

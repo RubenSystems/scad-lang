@@ -18,14 +18,8 @@ impl SSAValue {
                 rhs.to_llvm_ir()
             ),
             SSAValue::VariableDereference(name) => format!("%{name}"),
-            SSAValue::FunctionCall { name, parameters } => {
-                let parsed_params: Vec<String> = parameters
-                    .iter()
-                    .map(|x| format!("i32 noundef {}", x.to_llvm_ir()))
-                    .collect();
-                format!("call i32 @{name}({})", parsed_params.join(","))
-            }
             SSAValue::Nothing => "".into(),
+            SSAValue::FunctionCall { name, parameters } => todo!(),
         }
     }
 }
