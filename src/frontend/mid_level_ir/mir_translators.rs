@@ -9,49 +9,18 @@ pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
 pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpression {
     match exp {
-        Expression::InfixOperation(_e) => {
-            todo!()
-            // let op = e.op.0.clone();
-
-            // let k1 = |y1| {
-            //     let k2 = |y2| {
-            //         let tmp_name = generate_register_name();
-            //         let operation = SSAValue::Operation {
-            //             lhs: Box::new(y1),
-            //             op,
-            //             rhs: Box::new(y2),
-            //         };
-            //         SSAExpression::RegisterDecl {
-            //             name: tmp_name.clone(),
-            //             e1: operation,
-            //             e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
-            //         }
-            //     };
-            //     expression_l1_to_l2(*e.rhs, Box::new(k2))
-            // };
-            // expression_l1_to_l2(*e.lhs, Box::new(k1))
-        }
+        Expression::InfixOperation(_e) => todo!(),
         Expression::Float(f) => k(SSAValue::Float(f.0)),
         Expression::Integer(i) => k(SSAValue::Integer(i.0)),
         Expression::CharArray(_) => todo!(),
-        Expression::Identifier(x) => {
-            let id = x.0;
-            // let tmp_name = generate_register_name();
-            // SSAExpression::VariableReference {
-            //     name: id,
-            //     tmp_name: tmp_name.clone(),
-            //     e2: Box::new(k(SSAValue::VariableDereference(tmp_name))),
-            // }
-            println!("{id}");
-            k(SSAValue::RegisterReference(id))
-        }
+        Expression::Identifier(x) => k(SSAValue::RegisterReference(x.0)),
         Expression::Block(b) => SSAExpression::Block(Box::new(parse_expression_block(b, k))),
         Expression::FunctionCall(f) => {
             fn aux(
                 args: Vec<Expression>,
                 vals: Vec<SSAValue>,
                 function_name: String,
-                k: Box<dyn FnOnce(SSAValue) -> SSAExpression>,
+                k: ContinuationFunction,
             ) -> SSAExpression {
                 match args.as_slice() {
                     [] => {
@@ -92,34 +61,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
         Expression::ConditionalExpressionControlFlowControl {
             if_blocks: _,
             else_block: _,
-        } => {
-            todo!()
-            // let ifs: Vec<SSAExpression> = if_blocks
-            //     .iter()
-            //     .map(|x| {
-            //         let cond = x.condition.fcopy();
-            //         let block = x.block.fcopy();
-            //         expression_l1_to_l2(
-            //             cond,
-            //             Box::new(|cond_val| {
-            //                 SSAExpression::Conditional(SSAConditionalBlock {
-            //                     condition: cond_val,
-            //                     block: parse_expression_block(
-            //                         block,
-            //                         Box::new(|_| SSAExpression::Noop),
-            //                     ),
-            //                 })
-            //             }),
-            //         )
-            //     })
-            //     .collect();
-            // let el = parse_expression_block(*else_block, k);
-
-            // SSAExpression::ConditionalBlock {
-            //     conditionals: ifs,
-            //     else_block: Some(el),
-            // }
-        }
+        } => todo!()
     }
 }
 
@@ -139,7 +81,10 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             )
         }
         Statement::VariableDecl(_v) => todo!(),
-        Statement::Expression(exp) => expression_l1_to_l2(exp, Box::new(|_| SSAExpression::Noop)),
+        Statement::Expression(exp) => {
+            expression_l1_to_l2(exp, _k)
+
+        },
         Statement::FunctionDefinition(f) => {
             let gen = |x| _k(x);
             SSAExpression::FuncDecl {

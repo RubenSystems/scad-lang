@@ -125,15 +125,21 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32, b: i32) i32;
-        fn add_two_numbers_pt_two(a: i32, b: i32) i32;
+        fn add_two_numbers_2(a: i32, b: i32) i32;
 
+        
         fn add_two_numbers(a: i32, b: i32) i32 {
-            add_two_numbers(x: 1, y: 1)
-        };
-
-        fn add_two_numbers_pt_two(a: i32, b: i32) i32 {
+            add_two_numbers_2(x: 1.5, y: 15);
+            scad_core_arithmetic_add_i32(x: 1, y: 30);
             scad_core_arithmetic_add_i32(x: 1, y: 1)
         };
+
+        fn add_two_numbers_2(a: i32, b: i32) i32 {
+            scad_core_arithmetic_add_i32(x: 1, y: 15);
+            scad_core_arithmetic_add_i32(x: 1, y: 30);
+            scad_core_arithmetic_add_i32(x: 1, y: 1)
+        };
+
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
@@ -182,10 +188,10 @@ fn main() -> std::io::Result<()> {
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
     println!("{:#?}\n\n", tir);
 
-    let (_, tpe, context) = w_algo(ctx, &tir);
-
-    println!("{tpe:?}");
+    let (_, _, context) = w_algo(ctx, &tir);
+    
     println!("{context:#?}");
+    // println!("{tpe:?}");
 
     Ok(())
 }
