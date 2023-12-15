@@ -1,8 +1,11 @@
-use crate::frontend::high_level_ir::ast_types::{Expression, FailureCopy, Statement};
+use crate::frontend::{
+    high_level_ir::ast_types::{Expression, FailureCopy, Statement},
+    mid_level_ir::mir_ast_types::SSAConditionalBlock,
+};
 
 use super::{
-    mir_ast_types::{SSAExpression, SSAValue},
-    parsers::{generate_register_name, parse_expression_block},
+    mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
+    parsers::{generate_label_name, generate_register_name, parse_expression_block},
 };
 
 pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
@@ -11,6 +14,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
     match exp {
         Expression::InfixOperation(_e) => todo!(),
         Expression::Float(f) => k(SSAValue::Float(f.0)),
+        Expression::Bool(f) => k(SSAValue::Bool(f)),
         Expression::Integer(i) => k(SSAValue::Integer(i.0)),
         Expression::CharArray(_) => todo!(),
         Expression::Identifier(x) => k(SSAValue::RegisterReference(x.0)),
@@ -59,9 +63,55 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             )
         }
         Expression::ConditionalExpressionControlFlowControl {
-            if_blocks: _,
-            else_block: _,
-        } => todo!()
+            if_blocks,
+            else_block,
+        } => {
+            let gen = |x| k(x);
+            let block = if_blocks.first().unwrap().fcopy();
+
+            let if_label = generate_label_name();
+            let else_label = generate_label_name();
+
+            let inner_if_label = if_label.clone();
+            let inner_else_label = else_label.clone();
+
+            expression_l1_to_l2(
+                block.condition,
+                Box::new(move |condition| SSAExpression::ConditionalBlock {
+                    if_block: SSAConditionalBlock {
+                        condition,
+                        block: SSALabeledBlock {
+                            label: inner_if_label.clone(),
+                            block: Box::new(expression_l1_to_l2(
+                                Expression::Block(block.block),
+                                Box::new(move |res| SSAExpression::RegisterDecl {
+                                    name: format!("{inner_if_label}_result"),
+                                    vtype: None,
+                                    e1: res,
+                                    e2: Box::new(SSAExpression::Noop),
+                                }),
+                            )),
+                        },
+                    },
+                    else_block: SSALabeledBlock {
+                        label: inner_else_label.clone(),
+                        block: Box::new(expression_l1_to_l2(
+                            Expression::Block(*else_block),
+                            Box::new(move |res| SSAExpression::RegisterDecl {
+                                name: format!("{inner_else_label}_result"),
+                                vtype: None,
+                                e1: res,
+                                e2: Box::new(SSAExpression::Noop),
+                            }),
+                        )),
+                    },
+                    e2: Box::new(gen(SSAValue::Phi(vec![
+                        (format!("{if_label}_result"), if_label),
+                        (format!("{else_label}_result"), else_label),
+                    ]))),
+                }),
+            )
+        }
     }
 }
 
@@ -81,10 +131,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             )
         }
         Statement::VariableDecl(_v) => todo!(),
-        Statement::Expression(exp) => {
-            expression_l1_to_l2(exp, _k)
-
-        },
+        Statement::Expression(exp) => expression_l1_to_l2(exp, _k),
         Statement::FunctionDefinition(f) => {
             let gen = |x| _k(x);
             SSAExpression::FuncDecl {

@@ -206,10 +206,11 @@ pub struct InfixOperation {
 #[derive(Debug)]
 pub enum Expression {
     InfixOperation(InfixOperation), // Boolean expressions
-    Float(Float),                   // Floating-point values
-    Integer(Integer),               // Integer values
-    CharArray(CharArray),           // Character arrays
-    Identifier(Identifier),         // Identifiers
+    Float(Float),                   // Floating-point value
+    Bool(bool),
+    Integer(Integer),       // Integer values
+    CharArray(CharArray),   // Character arrays
+    Identifier(Identifier), // Identifiers
     ConditionalExpressionControlFlowControl {
         if_blocks: Vec<ConditionalExpressionBlock>, // List of else-if condition blocks
         else_block: Box<ExpressionBlock>,           // Optional else block if no conditions are met
@@ -231,9 +232,12 @@ impl FailureCopy for Expression {
             Expression::CharArray(_) => todo!(),
             Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
             Expression::ConditionalExpressionControlFlowControl {
-                if_blocks: _,
-                else_block: _,
-            } => todo!(),
+                if_blocks,
+                else_block,
+            } => Expression::ConditionalExpressionControlFlowControl {
+                if_blocks: if_blocks.iter().map(|x| x.fcopy()).collect(),
+                else_block: Box::new(else_block.fcopy()),
+            },
             Expression::FunctionCall(f) => Expression::FunctionCall(FunctionCall {
                 identifier: FunctionName(f.identifier.0.clone()),
                 args: f
@@ -243,6 +247,7 @@ impl FailureCopy for Expression {
                     .collect(),
             }),
             Expression::Block(b) => Expression::Block(b.fcopy()),
+            Expression::Bool(b) => Expression::Bool(*b),
         }
     }
 }

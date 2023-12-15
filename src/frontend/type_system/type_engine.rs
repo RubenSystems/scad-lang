@@ -19,6 +19,7 @@ use super::{
 
 pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
     match mir {
+        SSAValue::Bool(_) => (TIRExpression::Bool, ctx),
         SSAValue::RegisterReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
         SSAValue::VariableDereference(r) => (TIRExpression::VariableReference { name: r }, ctx),
         SSAValue::Integer(_) => (TIRExpression::Integer, ctx),
@@ -64,6 +65,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
             }
         }
         SSAValue::Nothing => (TIRExpression::Integer, ctx),
+        SSAValue::Phi(_) => todo!(),
     }
 }
 
@@ -226,8 +228,9 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
         } => todo!(),
         SSAExpression::Block(eb) => transform_mir_to_tir(*eb, ctx),
         SSAExpression::ConditionalBlock {
-            conditionals: _,
-            else_block: _,
+            if_block,
+            else_block,
+            e2,
         } => todo!(),
         SSAExpression::Conditional(_) => todo!(),
         SSAExpression::VariableDecl {
@@ -275,6 +278,14 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             Substitution::new(),
             MonoType::Application {
                 c: "i32".into(),
+                types: vec![],
+            },
+            context,
+        ),
+        TIRExpression::Bool => (
+            Substitution::new(),
+            MonoType::Application {
+                c: "bool".into(),
                 types: vec![],
             },
             context,
@@ -367,7 +378,6 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
 
             let s3u = s3.unwrap();
 
-
             (
                 s3u.merge(&s2.merge(&s1)),
                 s3u.substitute_mono(&MonoType::Variable(b)),
@@ -391,6 +401,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 new_context,
             )
         }
+        TIRExpression::Conditional { condition, if_block, else_block, e1 } => todo!(),
     }
 }
 

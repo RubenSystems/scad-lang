@@ -125,19 +125,14 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32, b: i32) i32;
-        fn add_two_numbers_2(a: i32, b: i32) i32;
 
         
         fn add_two_numbers(a: i32, b: i32) i32 {
-            add_two_numbers_2(x: 1.5, y: 15);
-            scad_core_arithmetic_add_i32(x: 1, y: 30);
-            scad_core_arithmetic_add_i32(x: 1, y: 1)
-        };
-
-        fn add_two_numbers_2(a: i32, b: i32) i32 {
-            scad_core_arithmetic_add_i32(x: 1, y: 15);
-            scad_core_arithmetic_add_i32(x: 1, y: 30);
-            scad_core_arithmetic_add_i32(x: 1, y: 1)
+            if true {
+                scad_core_arithmetic_add_i32(a: 10, b: 10)
+            } else {
+                scad_core_arithmetic_add_i32(a: 10, b: 10)
+            }
         };
 
     "#;
@@ -154,7 +149,7 @@ fn main() -> std::io::Result<()> {
         })
         .collect();
     let code = parse_program(code, Box::new(|_| SSAExpression::Noop));
-
+    println!("{code:#?}");
     // println!("{:#?}\n\n", code);
 
     let mut consumable_context = Context::new();
@@ -189,7 +184,7 @@ fn main() -> std::io::Result<()> {
     println!("{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(ctx, &tir);
-    
+
     println!("{context:#?}");
     // println!("{tpe:?}");
 

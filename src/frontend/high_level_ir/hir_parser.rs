@@ -318,34 +318,63 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                     Statement::FunctionDecleration(def)
                 }
                 Rule::if_expression_block => {
-                    let mut if_blocks: Vec<ConditionalExpressionBlock> = vec![];
-                    let else_block: Option<Box<ExpressionBlock>> = None;
-                    primary.into_inner().for_each(|c| match c.as_rule() {
-                        Rule::if_expression_block if if_blocks.is_empty() => {
-                            let cond_block = parse_expression_conditional_block(c);
-                            if_blocks.push(cond_block)
-                        }
-                        Rule::else_if_expression_block => {
-                            let cond_block = parse_expression_conditional_block(c);
-                            if_blocks.push(cond_block);
-                        }
-                        Rule::else_expression_block => todo!(),
-                        Rule::if_expression_block if !if_blocks.is_empty() => {
-                            unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
-                        }
-                        _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
-                    });
-                    Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
-                        if_blocks,
-                        else_block: else_block.unwrap_or_else(|| {
-                            unreachable!("Expression if must be paired with else!")
-                        }),
-                    })
+                    todo!()
+
+                    // let mut it = primary.into_inner();
+                    // let cond_block = parse_expression_conditional_block(it.next().unwrap());
+                    // todo!()
+
+                    // let mut if_blocks: Vec<ConditionalExpressionBlock> = vec![];
+                    // let else_block: Option<Box<ExpressionBlock>> = None;
+                    // println!("{:#?}", primary.clone().into_inner());
+                    // primary.into_inner().for_each(|c| match c.as_rule() {
+                    //     Rule::if_expression_block if if_blocks.is_empty() => {
+                    //         let cond_block = parse_expression_conditional_block(c);
+                    //         if_blocks.push(cond_block)
+                    //     }
+                    //     Rule::else_if_expression_block => {
+                    //         let cond_block = parse_expression_conditional_block(c);
+                    //         if_blocks.push(cond_block);
+                    //     }
+                    //     Rule::else_expression_block => todo!(),
+                    //     Rule::if_expression_block if !if_blocks.is_empty() => {
+                    //         unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
+                    //     }
+                    //     r => unreachable!("{r:#?} TRYING TO DO SOMETHING WEIRD!"),
+                    // });
+                    // Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
+                    //     if_blocks,
+                    //     else_block: else_block.unwrap_or_else(|| {
+                    //         unreachable!("Expression if must be paired with else!")
+                    //     }),
+                    // })
                 }
 
                 Rule::statement | Rule::top_level_statement | Rule::expression => {
                     parse(primary.into_inner())
                 }
+                Rule::if_expression_control_flow => {
+                    let it = primary.into_inner();
+                    let mut if_blocks = Vec::new();
+                    let mut else_block = None;
+                    for m in it {
+                        match m.as_rule() {
+                            Rule::if_expression_block | Rule::else_if_expression_block => {
+                                if_blocks.push(parse_expression_conditional_block(m))
+                            }
+                            Rule::else_expression_block => {
+                                else_block = Some(parse_expression_block(m));
+                            }
+                            x => todo!("rule {x:?}"),
+                        };
+                    }
+
+                    Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
+                        if_blocks,
+                        else_block: Box::new(else_block.unwrap()),
+                    })
+                }
+
                 rule => {
                     eprintln!("{}", primary);
                     unreachable!("Expr::parse expected atom, found {:?}", rule);
