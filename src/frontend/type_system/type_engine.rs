@@ -65,7 +65,9 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
             }
         }
         SSAValue::Nothing => (TIRExpression::Integer, ctx),
-        SSAValue::Phi(_) => todo!(),
+        SSAValue::Phi(p) => {
+            (TIRExpression::Phi(p), ctx)
+        },
     }
 }
 
@@ -231,7 +233,20 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             if_block,
             else_block,
             e2,
-        } => todo!(),
+        } => {
+            let (condition, ctx) = transform_mir_value_to_tir(if_block.condition, ctx);
+            let (if_block, ctx) = transform_mir_to_tir(*if_block.block.block, ctx);
+            let (else_block, ctx) = transform_mir_to_tir(*else_block.block, ctx);
+            let (e2, ctx) = transform_mir_to_tir(*e2, ctx);
+
+            (TIRExpression::Conditional { 
+                condition: Box::new(condition), 
+                if_block: Box::new(if_block), 
+                else_block: Box::new(else_block), 
+                e1: Box::new(e2)
+            }, 
+            ctx)
+        },
         SSAExpression::Conditional(_) => todo!(),
         SSAExpression::VariableDecl {
             name: _,
@@ -402,6 +417,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             )
         }
         TIRExpression::Conditional { condition, if_block, else_block, e1 } => todo!(),
+        TIRExpression::Phi(_) => todo!(),
     }
 }
 
