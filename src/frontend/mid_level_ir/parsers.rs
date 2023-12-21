@@ -20,10 +20,18 @@ use super::{
 
 static mut CURRENT_TMP_INDEX: u128 = 0;
 
-pub fn generate_register_name() -> String {
+pub fn get_number_for_name() -> u128 {
     let val = unsafe { CURRENT_TMP_INDEX };
     unsafe { CURRENT_TMP_INDEX += 1 };
-    format!("tmp{val}")
+    val
+}
+
+pub fn generate_register_name() -> String {
+    format!("tmp{}", get_number_for_name())
+}
+
+pub fn generate_label_name() -> String {
+    format!("label{}", get_number_for_name())
 }
 
 pub fn op_to_llvm(op: &str) -> String {

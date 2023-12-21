@@ -125,19 +125,14 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
         fn add_two_numbers(a: i32, b: i32) i32;
-        fn add_two_numbers_2(a: i32, b: i32) i32;
 
         
         fn add_two_numbers(a: i32, b: i32) i32 {
-            add_two_numbers_2(x: 1.5, y: 15);
-            scad_core_arithmetic_add_i32(x: 1, y: 30);
-            scad_core_arithmetic_add_i32(x: 1, y: 1)
-        };
-
-        fn add_two_numbers_2(a: i32, b: i32) i32 {
-            scad_core_arithmetic_add_i32(x: 1, y: 15);
-            scad_core_arithmetic_add_i32(x: 1, y: 30);
-            scad_core_arithmetic_add_i32(x: 1, y: 1)
+            if true {
+                10.8
+            } else {
+                11.2
+            }
         };
 
     "#;
@@ -154,7 +149,7 @@ fn main() -> std::io::Result<()> {
         })
         .collect();
     let code = parse_program(code, Box::new(|_| SSAExpression::Noop));
-
+    println!("{code:#?}");
     // println!("{:#?}\n\n", code);
 
     let mut consumable_context = Context::new();
@@ -185,11 +180,26 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
+    consumable_context.add_type_for_name(
+        "true".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "bool".into(),
+            types: vec![],
+        }),
+    );
+    consumable_context.add_type_for_name(
+        "false".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "bool".into(),
+            types: vec![],
+        }),
+    );
+
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
     println!("{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(ctx, &tir);
-    
+
     println!("{context:#?}");
     // println!("{tpe:?}");
 

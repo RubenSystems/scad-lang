@@ -1,16 +1,31 @@
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Type};
 
 #[derive(Debug)]
+pub struct SSALabeledBlock {
+    pub label: String,
+    pub block: Box<SSAExpression>,
+}
+
+impl FailureCopy for SSALabeledBlock {
+    fn fcopy(&self) -> Self {
+        SSALabeledBlock {
+            label: self.label.clone(),
+            block: Box::new(self.block.fcopy()),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct SSAConditionalBlock {
     pub condition: SSAValue,
-    pub block: Box<SSAExpression>,
+    pub block: SSALabeledBlock,
 }
 
 impl FailureCopy for SSAConditionalBlock {
     fn fcopy(&self) -> Self {
         SSAConditionalBlock {
             condition: self.condition.fcopy(),
-            block: Box::new(self.block.fcopy()),
+            block: self.block.fcopy(),
         }
     }
 }
@@ -60,8 +75,9 @@ pub enum SSAExpression {
     },
     Block(Box<SSAExpression>),
     ConditionalBlock {
-        conditionals: Vec<SSAExpression>,
-        else_block: Option<Vec<SSAExpression>>,
+        if_block: SSAConditionalBlock,
+        else_block: SSALabeledBlock,
+        e2: Box<SSAExpression>,
     },
     Conditional(SSAConditionalBlock),
 }
@@ -116,8 +132,9 @@ impl FailureCopy for SSAExpression {
             }
             SSAExpression::Block(b) => SSAExpression::Block(Box::new(b.fcopy())),
             SSAExpression::ConditionalBlock {
-                conditionals: _,
+                if_block: _,
                 else_block: _,
+                e2: _,
             } => todo!(),
             SSAExpression::Conditional(c) => SSAExpression::Conditional(c.fcopy()),
             SSAExpression::FuncForwardDecl {
@@ -139,8 +156,10 @@ impl FailureCopy for SSAExpression {
 pub enum SSAValue {
     RegisterReference(String),
     VariableDereference(String),
+    Phi(Vec<(String, String)>),
     Integer(i128),
     Float(f64),
+    Bool(bool),
     Operation {
         lhs: Box<SSAValue>,
         op: String,
@@ -170,6 +189,8 @@ impl FailureCopy for SSAValue {
                 name: name.clone(),
                 parameters: parameters.iter().map(|x| x.fcopy()).collect(),
             },
+            SSAValue::Bool(b) => SSAValue::Bool(*b),
+            SSAValue::Phi(v) => SSAValue::Phi(v.clone()),
         }
     }
 }
