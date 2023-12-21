@@ -128,11 +128,13 @@ fn main() -> std::io::Result<()> {
 
         
         fn add_two_numbers(a: i32, b: i32) i32 {
-            if true {
-                10.8
-            } else {
-                11.2
-            }
+            let m: i32 = 100; 
+
+            let k: i32 = if true {m} else {
+                scad_core_arithmetic_add_i32(a: m, b: 1)
+            };
+
+            10
         };
 
     "#;
