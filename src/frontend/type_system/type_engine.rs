@@ -65,9 +65,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
             }
         }
         SSAValue::Nothing => (TIRExpression::Integer, ctx),
-        SSAValue::Phi(p) => {
-            (TIRExpression::Phi(p), ctx)
-        },
+        SSAValue::Phi(p) => (TIRExpression::Phi(p), ctx),
     }
 }
 
@@ -204,7 +202,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
         SSAExpression::FuncDecl {
             name,
             args,
-            ret_type,
+            ret_type: _,
             block,
             e2,
         } => {
@@ -239,14 +237,16 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             let (else_block, ctx) = transform_mir_to_tir(*else_block.block, ctx);
             let (e2, ctx) = transform_mir_to_tir(*e2, ctx);
 
-            (TIRExpression::Conditional { 
-                condition: Box::new(condition), 
-                if_block: Box::new(if_block), 
-                else_block: Box::new(else_block), 
-                e1: Box::new(e2)
-            }, 
-            ctx)
-        },
+            (
+                TIRExpression::Conditional {
+                    condition: Box::new(condition),
+                    if_block: Box::new(if_block),
+                    else_block: Box::new(else_block),
+                    e1: Box::new(e2),
+                },
+                ctx,
+            )
+        }
         SSAExpression::Conditional(_) => todo!(),
         SSAExpression::VariableDecl {
             name: _,
@@ -306,7 +306,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             context,
         ),
         TIRExpression::Void { e2 } => {
-            let (s2, t2, sub_context) = w_algo(context, &e2);
+            let (_s2, _t2, sub_context) = w_algo(context, &e2);
             (
                 Substitution::new(),
                 MonoType::Variable("void".into()),
@@ -407,17 +407,58 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
             let (sub, tpe, new_context) = w_algo(new_context, e1);
 
-            (
-                sub.clone(),
-                sub.substitute_mono(&MonoType::Application {
-                    c: "->".into(),
-                    types: vec![tir_new_type, tpe],
-                }),
-                new_context,
-            )
+            let x = sub.substitute_mono(&MonoType::Application {
+                c: "->".into(),
+                types: vec![tir_new_type, tpe],
+            });
+
+            (sub, x, new_context)
         }
-        TIRExpression::Conditional { condition, if_block, else_block, e1 } => todo!(),
-        TIRExpression::Phi(_) => todo!(),
+        TIRExpression::Conditional {
+            condition,
+            if_block,
+            else_block,
+            e1,
+        } => {
+            // 1 type conditon ensure bool
+            let boolean = MonoType::Application {
+                c: "bool".into(),
+                types: vec![],
+            };
+            let (_, cond_mt, ctx) = w_algo(context, &condition);
+            if cond_mt != boolean {
+                unreachable!("Condition for if statement is not a boolean!");
+            }
+            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), &if_block);
+            let (_, else_mt, ctx) = w_algo(if_ctx, &else_block);
+   
+
+            if if_mt != else_mt {
+                unreachable!("If and else branches must have the same type!");
+            }
+
+            let (e2_sub, e2_mt, e2_ctx) = w_algo(ctx, e1);
+            (e2_sub, e2_mt, e2_ctx)
+        }
+        TIRExpression::Phi(p) => {
+            println!("{context:#?}");
+            let types: Vec<TIRType> = p.iter().map(|(name, _)| context.get_type_for_name(name).unwrap().clone()).collect();
+            if !types.iter().all(|x| *x == types[0]) {
+                unreachable!("you issue: All branches on phi node are not equal and so you have done something wrong");
+            }
+
+            let ret = match &types[0] {
+                TIRType::MonoType(mt) => mt.clone(),
+                TIRType::PolyType(_) => instantiate(types[0].clone()),
+                TIRType::ForwardDecleration(_) => todo!(),
+            };
+
+            (
+                Substitution::new(), 
+                ret,
+                context
+            )
+        },
     }
 }
 

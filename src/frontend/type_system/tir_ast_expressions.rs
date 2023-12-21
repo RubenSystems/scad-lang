@@ -7,7 +7,7 @@ pub enum TIRExpression {
     Void {
         e2: Box<TIRExpression>,
     },
-    Phi (Vec<(String, String)>),
+    Phi(Vec<(String, String)>),
     Float,
     VariableReference {
         name: String,

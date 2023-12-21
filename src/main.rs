@@ -129,9 +129,9 @@ fn main() -> std::io::Result<()> {
         
         fn add_two_numbers(a: i32, b: i32) i32 {
             if true {
-                scad_core_arithmetic_add_i32(a: 10, b: 10)
+                10.8
             } else {
-                scad_core_arithmetic_add_i32(a: 10, b: 10)
+                11.2
             }
         };
 
@@ -177,6 +177,21 @@ fn main() -> std::io::Result<()> {
                     ],
                 },
             ],
+        }),
+    );
+
+    consumable_context.add_type_for_name(
+        "true".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "bool".into(),
+            types: vec![],
+        }),
+    );
+    consumable_context.add_type_for_name(
+        "false".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "bool".into(),
+            types: vec![],
         }),
     );
 

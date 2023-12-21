@@ -132,9 +132,9 @@ impl FailureCopy for SSAExpression {
             }
             SSAExpression::Block(b) => SSAExpression::Block(Box::new(b.fcopy())),
             SSAExpression::ConditionalBlock {
-                if_block,
-                else_block,
-                e2,
+                if_block: _,
+                else_block: _,
+                e2: _,
             } => todo!(),
             SSAExpression::Conditional(c) => SSAExpression::Conditional(c.fcopy()),
             SSAExpression::FuncForwardDecl {

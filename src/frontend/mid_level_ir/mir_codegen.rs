@@ -1,5 +1,3 @@
-use crate::frontend::mid_level_ir::parsers::generate_register_name;
-
 use super::{
     mir_ast_types::{SSAExpression, SSAValue},
     parsers::op_to_llvm,
@@ -19,7 +17,10 @@ impl SSAValue {
             ),
             SSAValue::VariableDereference(name) => format!("%{name}"),
             SSAValue::Nothing => "".into(),
-            SSAValue::FunctionCall { name, parameters } => todo!(),
+            SSAValue::FunctionCall {
+                name: _,
+                parameters: _,
+            } => todo!(),
             SSAValue::Bool(_) => todo!(),
             SSAValue::Phi(_) => todo!(),
         }
@@ -69,9 +70,9 @@ impl SSAExpression {
             SSAExpression::FuncDecl {
                 name,
                 args,
-                ret_type,
+                ret_type: _,
                 block,
-                e2,
+                e2: _,
             } => {
                 let arg_defs: Vec<String> = args
                     .iter()
@@ -101,17 +102,17 @@ impl SSAExpression {
                 e2.to_llvm_ir(end_conditional_block, is_last_block)
             ),
             SSAExpression::Block(b) => b.to_llvm_ir(end_conditional_block.clone(), is_last_block),
-            SSAExpression::Conditional(c) => todo!(),
+            SSAExpression::Conditional(_c) => todo!(),
             SSAExpression::ConditionalBlock {
-                if_block,
-                else_block,
-                e2,
+                if_block: _,
+                else_block: _,
+                e2: _,
             } => todo!(),
             SSAExpression::FuncForwardDecl {
-                name,
-                args,
-                ret_type,
-                e2,
+                name: _,
+                args: _,
+                ret_type: _,
+                e2: _,
             } => todo!(),
         }
     }
