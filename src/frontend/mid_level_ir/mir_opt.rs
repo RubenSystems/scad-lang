@@ -20,13 +20,16 @@ fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAV
         SSAValue::Integer(i) => SSAValue::Integer(i),
         SSAValue::Float(f) => SSAValue::Float(f),
         SSAValue::Bool(b) => SSAValue::Bool(b),
-        SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
-            name,
-            parameters: parameters
-                .into_iter()
-                .map(|x| mir_val_variable_fold(x, env))
-                .collect(),
-        },
+        SSAValue::FunctionCall { name, parameters } => {
+            println!("{env:#?}");
+            SSAValue::FunctionCall {
+                name,
+                parameters: parameters
+                    .into_iter()
+                    .map(|x| mir_val_variable_fold(x, env))
+                    .collect(),
+            }
+        }
         SSAValue::Nothing => SSAValue::Nothing,
         _ => todo!(),
     }
@@ -47,7 +50,7 @@ pub fn mir_variable_fold(
             let (optimised_rest, mut env) = mir_variable_fold(*e2, env);
 
             env.insert(name.clone(), optimised_val.fcopy());
-
+            println!("{env:#?}==");
             (
                 SSAExpression::RegisterDecl {
                     name,
@@ -125,19 +128,15 @@ pub fn mir_variable_fold(
             else_block,
             e2,
         } => {
-            let ev1: HashMap<String, SSAValue> = env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
-            let ev2: HashMap<String, SSAValue> = env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+            let ev1: HashMap<String, SSAValue> =
+                env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+            let ev2: HashMap<String, SSAValue> =
+                env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
             let op_if = SSAConditionalBlock {
                 condition: mir_val_variable_fold(if_block.condition, &env),
                 block: SSALabeledBlock {
                     label: if_block.block.label,
-                    block: Box::new(
-                        mir_variable_fold(
-                            *if_block.block.block,
-                            env,
-                        )
-                        .0,
-                    ),
+                    block: Box::new(mir_variable_fold(*if_block.block.block, env).0),
                 },
             };
 
@@ -148,11 +147,14 @@ pub fn mir_variable_fold(
 
             let (e2, env) = mir_variable_fold(*e2, ev2);
 
-            (SSAExpression::ConditionalBlock {
-                if_block: op_if,
-                else_block: op_else,
-                e2: Box::new(e2),
-            }, env)
+            (
+                SSAExpression::ConditionalBlock {
+                    if_block: op_if,
+                    else_block: op_else,
+                    e2: Box::new(e2),
+                },
+                env,
+            )
         }
         SSAExpression::Conditional(_) => todo!(),
     }
