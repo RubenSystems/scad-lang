@@ -431,7 +431,6 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             }
             let (_, if_mt, if_ctx) = w_algo(ctx.clone(), &if_block);
             let (_, else_mt, ctx) = w_algo(if_ctx, &else_block);
-   
 
             if if_mt != else_mt {
                 unreachable!("If and else branches must have the same type!");
@@ -441,8 +440,15 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             (e2_sub, e2_mt, e2_ctx)
         }
         TIRExpression::Phi(p) => {
-            println!("{context:#?}");
-            let types: Vec<TIRType> = p.iter().map(|(name, _)| context.get_type_for_name(name).unwrap().clone()).collect();
+            let types: Vec<TIRType> = p
+                .iter()
+                .map(|phi| {
+                    context
+                        .get_type_for_name(&phi.register_name)
+                        .unwrap()
+                        .clone()
+                })
+                .collect();
             if !types.iter().all(|x| *x == types[0]) {
                 unreachable!("you issue: All branches on phi node are not equal and so you have done something wrong");
             }
@@ -453,12 +459,8 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 TIRType::ForwardDecleration(_) => todo!(),
             };
 
-            (
-                Substitution::new(), 
-                ret,
-                context
-            )
-        },
+            (Substitution::new(), ret, context)
+        }
     }
 }
 

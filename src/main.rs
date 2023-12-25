@@ -3,6 +3,7 @@ pub mod testing;
 
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
+use crate::frontend::mid_level_ir::mir_opt::mir_variable_fold;
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
@@ -12,6 +13,7 @@ use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::stat
 
 use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 
@@ -130,18 +132,16 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32 {
             let m: i32 = 100; 
 
-            let k: i32 = if true {m} else {
+            if true {m} else {
                 scad_core_arithmetic_add_i32(a: m, b: 1)
-            };
-
-            10
+            }
         };
 
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
 
-    let code: Vec<Statement> = parsed_result
+    let raw_statements: Vec<Statement> = parsed_result
         .flat_map(|pair| {
             if let Rule::EOI = pair.as_rule() {
                 None
@@ -150,9 +150,10 @@ fn main() -> std::io::Result<()> {
             }
         })
         .collect();
-    let code = parse_program(code, Box::new(|_| SSAExpression::Noop));
-    println!("{code:#?}");
+    let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
     // println!("{:#?}\n\n", code);
+    let code = mir_variable_fold(unop_code, HashMap::new());
+    println!("{code:#?}");
 
     let mut consumable_context = Context::new();
 
@@ -197,12 +198,12 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
-    let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
+    let (tir, ctx) = transform_mir_to_tir(code.0, consumable_context);
     println!("{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(ctx, &tir);
 
-    println!("{context:#?}");
+    // println!("{context:#?}");
     // println!("{tpe:?}");
 
     Ok(())

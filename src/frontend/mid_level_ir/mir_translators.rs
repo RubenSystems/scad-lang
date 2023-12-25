@@ -4,7 +4,7 @@ use crate::frontend::{
 };
 
 use super::{
-    mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
+    mir_ast_types::{Phi, SSAExpression, SSALabeledBlock, SSAValue},
     parsers::{generate_label_name, generate_register_name, parse_expression_block},
 };
 
@@ -106,8 +106,14 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                         )),
                     },
                     e2: Box::new(gen(SSAValue::Phi(vec![
-                        (format!("{if_label}_result"), if_label),
-                        (format!("{else_label}_result"), else_label),
+                        Phi {
+                            register_name: format!("{if_label}_result"),
+                            branch_name: if_label,
+                        },
+                        Phi {
+                            register_name: format!("{else_label}_result"),
+                            branch_name: else_label,
+                        },
                     ]))),
                 }),
             )

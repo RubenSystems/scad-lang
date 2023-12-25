@@ -152,11 +152,17 @@ impl FailureCopy for SSAExpression {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Phi {
+    pub branch_name: String,
+    pub register_name: String,
+}
+
 #[derive(Debug)]
 pub enum SSAValue {
     RegisterReference(String),
     VariableDereference(String),
-    Phi(Vec<(String, String)>),
+    Phi(Vec<Phi>),
     Integer(i128),
     Float(f64),
     Bool(bool),

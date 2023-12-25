@@ -1,4 +1,4 @@
-use crate::frontend::high_level_ir::ast_types::Type;
+use crate::frontend::{high_level_ir::ast_types::Type, mid_level_ir::mir_ast_types::Phi};
 
 #[derive(Debug)]
 pub enum TIRExpression {
@@ -7,7 +7,7 @@ pub enum TIRExpression {
     Void {
         e2: Box<TIRExpression>,
     },
-    Phi(Vec<(String, String)>),
+    Phi(Vec<Phi>),
     Float,
     VariableReference {
         name: String,
