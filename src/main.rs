@@ -201,7 +201,7 @@ fn main() -> std::io::Result<()> {
     let (tir, ctx) = transform_mir_to_tir(code.0, consumable_context);
     println!("{:#?}\n\n", tir);
 
-    let (_, _, context) = w_algo(ctx, &tir);
+    let (_, _, _context) = w_algo(ctx, &tir);
 
     // println!("{context:#?}");
     // println!("{tpe:?}");

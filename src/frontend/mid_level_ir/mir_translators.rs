@@ -107,11 +107,11 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     },
                     e2: Box::new(gen(SSAValue::Phi(vec![
                         Phi {
-                            register_name: format!("{if_label}_result"),
+                            value: SSAValue::RegisterReference(format!("{if_label}_result")),
                             branch_name: if_label,
                         },
                         Phi {
-                            register_name: format!("{else_label}_result"),
+                            value: SSAValue::RegisterReference(format!("{else_label}_result")),
                             branch_name: else_label,
                         },
                     ]))),

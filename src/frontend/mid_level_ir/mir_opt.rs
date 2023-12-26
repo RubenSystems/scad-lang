@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::frontend::{
-    high_level_ir::ast_types::FailureCopy, mid_level_ir::mir_ast_types::SSALabeledBlock,
+    high_level_ir::ast_types::FailureCopy,
+    mid_level_ir::mir_ast_types::{Phi, SSALabeledBlock},
 };
 
 use super::mir_ast_types::{SSAConditionalBlock, SSAExpression, SSAValue};
@@ -16,20 +17,28 @@ fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAV
             Some(nval) => nval.fcopy(),
             None => val,
         },
-        SSAValue::Phi(p) => SSAValue::Phi(p),
+        SSAValue::Phi(p) => {
+            println!("HI!{env:#?}");
+            println!("YO!{p:#?}");
+            SSAValue::Phi(
+                p.into_iter()
+                    .map(|x| Phi {
+                        branch_name: x.branch_name,
+                        value: mir_val_variable_fold(x.value, env),
+                    })
+                    .collect(),
+            )
+        }
         SSAValue::Integer(i) => SSAValue::Integer(i),
         SSAValue::Float(f) => SSAValue::Float(f),
         SSAValue::Bool(b) => SSAValue::Bool(b),
-        SSAValue::FunctionCall { name, parameters } => {
-            println!("{env:#?}");
-            SSAValue::FunctionCall {
-                name,
-                parameters: parameters
-                    .into_iter()
-                    .map(|x| mir_val_variable_fold(x, env))
-                    .collect(),
-            }
-        }
+        SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
+            name,
+            parameters: parameters
+                .into_iter()
+                .map(|x| mir_val_variable_fold(x, env))
+                .collect(),
+        },
         SSAValue::Nothing => SSAValue::Nothing,
         _ => todo!(),
     }
@@ -37,7 +46,7 @@ fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAV
 
 pub fn mir_variable_fold(
     expr: SSAExpression,
-    env: HashMap<String, SSAValue>,
+    mut env: HashMap<String, SSAValue>,
 ) -> (SSAExpression, HashMap<String, SSAValue>) {
     match expr {
         SSAExpression::RegisterDecl {
@@ -47,10 +56,10 @@ pub fn mir_variable_fold(
             e2,
         } => {
             let optimised_val = mir_val_variable_fold(e1, &env);
-            let (optimised_rest, mut env) = mir_variable_fold(*e2, env);
-
             env.insert(name.clone(), optimised_val.fcopy());
-            println!("{env:#?}==");
+
+            let (optimised_rest, env) = mir_variable_fold(*e2, env);
+
             (
                 SSAExpression::RegisterDecl {
                     name,
@@ -62,16 +71,16 @@ pub fn mir_variable_fold(
             )
         }
         SSAExpression::VariableDecl {
-            name,
-            vtype,
-            e1,
-            e2,
+            name: _,
+            vtype: _,
+            e1: _,
+            e2: _,
         } => todo!(),
         SSAExpression::ConstDecl {
-            name,
-            vtype,
-            e1,
-            e2,
+            name: _,
+            vtype: _,
+            e1: _,
+            e2: _,
         } => todo!(),
         SSAExpression::FuncDecl {
             name,
@@ -82,7 +91,7 @@ pub fn mir_variable_fold(
         } => {
             let env_cpy1 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
             let env_cpy2 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
-            let (op_block, env) = mir_variable_fold(*block, env_cpy1.collect());
+            let (op_block, _env) = mir_variable_fold(*block, env_cpy1.collect());
             // COPY ENV HERE
             let (op_e2, env) = mir_variable_fold(*e2, env_cpy2.collect());
 
@@ -121,31 +130,38 @@ pub fn mir_variable_fold(
             },
             env,
         ),
-        SSAExpression::VariableReference { name, tmp_name, e2 } => todo!(),
+        SSAExpression::VariableReference {
+            name: _,
+            tmp_name: _,
+            e2: _,
+        } => todo!(),
         SSAExpression::Block(b) => mir_variable_fold(*b, env),
         SSAExpression::ConditionalBlock {
             if_block,
             else_block,
             e2,
         } => {
-            let ev1: HashMap<String, SSAValue> =
-                env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
-            let ev2: HashMap<String, SSAValue> =
-                env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+            // let ev1: HashMap<String, SSAValue> =
+            //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+            // let ev2: HashMap<String, SSAValue> =
+            //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+
+            let (op_if_block, env) = mir_variable_fold(*if_block.block.block, env);
             let op_if = SSAConditionalBlock {
                 condition: mir_val_variable_fold(if_block.condition, &env),
                 block: SSALabeledBlock {
                     label: if_block.block.label,
-                    block: Box::new(mir_variable_fold(*if_block.block.block, env).0),
+                    block: Box::new(op_if_block),
                 },
             };
 
+            let (op_else_block, env) = mir_variable_fold(*else_block.block, env);
             let op_else = SSALabeledBlock {
                 label: else_block.label,
-                block: Box::new(mir_variable_fold(*else_block.block, ev1).0),
+                block: Box::new(op_else_block),
             };
 
-            let (e2, env) = mir_variable_fold(*e2, ev2);
+            let (e2, env) = mir_variable_fold(*e2, env);
 
             (
                 SSAExpression::ConditionalBlock {

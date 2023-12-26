@@ -12,7 +12,7 @@ use crate::frontend::{
 use super::{
     context::Context,
     substitution::Substitution,
-    tir_ast_expressions::TIRExpression,
+    tir_ast_expressions::{TIRExpression, TIRPhi},
     tir_types::{generate_type_name, MonoType, PolyType, TIRType},
     traits::{FreeVarsGettable, Instantiatable},
 };
@@ -65,7 +65,17 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
             }
         }
         SSAValue::Nothing => (TIRExpression::Integer, ctx),
-        SSAValue::Phi(p) => (TIRExpression::Phi(p), ctx),
+        SSAValue::Phi(p) => {
+            let phis = p.into_iter().map(|x| {
+                let (tir, _) = transform_mir_value_to_tir(x.value, ctx.clone());
+                TIRPhi {
+                    branch_name: x.branch_name,
+                    value: tir,
+                }
+            });
+
+            (TIRExpression::Phi(phis.collect()), ctx)
+        }
     }
 }
 
@@ -442,12 +452,8 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
         TIRExpression::Phi(p) => {
             let types: Vec<TIRType> = p
                 .iter()
-                .map(|phi| {
-                    context
-                        .get_type_for_name(&phi.register_name)
-                        .unwrap()
-                        .clone()
-                })
+                .map(|phi| w_algo(context.clone(), &phi.value).1)
+                .map(|x| TIRType::MonoType(x))
                 .collect();
             if !types.iter().all(|x| *x == types[0]) {
                 unreachable!("you issue: All branches on phi node are not equal and so you have done something wrong");
