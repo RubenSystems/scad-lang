@@ -7,7 +7,6 @@ use crate::frontend::{
 
 use super::mir_ast_types::{SSAConditionalBlock, SSAExpression, SSAValue};
 
-
 fn foldable(val: &SSAValue) -> bool {
     match val {
         SSAValue::RegisterReference(_) => true,
@@ -16,8 +15,15 @@ fn foldable(val: &SSAValue) -> bool {
         SSAValue::Integer(_) => true,
         SSAValue::Float(_) => true,
         SSAValue::Bool(_) => true,
-        SSAValue::Operation { lhs, op, rhs } => todo!(),
-        SSAValue::FunctionCall { name, parameters } => false,
+        SSAValue::Operation {
+            lhs: _,
+            op: _,
+            rhs: _,
+        } => todo!(),
+        SSAValue::FunctionCall {
+            name: _,
+            parameters: _,
+        } => false,
         SSAValue::Nothing => false,
     }
 }
@@ -74,7 +80,7 @@ pub fn mir_variable_fold(
             if foldable(&optimised_val) {
                 env.insert(name.clone(), optimised_val.fcopy());
             }
-            
+
             let (optimised_rest, env) = mir_variable_fold(*e2, env);
 
             (
