@@ -8,13 +8,11 @@ pub struct TIRPhi {
 
 #[derive(Debug)]
 pub enum TIRExpression {
-    Integer,
-    Bool,
-    Void {
-        e2: Box<TIRExpression>,
-    },
+    Integer(i128),
+    Bool(bool),
+    Void,
     Phi(Vec<TIRPhi>),
-    Float,
+    Float(f64),
     VariableReference {
         name: String,
     },

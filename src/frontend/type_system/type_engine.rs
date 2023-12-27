@@ -19,11 +19,11 @@ use super::{
 
 pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
     match mir {
-        SSAValue::Bool(_) => (TIRExpression::Bool, ctx),
+        SSAValue::Bool(b) => (TIRExpression::Bool(b), ctx),
         SSAValue::RegisterReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
         SSAValue::VariableDereference(r) => (TIRExpression::VariableReference { name: r }, ctx),
-        SSAValue::Integer(_) => (TIRExpression::Integer, ctx),
-        SSAValue::Float(_) => (TIRExpression::Float, ctx),
+        SSAValue::Integer(i) => (TIRExpression::Integer(i), ctx),
+        SSAValue::Float(f) => (TIRExpression::Float(f), ctx),
         SSAValue::Operation {
             lhs: _,
             op: _,
@@ -64,7 +64,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
                 )
             }
         }
-        SSAValue::Nothing => (TIRExpression::Integer, ctx),
+        SSAValue::Nothing => (TIRExpression::Void, ctx),
         SSAValue::Phi(p) => {
             let phis = p.into_iter().map(|x| {
                 let (tir, _) = transform_mir_value_to_tir(x.value, ctx.clone());
@@ -229,7 +229,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                 ctx,
             )
         }
-        SSAExpression::Noop => (TIRExpression::Integer, ctx),
+        SSAExpression::Noop => (TIRExpression::Void, ctx),
         SSAExpression::Return { val } => transform_mir_value_to_tir(val, ctx),
         SSAExpression::VariableReference {
             name: _,
@@ -288,9 +288,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             let (e2tir, e2ctx) = transform_mir_to_tir(*e2, new_ctx);
 
             (
-                TIRExpression::Void {
-                    e2: Box::new(e2tir),
-                },
+                e2tir,
                 e2ctx,
             )
         }
@@ -299,7 +297,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
 
 pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType, Context) {
     match exp {
-        TIRExpression::Integer => (
+        TIRExpression::Integer(_) => (
             Substitution::new(),
             MonoType::Application {
                 c: "i32".into(),
@@ -307,7 +305,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             },
             context,
         ),
-        TIRExpression::Bool => (
+        TIRExpression::Bool(_) => (
             Substitution::new(),
             MonoType::Application {
                 c: "bool".into(),
@@ -315,15 +313,14 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             },
             context,
         ),
-        TIRExpression::Void { e2 } => {
-            let (_s2, _t2, sub_context) = w_algo(context, &e2);
+        TIRExpression::Void => {
             (
                 Substitution::new(),
                 MonoType::Variable("void".into()),
-                sub_context,
+                context,
             )
         }
-        TIRExpression::Float => (
+        TIRExpression::Float(_)=> (
             Substitution::new(),
             MonoType::Application {
                 c: "f32".into(),

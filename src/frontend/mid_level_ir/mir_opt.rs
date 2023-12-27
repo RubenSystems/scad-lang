@@ -39,8 +39,6 @@ fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAV
             None => val,
         },
         SSAValue::Phi(p) => {
-            println!("HI!{env:#?}");
-            println!("YO!{p:#?}");
             SSAValue::Phi(
                 p.into_iter()
                     .map(|x| Phi {
