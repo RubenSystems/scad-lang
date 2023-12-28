@@ -30,7 +30,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     [] => {
                         let tmp_name = generate_register_name();
 
-                        SSAExpression::RegisterDecl {
+                        SSAExpression::VariableDecl {
                             name: tmp_name.clone(),
                             vtype: None,
                             e1: SSAValue::FunctionCall {
@@ -84,7 +84,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                             label: inner_if_label.clone(),
                             block: Box::new(expression_l1_to_l2(
                                 Expression::Block(block.block),
-                                Box::new(move |res| SSAExpression::RegisterDecl {
+                                Box::new(move |res| SSAExpression::VariableDecl {
                                     name: format!("{inner_if_label}_result"),
                                     vtype: None,
                                     e1: res,
@@ -97,7 +97,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                         label: inner_else_label.clone(),
                         block: Box::new(expression_l1_to_l2(
                             Expression::Block(*else_block),
-                            Box::new(move |res| SSAExpression::RegisterDecl {
+                            Box::new(move |res| SSAExpression::VariableDecl {
                                 name: format!("{inner_else_label}_result"),
                                 vtype: None,
                                 e1: res,
@@ -128,7 +128,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
 
             expression_l1_to_l2(
                 c.expression,
-                Box::new(|val| SSAExpression::RegisterDecl {
+                Box::new(|val| SSAExpression::VariableDecl {
                     name: c.identifier.0,
                     vtype: Some(c.subtype),
                     e1: val.fcopy(),

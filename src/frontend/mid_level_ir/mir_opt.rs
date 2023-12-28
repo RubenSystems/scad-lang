@@ -68,7 +68,7 @@ pub fn mir_variable_fold(
     mut env: HashMap<String, SSAValue>,
 ) -> (SSAExpression, HashMap<String, SSAValue>) {
     match expr {
-        SSAExpression::RegisterDecl {
+        SSAExpression::VariableDecl {
             name,
             vtype,
             e1,
@@ -82,7 +82,7 @@ pub fn mir_variable_fold(
             let (optimised_rest, env) = mir_variable_fold(*e2, env);
 
             (
-                SSAExpression::RegisterDecl {
+                SSAExpression::VariableDecl {
                     name,
                     vtype,
                     e1: optimised_val,
@@ -91,18 +91,6 @@ pub fn mir_variable_fold(
                 env,
             )
         }
-        SSAExpression::VariableDecl {
-            name: _,
-            vtype: _,
-            e1: _,
-            e2: _,
-        } => todo!(),
-        SSAExpression::ConstDecl {
-            name: _,
-            vtype: _,
-            e1: _,
-            e2: _,
-        } => todo!(),
         SSAExpression::FuncDecl {
             name,
             args,

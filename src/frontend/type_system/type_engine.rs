@@ -190,7 +190,7 @@ pub fn transform_mir_function_forward_decl_to_tir(
 
 pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression, Context) {
     match mir {
-        SSAExpression::RegisterDecl {
+        SSAExpression::VariableDecl {
             name,
             vtype,
             e1,
@@ -258,18 +258,6 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             )
         }
         SSAExpression::Conditional(_) => todo!(),
-        SSAExpression::VariableDecl {
-            name: _,
-            vtype: _,
-            e1: _,
-            e2: _,
-        } => todo!(),
-        SSAExpression::ConstDecl {
-            name: _,
-            vtype: _,
-            e1: _,
-            e2: _,
-        } => todo!(),
         SSAExpression::FuncForwardDecl {
             name,
             args,

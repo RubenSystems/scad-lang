@@ -37,30 +37,6 @@ impl SSAExpression {
                 e2,
             } => {
                 format!(
-                    "%{name} = alloca i32, align 4\nstore i32 {}, ptr %{name}, align 4\n{}",
-                    e1.to_llvm_ir(),
-                    e2.to_llvm_ir(end_conditional_block, is_last_block)
-                )
-            }
-            SSAExpression::ConstDecl {
-                name,
-                vtype: _,
-                e1,
-                e2,
-            } => {
-                format!(
-                    "%{name} = alloca i32, align 4\nstore i32 {}, ptr %{name}, align 4\n{}",
-                    e1.to_llvm_ir(),
-                    e2.to_llvm_ir(end_conditional_block, is_last_block)
-                )
-            }
-            SSAExpression::RegisterDecl {
-                name,
-                vtype: _,
-                e1,
-                e2,
-            } => {
-                format!(
                     "%{name} = {} \n{}",
                     e1.to_llvm_ir(),
                     e2.to_llvm_ir(end_conditional_block, is_last_block)

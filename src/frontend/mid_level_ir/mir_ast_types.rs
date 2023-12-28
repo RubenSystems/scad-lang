@@ -33,19 +33,7 @@ impl FailureCopy for SSAConditionalBlock {
 // SSA Definitions
 #[derive(Debug)]
 pub enum SSAExpression {
-    RegisterDecl {
-        name: String,
-        vtype: Option<Type>,
-        e1: SSAValue,
-        e2: Box<SSAExpression>,
-    },
     VariableDecl {
-        name: String,
-        vtype: Option<Type>,
-        e1: SSAValue,
-        e2: Box<SSAExpression>,
-    },
-    ConstDecl {
         name: String,
         vtype: Option<Type>,
         e1: SSAValue,
@@ -85,29 +73,17 @@ pub enum SSAExpression {
 impl FailureCopy for SSAExpression {
     fn fcopy(&self) -> Self {
         match self {
-            SSAExpression::RegisterDecl {
+            SSAExpression::VariableDecl {
                 name,
                 vtype,
                 e1,
                 e2,
-            } => Self::RegisterDecl {
+            } => Self::VariableDecl {
                 name: name.clone(),
                 vtype: vtype.as_ref().map(|x| x.fcopy()),
                 e1: e1.fcopy(),
                 e2: Box::new(e2.fcopy()),
             },
-            SSAExpression::VariableDecl {
-                name: _,
-                vtype: _,
-                e1: _,
-                e2: _,
-            } => todo!(),
-            SSAExpression::ConstDecl {
-                name: _,
-                vtype: _,
-                e1: _,
-                e2: _,
-            } => todo!(),
             SSAExpression::FuncDecl {
                 name,
                 args,
