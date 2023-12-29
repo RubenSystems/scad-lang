@@ -197,9 +197,24 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
 
                     Statement::VariableDecl(VariableDecl {
                         identifier,
-                        subtype: parsed_stype,
+                        subtype: Some(parsed_stype),
                         expression,
                     })
+                }
+
+                Rule::var_reassignment => {
+                    let mut p = primary.into_inner();
+                    let identifier = VariableName(p.next().unwrap().as_str().into());
+                    let Statement::Expression(expression) = parse(p.next().unwrap().into_inner())
+                    else {
+                        unreachable!("NOT AN EXPRESSION!");
+                    };
+                    Statement::VariableDecl(VariableDecl {
+                        identifier,
+                        subtype: None,
+                        expression,
+                    })
+
                 }
                 Rule::infix_operation => parse(primary.into_inner()),
                 Rule::binary_infix_operation => parse(primary.into_inner()),

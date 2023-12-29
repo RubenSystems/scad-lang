@@ -33,6 +33,8 @@ simple_type = { identifier }
 const_decl = { "let" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
 var_decl = { "let mut" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
 
+// variable reassignement 
+var_reassignment = {identifier ~ "=" ~ expression}
 
 // block
 block = _{ 
@@ -193,11 +195,14 @@ expression = {
 	| non_infix_expressions  
 }
 
+
+
 statement = { 
 	var_decl 
 	| const_decl 
 	| loop 
 	| if_statement_control_flow 
+	| var_reassignment
 	| expression 
 }
 

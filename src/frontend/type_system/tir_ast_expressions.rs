@@ -32,8 +32,8 @@ pub enum TIRExpression {
     },
     Conditional {
         condition: Box<TIRExpression>,
-        if_block: Box<TIRExpression>,
-        else_block: Box<TIRExpression>,
+        if_block: (String, Box<TIRExpression>), //Name, Expr
+        else_block: (String, Box<TIRExpression>),
         e1: Box<TIRExpression>,
     },
 }

@@ -237,15 +237,15 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             e2,
         } => {
             let (condition, ctx) = transform_mir_value_to_tir(if_block.condition, ctx);
-            let (if_block, ctx) = transform_mir_to_tir(*if_block.block.block, ctx);
-            let (else_block, ctx) = transform_mir_to_tir(*else_block.block, ctx);
+            let (tir_if_block, ctx) = transform_mir_to_tir(*if_block.block.block, ctx);
+            let (tir_else_block, ctx) = transform_mir_to_tir(*else_block.block, ctx);
             let (e2, ctx) = transform_mir_to_tir(*e2, ctx);
 
             (
                 TIRExpression::Conditional {
                     condition: Box::new(condition),
-                    if_block: Box::new(if_block),
-                    else_block: Box::new(else_block),
+                    if_block: (if_block.block.label, Box::new(tir_if_block)),
+                    else_block: (else_block.label, Box::new(tir_else_block)),
                     e1: Box::new(e2),
                 },
                 ctx,
@@ -412,8 +412,8 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             if cond_mt != boolean {
                 unreachable!("Condition for if statement is not a boolean!");
             }
-            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), if_block);
-            let (_, else_mt, ctx) = w_algo(if_ctx, else_block);
+            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), &if_block.1);
+            let (_, else_mt, ctx) = w_algo(if_ctx, &else_block.1);
 
             if if_mt != else_mt {
                 unreachable!("If and else branches must have the same type!");

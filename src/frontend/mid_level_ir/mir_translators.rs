@@ -123,20 +123,20 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 
 pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSAExpression {
     match statement {
-        Statement::ConstDecl(c) => {
+        Statement::ConstDecl(_) => todo!(),
+        Statement::VariableDecl(v) => {
             let gen = _k;
 
             expression_l1_to_l2(
-                c.expression,
+                v.expression,
                 Box::new(|val| SSAExpression::VariableDecl {
-                    name: c.identifier.0,
-                    vtype: Some(c.subtype),
+                    name: v.identifier.0,
+                    vtype: v.subtype,
                     e1: val.fcopy(),
                     e2: Box::new(gen(val)),
                 }),
             )
-        }
-        Statement::VariableDecl(_v) => todo!(),
+        },
         Statement::Expression(exp) => expression_l1_to_l2(exp, _k),
         Statement::FunctionDefinition(f) => {
             let gen = _k;
