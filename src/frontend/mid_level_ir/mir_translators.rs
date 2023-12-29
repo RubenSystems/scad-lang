@@ -17,7 +17,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
         Expression::Bool(f) => k(SSAValue::Bool(f)),
         Expression::Integer(i) => k(SSAValue::Integer(i.0)),
         Expression::CharArray(_) => todo!(),
-        Expression::Identifier(x) => k(SSAValue::RegisterReference(x.0)),
+        Expression::Identifier(x) => k(SSAValue::VariableReference(x.0)),
         Expression::Block(b) => SSAExpression::Block(Box::new(parse_expression_block(b, k))),
         Expression::FunctionCall(f) => {
             fn aux(
@@ -37,7 +37,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                                 name: function_name,
                                 parameters: vals.iter().map(|x| x.fcopy()).collect(),
                             },
-                            e2: Box::new(k(SSAValue::RegisterReference(tmp_name))),
+                            e2: Box::new(k(SSAValue::VariableReference(tmp_name))),
                         }
                     }
                     [head, rest @ ..] => {
@@ -66,7 +66,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             if_blocks,
             else_block,
         } => {
-            let gen = |x| k(x);
+            let gen = k;
             let block = if_blocks.first().unwrap().fcopy();
 
             let if_label = generate_label_name();
@@ -107,11 +107,11 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     },
                     e2: Box::new(gen(SSAValue::Phi(vec![
                         Phi {
-                            value: SSAValue::RegisterReference(format!("{if_label}_result")),
+                            value: SSAValue::VariableReference(format!("{if_label}_result")),
                             branch_name: if_label,
                         },
                         Phi {
-                            value: SSAValue::RegisterReference(format!("{else_label}_result")),
+                            value: SSAValue::VariableReference(format!("{else_label}_result")),
                             branch_name: else_label,
                         },
                     ]))),
@@ -124,7 +124,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSAExpression {
     match statement {
         Statement::ConstDecl(c) => {
-            let gen = |x| _k(x);
+            let gen = _k;
 
             expression_l1_to_l2(
                 c.expression,
@@ -139,7 +139,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         Statement::VariableDecl(_v) => todo!(),
         Statement::Expression(exp) => expression_l1_to_l2(exp, _k),
         Statement::FunctionDefinition(f) => {
-            let gen = |x| _k(x);
+            let gen = _k;
             SSAExpression::FuncDecl {
                 name: f.identifier.0,
                 args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
@@ -161,7 +161,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         }
         Statement::Block(_blk) => todo!(),
         Statement::FunctionDecleration(f) => {
-            let gen = |x| _k(x);
+            let gen = _k;
             SSAExpression::FuncForwardDecl {
                 name: f.identifier.0,
                 args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),

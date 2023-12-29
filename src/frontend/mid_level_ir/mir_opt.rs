@@ -9,7 +9,7 @@ use super::mir_ast_types::{SSAConditionalBlock, SSAExpression, SSAValue};
 
 fn foldable(val: &SSAValue) -> bool {
     match val {
-        SSAValue::RegisterReference(_) => true,
+        SSAValue::VariableReference(_) => true,
         SSAValue::Phi(_) => false,
         SSAValue::Integer(_) => true,
         SSAValue::Float(_) => true,
@@ -29,7 +29,7 @@ fn foldable(val: &SSAValue) -> bool {
 
 fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
     match val {
-        SSAValue::RegisterReference(v) => {
+        SSAValue::VariableReference(v) => {
             let mut new = HashSet::new();
             new.insert(v.clone());
             new
@@ -46,11 +46,18 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
         SSAValue::Integer(_) => HashSet::new(),
         SSAValue::Float(_) => HashSet::new(),
         SSAValue::Bool(_) => HashSet::new(),
-        SSAValue::Operation { lhs: _, op: _, rhs: _ } => todo!(),
-        SSAValue::FunctionCall { name: _, parameters } => {
+        SSAValue::Operation {
+            lhs: _,
+            op: _,
+            rhs: _,
+        } => todo!(),
+        SSAValue::FunctionCall {
+            name: _,
+            parameters,
+        } => {
             let mut set: HashSet<String> = HashSet::new();
             for i in parameters {
-                let subset = get_referenced_value(&i);
+                let subset = get_referenced_value(i);
                 set.extend(subset);
             }
             set
@@ -79,7 +86,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             e2,
         } => {
             let mut hs = get_referenced(e2);
-            hs.extend(get_referenced(&block));
+            hs.extend(get_referenced(block));
             hs
         }
         SSAExpression::FuncForwardDecl {
@@ -99,7 +106,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             let mut hs = get_referenced_value(&if_block.condition);
             hs.extend(get_referenced(&if_block.block.block));
             hs.extend(get_referenced(&else_block.block));
-            hs.extend(get_referenced(&e2));
+            hs.extend(get_referenced(e2));
 
             hs
         }
@@ -135,8 +142,8 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
             name,
             args,
             ret_type,
-            block: Box::new(remove_unused_variables(*block, &used)),
-            e2: Box::new(remove_unused_variables(*e2, &used)),
+            block: Box::new(remove_unused_variables(*block, used)),
+            e2: Box::new(remove_unused_variables(*e2, used)),
         },
         SSAExpression::FuncForwardDecl {
             name,
@@ -177,7 +184,7 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
 
 fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAValue {
     match val.fcopy() {
-        SSAValue::RegisterReference(r) => match env.get(&r) {
+        SSAValue::VariableReference(r) => match env.get(&r) {
             Some(nval) => nval.fcopy(),
             None => val,
         },

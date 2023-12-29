@@ -20,7 +20,7 @@ use super::{
 pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
     match mir {
         SSAValue::Bool(b) => (TIRExpression::Bool(b), ctx),
-        SSAValue::RegisterReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
+        SSAValue::VariableReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
         SSAValue::Integer(i) => (TIRExpression::Integer(i), ctx),
         SSAValue::Float(f) => (TIRExpression::Float(f), ctx),
         SSAValue::Operation {
@@ -92,7 +92,7 @@ pub fn transform_mir_function_decl_to_tir(
             },
             ctx,
         )
-    } else if args.len() == 0 {
+    } else if args.is_empty() {
         let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);
         (
             TIRExpression::FunctionDefinition {
@@ -317,7 +317,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             e1,
             e2,
         } => {
-            let (s1, t1, mut context) = w_algo(context, &e1);
+            let (s1, t1, mut context) = w_algo(context, e1);
 
             if let Some(x) = context.get_type_for_name(name) {
                 match x {
@@ -357,7 +357,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 );
             }
 
-            let (s2, t2, sub_context) = w_algo(sub_context, &e2);
+            let (s2, t2, sub_context) = w_algo(sub_context, e2);
 
             (s2.merge(&s1), t2, sub_context)
         }
@@ -408,12 +408,12 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 c: "bool".into(),
                 types: vec![],
             };
-            let (_, cond_mt, ctx) = w_algo(context, &condition);
+            let (_, cond_mt, ctx) = w_algo(context, condition);
             if cond_mt != boolean {
                 unreachable!("Condition for if statement is not a boolean!");
             }
-            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), &if_block);
-            let (_, else_mt, ctx) = w_algo(if_ctx, &else_block);
+            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), if_block);
+            let (_, else_mt, ctx) = w_algo(if_ctx, else_block);
 
             if if_mt != else_mt {
                 unreachable!("If and else branches must have the same type!");
@@ -426,7 +426,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             let types: Vec<TIRType> = p
                 .iter()
                 .map(|phi| w_algo(context.clone(), &phi.value).1)
-                .map(|x| TIRType::MonoType(x))
+                .map(TIRType::MonoType)
                 .collect();
             if !types.iter().all(|x| *x == types[0]) {
                 unreachable!("you issue: All branches on phi node are not equal and so you have done something wrong");
@@ -484,7 +484,7 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError>
         }
     };
     if let MonoType::Variable(a) = &t1 {
-        if contains(&t2, a) {
+        if contains(t2, a) {
             return Err(UnificationError::InfiniteUnification);
         };
         let mut new_sub = Substitution::new();

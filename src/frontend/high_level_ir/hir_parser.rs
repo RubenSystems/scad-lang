@@ -120,22 +120,22 @@ fn parse_expression_block(blk: pest::iterators::Pair<'_, Rule>) -> ExpressionBlo
     }
 }
 
-fn parse_conditional_block(blk: pest::iterators::Pair<'_, Rule>) -> ConditionalStatementBlock {
-    let mut unparsed_it = blk.into_inner();
-    let a = unparsed_it.next().unwrap().into_inner();
-    let b = unparsed_it.next().unwrap();
-    let parsed_exp = parse(a);
-    let block = parse_block(b);
+// fn parse_conditional_block(blk: pest::iterators::Pair<'_, Rule>) -> ConditionalStatementBlock {
+//     let mut unparsed_it = blk.into_inner();
+//     let a = unparsed_it.next().unwrap().into_inner();
+//     let b = unparsed_it.next().unwrap();
+//     let parsed_exp = parse(a);
+//     let block = parse_block(b);
 
-    let Statement::Expression(e) = parsed_exp else {
-        unreachable!("Not expressions")
-    };
+//     let Statement::Expression(e) = parsed_exp else {
+//         unreachable!("Not expressions")
+//     };
 
-    ConditionalStatementBlock {
-        condition: e,
-        block,
-    }
-}
+//     ConditionalStatementBlock {
+//         condition: e,
+//         block,
+//     }
+// }
 
 fn parse_expression_conditional_block(
     blk: pest::iterators::Pair<'_, Rule>,
@@ -374,7 +374,15 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                         else_block: Box::new(else_block.unwrap()),
                     })
                 }
-
+                Rule::boolean_t => {
+                    Statement::Expression(Expression::Bool(if primary.as_str() == "true" {
+                        true
+                    } else if primary.as_str() == "false" {
+                        false
+                    } else {
+                        unreachable!("Undefined boolean")
+                    }))
+                }
                 rule => {
                     eprintln!("{}", primary);
                     unreachable!("Expr::parse expected atom, found {:?}", rule);

@@ -181,7 +181,8 @@ non_infix_expressions = _{
 	| "(" ~ expression ~ ")" 
 	| expression_block 
 	| float 
-	| integer 
+	| integer
+	| boolean_t 
 	| char_array
 	| identifier 
 }

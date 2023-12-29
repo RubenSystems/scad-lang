@@ -3,6 +3,7 @@ pub mod testing;
 
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
+use crate::frontend::mid_level_ir::mir_desugar::rename_variables;
 use crate::frontend::mid_level_ir::mir_opt::{
     get_referenced, mir_variable_fold, remove_unused_variables,
 };
@@ -155,9 +156,10 @@ fn main() -> std::io::Result<()> {
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
     // println!("{:#?}\n\n", code);
     let code = mir_variable_fold(unop_code, HashMap::new());
+    let code = rename_variables(code.0, "test");
+    let referenced_vars = get_referenced(&code);
+    let code = remove_unused_variables(code, &referenced_vars);
     println!("{code:#?}");
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
 
     let mut consumable_context = Context::new();
 

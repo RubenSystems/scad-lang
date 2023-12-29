@@ -50,7 +50,7 @@ impl Substitution {
             PolyType::MonoType(m) => PolyType::MonoType(self.substitute_mono(m)),
             PolyType::TypeQuantifier { alpha, sigma } => PolyType::TypeQuantifier {
                 alpha: alpha.clone(),
-                sigma: Box::new(self.substitute_poly(&sigma)),
+                sigma: Box::new(self.substitute_poly(sigma)),
             },
         }
     }

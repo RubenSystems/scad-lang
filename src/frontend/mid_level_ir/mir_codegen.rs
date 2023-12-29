@@ -6,7 +6,7 @@ use super::{
 impl SSAValue {
     pub fn to_llvm_ir(&self) -> String {
         match self {
-            SSAValue::RegisterReference(name) => format!("%{name}"),
+            SSAValue::VariableReference(name) => format!("%{name}"),
             SSAValue::Integer(i) => i.to_string(),
             SSAValue::Float(f) => f.to_string(),
             SSAValue::Operation { lhs, op, rhs } => format!(

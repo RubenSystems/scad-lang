@@ -122,7 +122,7 @@ pub struct Phi {
 
 #[derive(Debug, Clone)]
 pub enum SSAValue {
-    RegisterReference(String),
+    VariableReference(String),
     Phi(Vec<Phi>),
     Integer(i128),
     Float(f64),
@@ -143,7 +143,7 @@ impl FailureCopy for SSAValue {
     fn fcopy(&self) -> SSAValue {
         match self {
             SSAValue::Nothing => SSAValue::Nothing,
-            SSAValue::RegisterReference(r) => SSAValue::RegisterReference(r.clone()),
+            SSAValue::VariableReference(r) => SSAValue::VariableReference(r.clone()),
             SSAValue::Integer(i) => SSAValue::Integer(*i),
             SSAValue::Float(f) => SSAValue::Float(*f),
             SSAValue::Operation { lhs, op, rhs: _ } => SSAValue::Operation {
