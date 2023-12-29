@@ -46,8 +46,8 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
         SSAValue::Integer(_) => HashSet::new(),
         SSAValue::Float(_) => HashSet::new(),
         SSAValue::Bool(_) => HashSet::new(),
-        SSAValue::Operation { lhs, op, rhs } => todo!(),
-        SSAValue::FunctionCall { name, parameters } => {
+        SSAValue::Operation { lhs: _, op: _, rhs: _ } => todo!(),
+        SSAValue::FunctionCall { name: _, parameters } => {
             let mut set: HashSet<String> = HashSet::new();
             for i in parameters {
                 let subset = get_referenced_value(&i);
@@ -62,8 +62,8 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
 pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
     match expr {
         SSAExpression::VariableDecl {
-            name,
-            vtype,
+            name: _,
+            vtype: _,
             e1,
             e2,
         } => {
@@ -72,9 +72,9 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             hs
         }
         SSAExpression::FuncDecl {
-            name,
-            args,
-            ret_type,
+            name: _,
+            args: _,
+            ret_type: _,
             block,
             e2,
         } => {
@@ -83,9 +83,9 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             hs
         }
         SSAExpression::FuncForwardDecl {
-            name,
-            args,
-            ret_type,
+            name: _,
+            args: _,
+            ret_type: _,
             e2,
         } => get_referenced(e2),
         SSAExpression::Noop => HashSet::new(),

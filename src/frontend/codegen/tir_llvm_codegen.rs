@@ -8,7 +8,7 @@ trait LLVMCodegeneratable {
 
 impl LLVMCodegeneratable for TIRExpression {
     fn generate_llvm(&self) -> String {
-        let (_, _, ctx) = w_algo(Context::new(), self);
+        let (_, _, _ctx) = w_algo(Context::new(), self);
 
         match self {
             TIRExpression::Integer(i) => i.to_string(),
@@ -17,20 +17,20 @@ impl LLVMCodegeneratable for TIRExpression {
             TIRExpression::Void => "".into(),
             TIRExpression::Phi(_) => todo!(),
             TIRExpression::Float(_) => todo!(),
-            TIRExpression::VariableReference { name } => todo!(),
+            TIRExpression::VariableReference { name: _ } => todo!(),
             TIRExpression::VariableDecl {
-                name,
-                type_hint,
-                e1,
-                e2,
+                name: _,
+                type_hint: _,
+                e1: _,
+                e2: _,
             } => todo!(),
-            TIRExpression::FunctionCall { e1, e2 } => todo!(),
-            TIRExpression::FunctionDefinition { arg_name, e1 } => todo!(),
+            TIRExpression::FunctionCall { e1: _, e2: _ } => todo!(),
+            TIRExpression::FunctionDefinition { arg_name: _, e1: _ } => todo!(),
             TIRExpression::Conditional {
-                condition,
-                if_block,
-                else_block,
-                e1,
+                condition: _,
+                if_block: _,
+                else_block: _,
+                e1: _,
             } => todo!(),
         }
     }
