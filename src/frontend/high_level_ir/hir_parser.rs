@@ -214,7 +214,6 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                         subtype: None,
                         expression,
                     })
-
                 }
                 Rule::infix_operation => parse(primary.into_inner()),
                 Rule::binary_infix_operation => parse(primary.into_inner()),

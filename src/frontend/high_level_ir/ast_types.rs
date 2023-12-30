@@ -126,7 +126,7 @@ pub struct ConstDecl {
 #[derive(Debug)]
 pub struct VariableDecl {
     pub identifier: VariableName, // Identifier for the constant
-    pub subtype: Option<Type>,            // Type of the constant
+    pub subtype: Option<Type>,    // Type of the constant
     pub expression: Expression,   // Expression representing the constant's value
 }
 
@@ -278,7 +278,7 @@ impl FailureCopy for Statement {
                 identifier: VariableName(v.identifier.0.clone()),
                 subtype: match &v.subtype {
                     Some(x) => Some(x.fcopy()),
-                    None => None
+                    None => None,
                 },
                 expression: v.expression.fcopy(),
             }),

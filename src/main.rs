@@ -16,7 +16,7 @@ use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::stat
 
 use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Write;
 
@@ -133,7 +133,6 @@ fn main() -> std::io::Result<()> {
 
         fn add_two_numbers(a: i32, b: i32) i32 {
             let mut m: i32 = 100; 
-            m = 200;
 
             if true {m} else {
                 scad_core_arithmetic_add_i32(a: m, b: 1)
@@ -155,10 +154,10 @@ fn main() -> std::io::Result<()> {
         .collect();
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
     // println!("{:#?}\n\n", code);
-    let code = mir_variable_fold(unop_code, HashMap::new());
-    let code = rename_variables(code.0, "test");
+    // let code = mir_variable_fold(unop_code, HashMap::new());
+    let code = rename_variables(unop_code, vec!["test".into()], HashSet::new());
     let referenced_vars = get_referenced(&code);
-    let code = remove_unused_variables(code, &referenced_vars);
+    // let code = remove_unused_variables(code, &referenced_vars);
     println!("{code:#?}");
 
     let mut consumable_context = Context::new();

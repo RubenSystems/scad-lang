@@ -136,7 +136,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                     e2: Box::new(gen(val)),
                 }),
             )
-        },
+        }
         Statement::Expression(exp) => expression_l1_to_l2(exp, _k),
         Statement::FunctionDefinition(f) => {
             let gen = _k;
