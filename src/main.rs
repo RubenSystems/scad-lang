@@ -134,7 +134,9 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32 {
             let mut m: i32 = 100; 
 
-            if true {m} else {
+            if true {
+                m
+            } else {
                 scad_core_arithmetic_add_i32(a: m, b: 1)
             }
         };

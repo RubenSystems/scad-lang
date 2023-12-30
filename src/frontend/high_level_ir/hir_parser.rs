@@ -218,7 +218,7 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                 Rule::infix_operation => parse(primary.into_inner()),
                 Rule::binary_infix_operation => parse(primary.into_inner()),
                 Rule::identifier => Statement::Expression(Expression::Identifier(Identifier(
-                    primary.as_str().into(),
+                    primary.as_str().trim().into(),
                 ))),
                 Rule::function_call => {
                     let mut it: Pairs<'_, Rule> = primary.into_inner();
