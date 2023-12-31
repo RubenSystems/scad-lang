@@ -204,7 +204,7 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
 
                 Rule::var_reassignment => {
                     let mut p = primary.into_inner();
-                    let identifier = VariableName(p.next().unwrap().as_str().into());
+                    let identifier = VariableName(p.next().unwrap().as_str().trim().into());
                     let Statement::Expression(expression) = parse(p.next().unwrap().into_inner())
                     else {
                         unreachable!("NOT AN EXPRESSION!");

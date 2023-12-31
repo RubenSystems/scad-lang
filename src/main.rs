@@ -3,7 +3,7 @@ pub mod testing;
 
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::mid_level_ir::mir_desugar::rename_variables;
+use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 use crate::frontend::mid_level_ir::mir_opt::{
     get_referenced, mir_variable_fold, remove_unused_variables,
 };
@@ -132,12 +132,10 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32;
 
         fn add_two_numbers(a: i32, b: i32) i32 {
-            let mut m: i32 = 100; 
-
             if true {
-                m
+                1
             } else {
-                scad_core_arithmetic_add_i32(a: m, b: 1)
+                0
             }
         };
 
@@ -155,11 +153,12 @@ fn main() -> std::io::Result<()> {
         })
         .collect();
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
-    // println!("{:#?}\n\n", code);
-    // let code = mir_variable_fold(unop_code, HashMap::new());
+
     let code = rename_variables(unop_code, vec!["test".into()], HashSet::new());
+    let code = rename_variable_reassignment(code, &mut HashMap::new());
+    // let code = mir_variable_fold(code, HashMap::new());
     let referenced_vars = get_referenced(&code);
-    // let code = remove_unused_variables(code, &referenced_vars);
+    // let code = remove_unused_variables(code.0, &referenced_vars);
     println!("{code:#?}");
 
     let mut consumable_context = Context::new();
