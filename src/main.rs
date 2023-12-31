@@ -158,7 +158,7 @@ fn main() -> std::io::Result<()> {
         .collect();
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
 
-    let code = rename_variables(unop_code, vec!["test".into()], HashSet::new());
+    let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
 
     // Optimiser
@@ -167,7 +167,7 @@ fn main() -> std::io::Result<()> {
     let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
-    println!("{code:#?}");
+    // println!("{code:#?}");
 
     let mut consumable_context = Context::new();
 

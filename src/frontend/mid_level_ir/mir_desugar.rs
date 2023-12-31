@@ -140,7 +140,7 @@ pub fn rename_variable_reassignment(
 pub fn rename_variables_value(
     value: SSAValue,
     mut scoped_name: Vec<String>,
-    used_vars: &HashSet<String>,
+    used_vars: &mut HashSet<String>,
 ) -> SSAValue {
     match value {
         SSAValue::VariableReference(name) => {
@@ -195,7 +195,7 @@ pub fn rename_variables_value(
 pub fn rename_variables(
     expression: SSAExpression,
     mut scoped_name: Vec<String>,
-    mut used_vars: HashSet<String>,
+    used_vars: &mut HashSet<String>,
 ) -> SSAExpression {
     match expression {
         SSAExpression::VariableDecl {
@@ -209,7 +209,7 @@ pub fn rename_variables(
             SSAExpression::VariableDecl {
                 name: scoped_rename(&name, &scoped_name),
                 vtype,
-                e1: rename_variables_value(e1, scoped_name.clone(), &used_vars),
+                e1: rename_variables_value(e1, scoped_name.clone(), used_vars),
                 e2: Box::new(rename_variables(*e2, scoped_name, used_vars)),
             }
         }
@@ -229,7 +229,7 @@ pub fn rename_variables(
             args.iter().for_each(|(name, _)| {
                 used_vars.insert(name.clone());
             });
-            let block = rename_variables(*block, scoped_name.clone(), used_vars.clone());
+            let block = rename_variables(*block, scoped_name.clone(), used_vars);
             args.iter().for_each(|(name, _)| {
                 used_vars.remove(name);
             });
@@ -259,7 +259,7 @@ pub fn rename_variables(
         },
         SSAExpression::Noop => SSAExpression::Noop,
         SSAExpression::Return { val } => SSAExpression::Return {
-            val: rename_variables_value(val, scoped_name, &used_vars),
+            val: rename_variables_value(val, scoped_name, used_vars),
         },
         SSAExpression::Block(b) => {
             SSAExpression::Block(Box::new(rename_variables(*b, scoped_name, used_vars)))
@@ -273,13 +273,13 @@ pub fn rename_variables(
             let if_block_expr = rename_variables(
                 *if_block.block.block,
                 scoped_name.clone(),
-                used_vars.clone(),
+                used_vars,
             );
             let if_block_label = scoped_name.pop().unwrap();
             scoped_name.push(else_block.label);
 
             let else_block_expr =
-                rename_variables(*else_block.block, scoped_name.clone(), used_vars.clone());
+                rename_variables(*else_block.block, scoped_name.clone(), used_vars);
             let else_block_label = scoped_name.pop().unwrap();
 
             SSAExpression::ConditionalBlock {
@@ -287,7 +287,7 @@ pub fn rename_variables(
                     condition: rename_variables_value(
                         if_block.condition,
                         scoped_name.clone(),
-                        &used_vars,
+                        used_vars,
                     ),
                     block: SSALabeledBlock {
                         label: scoped_rename(&if_block_label, &scoped_name),
