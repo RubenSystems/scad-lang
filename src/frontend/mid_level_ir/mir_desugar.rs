@@ -34,7 +34,7 @@ pub fn rename_variable_reassignment_value(
         SSAValue::Integer(i) => SSAValue::Integer(i),
         SSAValue::Float(f) => SSAValue::Float(f),
         SSAValue::Bool(b) => SSAValue::Bool(b),
-        SSAValue::Operation { lhs, op, rhs } => todo!(),
+        SSAValue::Operation { lhs: _, op: _, rhs: _ } => todo!(),
         SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
             name,
             parameters: parameters
@@ -57,7 +57,7 @@ pub fn rename_variable_reassignment(
             e1,
             e2,
         } => {
-            let counter = tracker.get(&name).unwrap_or(&-1).clone() + 1;
+            let counter = *tracker.get(&name).unwrap_or(&-1) + 1;
             tracker.insert(name.clone(), counter);
 
             SSAExpression::VariableDecl {
@@ -167,7 +167,7 @@ pub fn rename_variables_value(
                     let mut new_scope_name = scoped_name.clone();
                     new_scope_name.push(x.branch_name);
                     Phi {
-                        branch_name: scoped_rename(&new_scope_name.last().unwrap(), &scoped_name),
+                        branch_name: scoped_rename(new_scope_name.last().unwrap(), &scoped_name),
                         value: rename_variables_value(x.value, new_scope_name, used_vars),
                     }
                 })

@@ -132,10 +132,14 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32;
 
         fn add_two_numbers(a: i32, b: i32) i32 {
+            let mut m: i32 = 0; 
+            let mut k: i32 = m; 
+            m = 1;
+
             if true {
-                1
+                m
             } else {
-                0
+                k
             }
         };
 
@@ -156,9 +160,13 @@ fn main() -> std::io::Result<()> {
 
     let code = rename_variables(unop_code, vec!["test".into()], HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-    // let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code);
-    // let code = remove_unused_variables(code.0, &referenced_vars);
+
+    // Optimiser
+    let code = mir_variable_fold(code, HashMap::new());
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
+    // endof optimiser
+
     println!("{code:#?}");
 
     let mut consumable_context = Context::new();

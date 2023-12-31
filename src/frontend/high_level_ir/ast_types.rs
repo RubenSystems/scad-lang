@@ -276,10 +276,7 @@ impl FailureCopy for Statement {
             }),
             Self::VariableDecl(v) => Statement::VariableDecl(VariableDecl {
                 identifier: VariableName(v.identifier.0.clone()),
-                subtype: match &v.subtype {
-                    Some(x) => Some(x.fcopy()),
-                    None => None,
-                },
+                subtype: v.subtype.as_ref().map(|x| x.fcopy()),
                 expression: v.expression.fcopy(),
             }),
             Self::Expression(e) => Statement::Expression(e.fcopy()),
