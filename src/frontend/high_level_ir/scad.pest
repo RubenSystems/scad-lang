@@ -92,12 +92,17 @@ conditional_loop = {
 }
 
 // Functios
+
+comptime_generic_list = {
+	"<" ~ type+ ~ ">"
+}
+
 forward_function_decleration = {
-	"fn" ~ function_name ~ "(" ~ function_def_params? ~ ")" ~ type
+	"fn" ~ function_name ~ comptime_generic_list? ~ "(" ~ function_def_params? ~ ")" ~ type
 }
 
 function_definition = {
-	"fn" ~ function_name ~ "(" ~ function_def_params? ~ ")" ~ type ~ expression_block 
+	"fn" ~ function_name ~ comptime_generic_list? ~ "(" ~ function_def_params? ~ ")" ~ type ~ expression_block 
 }
 
 forward_procedure_decleration = {

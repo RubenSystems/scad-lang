@@ -523,7 +523,7 @@ fn diff(a: Vec<String>, b: Vec<String>) -> Vec<String> {
     b.into_iter().filter(|x| !vars.contains(x)).collect()
 }
 
-fn instantiate(tpe: TIRType) -> MonoType {
+pub fn instantiate(tpe: TIRType) -> MonoType {
     let mut map = HashMap::new();
     match tpe {
         TIRType::MonoType(m) => m.instantiate(&mut map),

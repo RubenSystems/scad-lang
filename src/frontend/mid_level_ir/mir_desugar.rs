@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::frontend::type_system::context::Context;
+
 use super::mir_ast_types::{Phi, SSAConditionalBlock, SSAExpression, SSALabeledBlock, SSAValue};
 
 fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {
@@ -14,6 +16,79 @@ fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {
 //         .expect(&format!("Could not find variable {v} in environment"))
 // )
 
+pub fn function_name_mangle_value(val: SSAValue, context: &Context) -> SSAValue {
+    match val {
+        SSAValue::VariableReference(v) => SSAValue::VariableReference(v),
+        SSAValue::Phi(_) => todo!(),
+        SSAValue::Integer(i) => SSAValue::Integer(i),
+        SSAValue::Float(f) => SSAValue::Float(f),
+        SSAValue::Bool(b) => SSAValue::Bool(b),
+        SSAValue::Operation { lhs, op, rhs } => todo!(),
+        SSAValue::FunctionCall { name, parameters } => todo!(),
+        SSAValue::Nothing => SSAValue::Nothing,
+    }
+}
+
+pub fn function_name_mangle(expr: SSAExpression, context: &Context) -> SSAExpression {
+    match expr {
+        SSAExpression::VariableDecl {
+            name,
+            vtype,
+            e1,
+            e2,
+        } => SSAExpression::VariableDecl {
+            name,
+            vtype,
+            e1: function_name_mangle_value(e1, context),
+            e2: Box::new(function_name_mangle(*e2, context)),
+        },
+        SSAExpression::FuncDecl {
+            name,
+            args,
+            ret_type,
+            block,
+            e2,
+        } => todo!(),
+        SSAExpression::FuncForwardDecl {
+            name,
+            args,
+            ret_type,
+            e2,
+        } => todo!(),
+        SSAExpression::Noop => SSAExpression::Noop,
+        SSAExpression::Return { val } => SSAExpression::Return {
+            val: function_name_mangle_value(val, context),
+        },
+        SSAExpression::Block(b) => {
+            SSAExpression::Block(Box::new(function_name_mangle(*b, context)))
+        }
+        SSAExpression::ConditionalBlock {
+            if_block,
+            else_block,
+            e2,
+        } => {
+            let inner_if_block = SSALabeledBlock {
+                label: if_block.block.label,
+                block: Box::new(function_name_mangle(*if_block.block.block, context)),
+            };
+            let if_block = SSAConditionalBlock {
+                condition: function_name_mangle_value(if_block.condition, context),
+                block: inner_if_block,
+            };
+            let else_block = SSALabeledBlock {
+                label: else_block.label,
+                block: Box::new(function_name_mangle(*else_block.block, context)),
+            };
+
+            SSAExpression::ConditionalBlock {
+                if_block,
+                else_block,
+                e2: Box::new(function_name_mangle(*e2, context)),
+            }
+        }
+    }
+}
+
 pub fn rename_variable_reassignment_value(
     val: SSAValue,
     tracker: &mut HashMap<String, i32>,
@@ -21,7 +96,7 @@ pub fn rename_variable_reassignment_value(
     match val {
         SSAValue::VariableReference(v) => SSAValue::VariableReference(match tracker.get(&v) {
             Some(x) => format!("{v}.{x}"),
-            None => v
+            None => v,
         }),
         SSAValue::Phi(p) => SSAValue::Phi(
             p.into_iter()
@@ -34,7 +109,11 @@ pub fn rename_variable_reassignment_value(
         SSAValue::Integer(i) => SSAValue::Integer(i),
         SSAValue::Float(f) => SSAValue::Float(f),
         SSAValue::Bool(b) => SSAValue::Bool(b),
-        SSAValue::Operation { lhs: _, op: _, rhs: _ } => todo!(),
+        SSAValue::Operation {
+            lhs: _,
+            op: _,
+            rhs: _,
+        } => todo!(),
         SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
             name,
             parameters: parameters
@@ -80,7 +159,7 @@ pub fn rename_variable_reassignment(
 
             SSAExpression::FuncDecl {
                 name,
-                args,
+                args: args.into_iter().map(|(n, tpe)| (format!("{n}.{}", tracker.get(&n).unwrap()), tpe)).collect(),
                 ret_type,
                 block: Box::new(rename_variable_reassignment(*block, tracker)),
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),
@@ -111,10 +190,7 @@ pub fn rename_variable_reassignment(
         } => {
             let inner_if_block = SSALabeledBlock {
                 label: if_block.block.label,
-                block: Box::new(rename_variable_reassignment(
-                    *if_block.block.block,
-                    tracker,
-                )),
+                block: Box::new(rename_variable_reassignment(*if_block.block.block, tracker)),
             };
             let if_block = SSAConditionalBlock {
                 condition: rename_variable_reassignment_value(if_block.condition, tracker),
@@ -122,10 +198,7 @@ pub fn rename_variable_reassignment(
             };
             let else_block = SSALabeledBlock {
                 label: else_block.label,
-                block: Box::new(rename_variable_reassignment(
-                    *else_block.block,
-                    tracker,
-                )),
+                block: Box::new(rename_variable_reassignment(*else_block.block, tracker)),
             };
 
             SSAExpression::ConditionalBlock {
@@ -270,11 +343,8 @@ pub fn rename_variables(
             e2,
         } => {
             scoped_name.push(if_block.block.label.clone());
-            let if_block_expr = rename_variables(
-                *if_block.block.block,
-                scoped_name.clone(),
-                used_vars,
-            );
+            let if_block_expr =
+                rename_variables(*if_block.block.block, scoped_name.clone(), used_vars);
             let if_block_label = scoped_name.pop().unwrap();
             scoped_name.push(else_block.label);
 

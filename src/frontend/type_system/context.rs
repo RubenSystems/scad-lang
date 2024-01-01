@@ -4,7 +4,7 @@ use super::{substitution::Substitution, tir_types::TIRType, traits::FreeVarsGett
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    env: HashMap<String, TIRType>,
+    pub env: HashMap<String, TIRType>,
 }
 
 impl Context {
