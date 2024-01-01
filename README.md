@@ -23,8 +23,10 @@ This is just another way that SCaD improves developer experience.
 ## Architecture 
 1. Conversion from concrete syntax to high level IR
 2. HIR to MIR lowering (involves static single assignment transformation)
-3. MIR to LLVM IR lowering
-4. LLVM optimisation
+3. MIR desugaring and optimisation (constant folding etc)
+4. OptMIR to typed lambda calculus IR (typing using Hindly Milner)
+5. TLCIR to LLVM IR lowering
+6. LLVM optimisation
 
 
 ## Features
