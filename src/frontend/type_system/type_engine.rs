@@ -78,6 +78,18 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
     }
 }
 
+pub fn get_typename(tpe: Type) -> String {
+    match tpe {
+        Type::Array { subtype, size } => format!("{}.[{}]", get_typename(*subtype), size),
+        Type::SimpleType { identifier } => identifier.0,
+    }
+}
+
+pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {
+    TIRType::MonoType(MonoType::Application { c: get_typename(tpe), types: vec![] })
+}
+
+
 pub fn transform_mir_function_decl_to_tir(
     args: Vec<(String, Type)>,
     block: Box<SSAExpression>,
@@ -88,6 +100,7 @@ pub fn transform_mir_function_decl_to_tir(
         (
             TIRExpression::FunctionDefinition {
                 arg_name: args[0].0.clone(),
+                arg_type_hint: Some(convert_hir_to_tir_type(args[0].1.fcopy())),
                 e1: Box::new(xp),
             },
             ctx,
@@ -97,6 +110,7 @@ pub fn transform_mir_function_decl_to_tir(
         (
             TIRExpression::FunctionDefinition {
                 arg_name: "a".into(),
+                arg_type_hint: None,
                 e1: Box::new(xp),
             },
             ctx,
@@ -114,6 +128,7 @@ pub fn transform_mir_function_decl_to_tir(
         (
             TIRExpression::FunctionDefinition {
                 arg_name: args[0].0.clone(),
+                arg_type_hint: Some(convert_hir_to_tir_type(args[0].1.fcopy())),
                 e1: Box::new(xp),
             },
             ctx,
@@ -382,7 +397,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 context,
             )
         }
-        TIRExpression::FunctionDefinition { arg_name: name, e1 } => {
+        TIRExpression::FunctionDefinition { arg_name: name, e1, arg_type_hint } => {
             let new_type = generate_type_name();
             let tir_new_type = MonoType::Variable(new_type);
 
