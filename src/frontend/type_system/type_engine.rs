@@ -86,9 +86,11 @@ pub fn get_typename(tpe: Type) -> String {
 }
 
 pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {
-    TIRType::MonoType(MonoType::Application { c: get_typename(tpe), types: vec![] })
+    TIRType::MonoType(MonoType::Application {
+        c: get_typename(tpe),
+        types: vec![],
+    })
 }
-
 
 pub fn transform_mir_function_decl_to_tir(
     args: Vec<(String, Type)>,
@@ -308,7 +310,10 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
         ),
         TIRExpression::Void => (
             Substitution::new(),
-            MonoType::Variable("void".into()),
+            MonoType::Application {
+                c: "void".into(),
+                types: vec![],
+            },
             context,
         ),
         TIRExpression::Float(_) => (
@@ -378,6 +383,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
         }
         TIRExpression::FunctionCall { e1, e2 } => {
             let (s1, t1, context) = w_algo(context, e1);
+            println!("{s1:#?}\n\n{t1:#?}\n\n{context:#?}===");
             let (s2, t2, context) = w_algo(context.applying_substitution(&s1), e2);
             let b = generate_type_name();
 
@@ -397,7 +403,11 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 context,
             )
         }
-        TIRExpression::FunctionDefinition { arg_name: name, e1, arg_type_hint } => {
+        TIRExpression::FunctionDefinition {
+            arg_name: name,
+            e1,
+            arg_type_hint,
+        } => {
             let new_type = generate_type_name();
             let tir_new_type = MonoType::Variable(new_type);
 

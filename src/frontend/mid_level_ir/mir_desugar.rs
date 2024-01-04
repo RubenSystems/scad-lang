@@ -159,7 +159,10 @@ pub fn rename_variable_reassignment(
 
             SSAExpression::FuncDecl {
                 name,
-                args: args.into_iter().map(|(n, tpe)| (format!("{n}.{}", tracker.get(&n).unwrap()), tpe)).collect(),
+                args: args
+                    .into_iter()
+                    .map(|(n, tpe)| (format!("{n}.{}", tracker.get(&n).unwrap()), tpe))
+                    .collect(),
                 ret_type,
                 block: Box::new(rename_variable_reassignment(*block, tracker)),
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),

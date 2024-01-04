@@ -11,7 +11,7 @@ use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
-use crate::frontend::type_system::type_engine::{transform_mir_to_tir, w_algo, instantiate};
+use crate::frontend::type_system::type_engine::{instantiate, transform_mir_to_tir, w_algo};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -132,15 +132,8 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32;
 
         fn add_two_numbers(a: i32, b: i32) i32 {
-            let mut m: i32 = scad_core_arithmetic_add(a: a, b: b); 
-            let mut k: i32 = m; 
-            m = 1;
+            scad_core_arithmetic_add(a: a, b: b)
 
-            if true {
-                m
-            } else {
-                k
-            }
         };
 
     "#;
@@ -176,17 +169,11 @@ fn main() -> std::io::Result<()> {
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
             types: vec![
-                MonoType::Application {
-                    c: "i32".into(),
-                    types: vec![],
-                },
+                MonoType::Variable("any_int".into()),
                 MonoType::Application {
                     c: "->".into(),
                     types: vec![
-                        MonoType::Application {
-                            c: "i32".into(),
-                            types: vec![],
-                        },
+                        MonoType::Variable("any_int".into()),
                         MonoType::Application {
                             c: "i32".into(),
                             types: vec![],
@@ -197,13 +184,18 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
-
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
     println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(ctx, &tir);
 
-    println!("{:#?}", context.env.into_iter().map(|(name, tpe)| (name, instantiate(tpe))));
+    // println!(
+    //     "{:#?}",
+    //     context
+    //         .env
+    //         .into_iter()
+    //         .map(|(name, tpe)| (name, instantiate(tpe)))
+    // );
     // println!("{tpe:?}");
 
     Ok(())
