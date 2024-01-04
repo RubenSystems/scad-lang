@@ -290,7 +290,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
     }
 }
 
-pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType, Context) {
+pub fn w_algo(context: Context, req_type: Option<TIRType>, exp: &TIRExpression) -> (Substitution, MonoType, Context) {
     match exp {
         TIRExpression::Integer(_) => (
             Substitution::new(),
@@ -329,6 +329,11 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 unreachable!("Undefined variable reference {name} - epic fail")
             };
 
+            // TODO: make it so polymorphic types are allowed
+            let Some(tpe) = tpe.first() else {
+                unreachable!("Undefined variable reference {name} - epic fail")
+            };
+
             (Substitution::new(), instantiate(tpe.clone()), context)
         }
         TIRExpression::VariableDecl {
@@ -337,10 +342,11 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
             e1,
             e2,
         } => {
-            let (s1, t1, mut context) = w_algo(context, e1);
+            let (s1, t1, mut context) = w_algo(context, req_type.clone(), e1);
 
             if let Some(x) = context.get_type_for_name(name) {
-                match x {
+                // TODO: make it so polymorphic types are allowed
+                match x.first().unwrap() {
                     TIRType::ForwardDecleration(_) => {
                         context.remove_type_for_name(name);
                     },
@@ -377,14 +383,14 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 );
             }
 
-            let (s2, t2, sub_context) = w_algo(sub_context, e2);
+            let (s2, t2, sub_context) = w_algo(sub_context, req_type,  e2);
 
             (s2.merge(&s1), t2, sub_context)
         }
         TIRExpression::FunctionCall { e1, e2 } => {
-            let (s1, t1, context) = w_algo(context, e1);
+            let (s1, t1, context) = w_algo(context, req_type.clone(),  e1);
             println!("{s1:#?}\n\n{t1:#?}\n\n{context:#?}===");
-            let (s2, t2, context) = w_algo(context.applying_substitution(&s1), e2);
+            let (s2, t2, context) = w_algo(context.applying_substitution(&s1), req_type, e2);
             let b = generate_type_name();
 
             let s3 = unify(
@@ -413,7 +419,7 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
 
             let mut new_context = context.clone();
             new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
-            let (sub, tpe, new_context) = w_algo(new_context, e1);
+            let (sub, tpe, new_context) = w_algo(new_context, req_type, e1);
 
             let x = sub.substitute_mono(&MonoType::Application {
                 c: "->".into(),
@@ -433,24 +439,24 @@ pub fn w_algo(context: Context, exp: &TIRExpression) -> (Substitution, MonoType,
                 c: "bool".into(),
                 types: vec![],
             };
-            let (_, cond_mt, ctx) = w_algo(context, condition);
+            let (_, cond_mt, ctx) = w_algo(context, req_type.clone(), condition);
             if cond_mt != boolean {
                 unreachable!("Condition for if statement is not a boolean!");
             }
-            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), &if_block.1);
-            let (_, else_mt, ctx) = w_algo(if_ctx, &else_block.1);
+            let (_, if_mt, if_ctx) = w_algo(ctx.clone(), req_type.clone(), &if_block.1);
+            let (_, else_mt, ctx) = w_algo(if_ctx, req_type.clone(), &else_block.1);
 
             if if_mt != else_mt {
                 unreachable!("If and else branches must have the same type!");
             }
 
-            let (e2_sub, e2_mt, e2_ctx) = w_algo(ctx, e1);
+            let (e2_sub, e2_mt, e2_ctx) = w_algo(ctx, req_type,  e1);
             (e2_sub, e2_mt, e2_ctx)
         }
         TIRExpression::Phi(p) => {
             let types: Vec<TIRType> = p
                 .iter()
-                .map(|phi| w_algo(context.clone(), &phi.value).1)
+                .map(|phi| w_algo(context.clone(), req_type.clone(), &phi.value).1)
                 .map(TIRType::MonoType)
                 .collect();
             if !types.iter().all(|x| *x == types[0]) {

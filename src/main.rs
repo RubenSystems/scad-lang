@@ -187,7 +187,7 @@ fn main() -> std::io::Result<()> {
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
     println!("\n\n{:#?}\n\n", tir);
 
-    let (_, _, context) = w_algo(ctx, &tir);
+    let (_, _, context) = w_algo(ctx, None, &tir);
 
     // println!(
     //     "{:#?}",
