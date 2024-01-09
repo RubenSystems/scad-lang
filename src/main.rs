@@ -10,8 +10,9 @@ use crate::frontend::mid_level_ir::mir_opt::{
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
+use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
-use crate::frontend::type_system::type_engine::{instantiate, transform_mir_to_tir, w_algo};
+use crate::frontend::type_system::type_engine::w_algo;
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -132,7 +133,7 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32;
 
         fn add_two_numbers(a: i32, b: i32) i32 {
-            scad_core_arithmetic_add(a: a, b: b)
+            scad_core_arithmetic_add(a: 1, b: b)
 
         };
 
@@ -163,17 +164,48 @@ fn main() -> std::io::Result<()> {
     // println!("{code:#?}");
 
     let mut consumable_context = Context::new();
-
+    
+    // consumable_context.add_type_for_name(
+    //     "scad_core_arithmetic_add".into(),
+    //     TIRType::MonoType(MonoType::Application {
+    //         c: "->".into(),
+    //         types: vec![
+    //             MonoType::Application {
+    //                 c: "f32".into(),
+    //                 types: vec![],
+    //             },
+    //             MonoType::Application {
+    //                 c: "->".into(),
+    //                 types: vec![
+    //                     MonoType::Application {
+    //                         c: "f32".into(),
+    //                         types: vec![],
+    //                     },
+    //                     MonoType::Application {
+    //                         c: "f32".into(),
+    //                         types: vec![],
+    //                     },
+    //                 ],
+    //             },
+    //         ],
+    //     }),
+    // );
     consumable_context.add_type_for_name(
         "scad_core_arithmetic_add".into(),
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
             types: vec![
-                MonoType::Variable("any_int".into()),
+                MonoType::Application {
+                    c: "i32".into(),
+                    types: vec![],
+                },
                 MonoType::Application {
                     c: "->".into(),
                     types: vec![
-                        MonoType::Variable("any_int".into()),
+                        MonoType::Application {
+                            c: "i32".into(),
+                            types: vec![],
+                        },
                         MonoType::Application {
                             c: "i32".into(),
                             types: vec![],
@@ -184,10 +216,13 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
+
+    println!("{:#?}", consumable_context);
+
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
     println!("\n\n{:#?}\n\n", tir);
 
-    let (_, _, context) = w_algo(ctx, None, &tir);
+    let (_, _, context) = w_algo(ctx, None, &tir).unwrap();
 
     // println!(
     //     "{:#?}",

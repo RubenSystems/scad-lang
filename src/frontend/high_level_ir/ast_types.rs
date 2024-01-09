@@ -63,11 +63,11 @@ impl Type {
         }
     }
 
-    pub fn to_tir_type(&self) -> TIRType {
-        TIRType::MonoType(MonoType::Application {
+    pub fn to_tir_type(&self) -> MonoType {
+        MonoType::Application {
             c: self.to_string(),
             types: vec![],
-        })
+        }
     }
 }
 
