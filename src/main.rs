@@ -10,8 +10,9 @@ use crate::frontend::mid_level_ir::mir_opt::{
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
+use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
-use crate::frontend::type_system::type_engine::{transform_mir_to_tir, w_algo};
+use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo, instantiate};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -132,15 +133,8 @@ fn main() -> std::io::Result<()> {
         fn add_two_numbers(a: i32, b: i32) i32;
 
         fn add_two_numbers(a: i32, b: i32) i32 {
-            let mut m: i32 = 0; 
-            let mut k: i32 = m; 
-            m = 1;
+            scad_core_arithmetic_add(a: 1, b: b)
 
-            if true {
-                m
-            } else {
-                k
-            }
         };
 
     "#;
@@ -172,7 +166,32 @@ fn main() -> std::io::Result<()> {
     let mut consumable_context = Context::new();
 
     consumable_context.add_type_for_name(
-        "scad_core_arithmetic_add_i32".into(),
+        "scad_core_arithmetic_add".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "->".into(),
+            types: vec![
+                MonoType::Application {
+                    c: "f32".into(),
+                    types: vec![],
+                },
+                MonoType::Application {
+                    c: "->".into(),
+                    types: vec![
+                        MonoType::Application {
+                            c: "f32".into(),
+                            types: vec![],
+                        },
+                        MonoType::Application {
+                            c: "f32".into(),
+                            types: vec![],
+                        },
+                    ],
+                },
+            ],
+        }),
+    );
+    consumable_context.add_type_for_name(
+        "scad_core_arithmetic_add".into(),
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
             types: vec![
@@ -197,27 +216,14 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
-    consumable_context.add_type_for_name(
-        "true".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "bool".into(),
-            types: vec![],
-        }),
-    );
-    consumable_context.add_type_for_name(
-        "false".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "bool".into(),
-            types: vec![],
-        }),
-    );
+    println!("{:#?}", consumable_context);
 
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
-    println!("{:#?}\n\n", tir);
+    println!("\n\n{:#?}\n\n", tir);
 
-    let (_, _, _context) = w_algo(ctx, &tir);
+    let (_, _, context) = w_algo(ctx, WAlgoInfo { retry_count: 0, req_type: None }, &tir).unwrap();
 
-    // println!("{context:#?}");
+    println!("{:#?}", context);
     // println!("{tpe:?}");
 
     Ok(())

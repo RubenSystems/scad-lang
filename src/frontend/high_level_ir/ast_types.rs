@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // Definition of terminal symbols representing basic data types and identifiers
-use crate::frontend::type_system::tir_types::{MonoType, TIRType};
+use crate::frontend::type_system::tir_types::MonoType;
 
 // When you are a failure, you copy. When you are a succes, you move
 pub trait FailureCopy {
@@ -63,11 +63,11 @@ impl Type {
         }
     }
 
-    pub fn to_tir_type(&self) -> TIRType {
-        TIRType::MonoType(MonoType::Application {
+    pub fn to_tir_type(&self) -> MonoType {
+        MonoType::Application {
             c: self.to_string(),
             types: vec![],
-        })
+        }
     }
 }
 

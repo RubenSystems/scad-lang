@@ -4,7 +4,8 @@ use super::{substitution::Substitution, tir_types::TIRType, traits::FreeVarsGett
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    env: HashMap<String, TIRType>,
+    // Vec allows for polymorphism
+    pub env: HashMap<String, Vec<TIRType>>,
 }
 
 impl Context {
@@ -15,14 +16,17 @@ impl Context {
     }
 
     pub fn add_type_for_name(&mut self, name: String, tpe: TIRType) {
-        self.env.insert(name, tpe);
+        // self.env.insert(name, tpe);
+        let mut new_env = self.env.remove(&name).unwrap_or(vec![]);
+        new_env.push(tpe);
+        self.env.insert(name, new_env);
     }
 
     pub fn remove_type_for_name(&mut self, name: &str) {
         self.env.remove(name);
     }
 
-    pub fn get_type_for_name(&self, name: &str) -> Option<&TIRType> {
+    pub fn get_type_for_name(&self, name: &str) -> Option<&Vec<TIRType>> {
         self.env.get(name)
     }
 
@@ -35,7 +39,7 @@ impl Context {
             env: self
                 .env
                 .iter()
-                .map(|(k, v)| (k.clone(), sub.substitute(v)))
+                .map(|(k, v)| (k.clone(), v.iter().map(|tpe| sub.substitute(tpe)).collect()))
                 .collect(),
         }
     }
@@ -43,6 +47,9 @@ impl Context {
 
 impl FreeVarsGettable for Context {
     fn free_vars(&self) -> Vec<String> {
-        self.env.iter().flat_map(|(_, v)| v.free_vars()).collect()
+        self.env
+            .iter()
+            .flat_map(|(_, v)| v.iter().flat_map(|t| t.free_vars()))
+            .collect()
     }
 }

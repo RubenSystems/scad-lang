@@ -1,5 +1,7 @@
 use crate::frontend::high_level_ir::ast_types::Type;
 
+use super::tir_types::TIRType;
+
 #[derive(Debug)]
 pub struct TIRPhi {
     pub branch_name: String,
@@ -28,6 +30,7 @@ pub enum TIRExpression {
     },
     FunctionDefinition {
         arg_name: String,
+        arg_type_hint: Option<TIRType>,
         e1: Box<TIRExpression>,
     },
     Conditional {
