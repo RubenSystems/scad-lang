@@ -26,15 +26,23 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 
                 (
                     TIRExpression::FunctionCall {
-                        e1: Box::new(TIRExpression::VariableReference { name: name.clone() }),
+                        e1: Box::new(TIRExpression::VariableReference { name }),
                         e2: Box::new(xp),
+                    },
+                    ctx,
+                )
+            } else if (parameters.len()) == 0 {
+                (
+                    TIRExpression::FunctionCall {
+                        e1: Box::new(TIRExpression::VariableReference { name }),
+                        e2: Box::new(TIRExpression::Void),
                     },
                     ctx,
                 )
             } else {
                 let (xp, ctx) = transform_mir_value_to_tir(
                     SSAValue::FunctionCall {
-                        name: name.clone(),
+                        name,
                         parameters: parameters[..parameters.len() - 1]
                             .iter()
                             .map(|x| x.fcopy())
@@ -71,10 +79,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 }
 
 pub fn get_typename(tpe: Type) -> String {
-    match tpe {
-        Type::Array { subtype, size } => format!("{}.[{}]", get_typename(*subtype), size),
-        Type::SimpleType { identifier } => identifier.0,
-    }
+    tpe.to_string()
 }
 
 pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {

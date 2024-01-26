@@ -25,9 +25,12 @@ identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }
 boolean_t = { "true" | "false" }
 
 // type
-type = _{ array_type | simple_type }
-array_type = { "[" ~ type ~ ";" ~ integer ~ "]" }
-simple_type = { identifier }
+// type = _{ array_type | simple_type }
+// array_type = { "[" ~ type ~ ";" ~ integer ~ "]" }
+type = { (integer ~ "x")* ~ simple_type  }
+simple_type = _{ identifier }
+
+
 
 // Variable declerations
 const_decl = { "let" ~ identifier ~ ":" ~ type ~ "=" ~ expression }

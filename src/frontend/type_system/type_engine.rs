@@ -17,7 +17,6 @@ pub enum WAlgoError {
     UnificationError(UnificationError),
 }
 
-
 pub struct WAlgoInfo {
     pub retry_count: usize,
     pub req_type: Option<TIRType>,
@@ -32,7 +31,7 @@ pub fn w_algo(
         TIRExpression::Integer(_) => Ok((
             Substitution::new(),
             MonoType::Application {
-                c: "i32".into(),
+                c: "1xi32".into(),
                 types: vec![],
             },
             context,
@@ -66,7 +65,6 @@ pub fn w_algo(
                 unreachable!("Undefined variable reference {name} - epic fail")
             };
 
-            // TODO: make it so polymorphic types are allowed
             let tpe = match Some(tpe[info.retry_count].clone()) {
                 Some(a) => a,
                 None => unreachable!("Undefined variable reference {name} - epic fail"),
@@ -130,7 +128,14 @@ pub fn w_algo(
                 );
             }
 
-            let Ok((s2, t2, sub_context)) = w_algo(sub_context, WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type }, e2) else {
+            let Ok((s2, t2, sub_context)) = w_algo(
+                sub_context,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type,
+                },
+                e2,
+            ) else {
                 todo!()
             };
 
@@ -139,14 +144,28 @@ pub fn w_algo(
         TIRExpression::FunctionCall { e1, e2 } => {
             let mut retry_count = 0;
             loop {
-
-                let (s1, t1, context) = w_algo(context.clone(), WAlgoInfo { retry_count, req_type: info.req_type.clone() }, e1)?;
+                let (s1, t1, context) = w_algo(
+                    context.clone(),
+                    WAlgoInfo {
+                        retry_count,
+                        req_type: info.req_type.clone(),
+                    },
+                    e1,
+                )?;
                 let b = generate_type_name();
-                let Ok((s2, t2, context)) = w_algo(context.applying_substitution(&s1), WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type.clone() }, e2)
-                else {
+                let Ok((s2, t2, context)) = w_algo(
+                    context.applying_substitution(&s1),
+                    WAlgoInfo {
+                        retry_count: info.retry_count,
+                        req_type: info.req_type.clone(),
+                    },
+                    e2,
+                ) else {
                     todo!()
                 };
-    
+
+                println!("{s2:#?} {t2:#?};\n\n");
+
                 let s3 = unify(
                     &s2.substitute_mono(&t1),
                     &MonoType::Application {
@@ -154,14 +173,16 @@ pub fn w_algo(
                         types: vec![t2, MonoType::Variable(b.clone())],
                     },
                 );
-    
+
                 match s3 {
-                    Ok(s3u) => return Ok((
-                        s3u.merge(&s2.merge(&s1)),
-                        s3u.substitute_mono(&MonoType::Variable(b)),
-                        context,
-                    )),
-                    _ => retry_count += 1
+                    Ok(s3u) => {
+                        return Ok((
+                            s3u.merge(&s2.merge(&s1)),
+                            s3u.substitute_mono(&MonoType::Variable(b)),
+                            context,
+                        ))
+                    }
+                    _ => retry_count += 1,
                 };
             }
         }
@@ -175,7 +196,14 @@ pub fn w_algo(
 
             let mut new_context = context.clone();
             new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
-            let Ok((sub, tpe, new_context)) = w_algo(new_context, WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type }, e1) else {
+            let Ok((sub, tpe, new_context)) = w_algo(
+                new_context,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type,
+                },
+                e1,
+            ) else {
                 todo!()
             };
 
@@ -197,16 +225,37 @@ pub fn w_algo(
                 c: "bool".into(),
                 types: vec![],
             };
-            let Ok((_, cond_mt, ctx)) = w_algo(context, WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type.clone() }, condition) else {
+            let Ok((_, cond_mt, ctx)) = w_algo(
+                context,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                },
+                condition,
+            ) else {
                 todo!()
             };
             if cond_mt != boolean {
                 unreachable!("Condition for if statement is not a boolean!");
             }
-            let Ok((_, if_mt, if_ctx)) = w_algo(ctx.clone(), WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type.clone() }, &if_block.1) else {
+            let Ok((_, if_mt, if_ctx)) = w_algo(
+                ctx.clone(),
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                },
+                &if_block.1,
+            ) else {
                 todo!()
             };
-            let Ok((_, else_mt, ctx)) = w_algo(if_ctx, WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type.clone() }, &else_block.1) else {
+            let Ok((_, else_mt, ctx)) = w_algo(
+                if_ctx,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                },
+                &else_block.1,
+            ) else {
                 todo!()
             };
 
@@ -214,7 +263,14 @@ pub fn w_algo(
                 unreachable!("If and else branches must have the same type!");
             }
 
-            let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(ctx, WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type }, e1) else {
+            let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(
+                ctx,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type,
+                },
+                e1,
+            ) else {
                 todo!()
             };
             Ok((e2_sub, e2_mt, e2_ctx))
@@ -223,9 +279,16 @@ pub fn w_algo(
             let types: Vec<TIRType> = p
                 .iter()
                 .map(|phi| {
-                    w_algo(context.clone(), WAlgoInfo { retry_count: info.retry_count, req_type: info.req_type.clone() }, &phi.value)
-                        .unwrap()
-                        .1
+                    w_algo(
+                        context.clone(),
+                        WAlgoInfo {
+                            retry_count: info.retry_count,
+                            req_type: info.req_type.clone(),
+                        },
+                        &phi.value,
+                    )
+                    .unwrap()
+                    .1
                 })
                 .map(TIRType::MonoType)
                 .collect();

@@ -40,27 +40,22 @@ pub struct VariableName(pub String);
 #[derive(Debug)]
 pub struct FunctionName(pub String);
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TypeName(pub String);
 
 // Definition of types within the language, including arrays and simple types
-#[derive(Debug, PartialEq, Eq)]
-pub enum Type {
-    Array {
-        subtype: Box<Type>, // Array type with its subtype (element type)
-        size: usize,        // Size of the array
-    },
-    SimpleType {
-        identifier: TypeName, // Simple type identified by a name (identifier)
-    },
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Type {
+    pub dimensions: Vec<u32>,
+    pub subtype: TypeName, // Array type with its subtype (element type)
 }
 
 impl Type {
     pub fn to_string(&self) -> String {
-        match self {
-            Type::Array { subtype, size } => format!("{};{}", subtype.to_string(), size),
-            Type::SimpleType { identifier } => identifier.0.clone(),
-        }
+        let dimension_string: Vec<String> = self.dimensions.iter().map(|x| x.to_string()).collect();
+        let fstring = format!("{}x{}", dimension_string.join("x"), self.subtype.0);
+        println!("{fstring}");
+        fstring
     }
 
     pub fn to_tir_type(&self) -> MonoType {
@@ -73,15 +68,7 @@ impl Type {
 
 impl FailureCopy for Type {
     fn fcopy(&self) -> Self {
-        match self {
-            Type::Array { subtype, size } => Type::Array {
-                subtype: Box::new(subtype.fcopy()),
-                size: *size,
-            },
-            Type::SimpleType { identifier } => Type::SimpleType {
-                identifier: TypeName(identifier.0.clone()),
-            },
-        }
+        self.clone()
     }
 }
 

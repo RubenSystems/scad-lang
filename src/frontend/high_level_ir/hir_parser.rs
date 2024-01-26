@@ -53,19 +53,35 @@ lazy_static! {
 
 fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
     match tpe.as_rule() {
-        Rule::r#type => parse_type(tpe),
-        Rule::simple_type => Type::SimpleType {
-            identifier: TypeName(tpe.as_str().into()),
-        },
-        Rule::array_type => {
-            let mut p = tpe.into_inner();
-            let typename = parse_type(p.next().unwrap());
-            let size = p.next().unwrap().as_str().parse::<usize>().unwrap();
-            Type::Array {
-                subtype: Box::new(typename),
-                size,
+        Rule::r#type => {
+            let subtype = tpe.clone().into_inner().last().unwrap().as_str().to_string();
+            let dimensions: Vec<u32> = tpe
+                .into_inner()
+                .filter_map(|x| {
+                    if let Rule::integer = x.as_rule() {
+                        x.as_str().parse::<u32>().map(|x| Some(x)).unwrap_or(None)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            Type {
+                dimensions,
+                subtype: TypeName(subtype),
             }
         }
+        // Rule::simple_type => Type::SimpleType {
+        //     identifier: TypeName(tpe.as_str().into()),
+        // },
+        // Rule::array_type => {
+        //     let mut p = tpe.into_inner();
+        //     let typename = parse_type(p.next().unwrap());
+        //     let size = p.next().unwrap().as_str().parse::<usize>().unwrap();
+        //     Type::Array {
+        //         subtype: Box::new(typename),
+        //         size,
+        //     }
+        // }
         _ => unreachable!("PANICCCCCCCC invalid type"),
     }
 }
@@ -223,7 +239,11 @@ pub fn parse(rules: Pairs<Rule>) -> Statement {
                 Rule::function_call => {
                     let mut it: Pairs<'_, Rule> = primary.into_inner();
                     let identifier = FunctionName(it.next().unwrap().as_str().into());
-                    let args = parse_function_call_args(it.next().unwrap());
+
+                    let args = match it.next() {
+                        Some(x) => parse_function_call_args(x),
+                        _ => vec![],
+                    };
 
                     Statement::Expression(Expression::FunctionCall(FunctionCall {
                         identifier,

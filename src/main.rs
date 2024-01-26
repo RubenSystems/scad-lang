@@ -12,7 +12,7 @@ use crate::frontend::type_system::context::Context;
 
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
-use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo, instantiate};
+use crate::frontend::type_system::type_engine::{instantiate, w_algo, WAlgoInfo};
 use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -130,11 +130,17 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-        fn add_two_numbers(a: i32, b: i32) i32;
+        fn add_two_numbers() 1xi32;
+        fn main() 1xi32; 
 
-        fn add_two_numbers(a: i32, b: i32) i32 {
-            scad_core_arithmetic_add(a: 1, b: b)
+        fn add_two_numbers() 1xi32 {
+            let mut i: 1xi32 = 100;
+            i = 200;
+            if true {i} else {scad_core_arithmetic_add(a: 100, b: 200)}
+        };
 
+        fn main() 1xi32 {
+            add_two_numbers()
         };
 
     "#;
@@ -196,18 +202,18 @@ fn main() -> std::io::Result<()> {
             c: "->".into(),
             types: vec![
                 MonoType::Application {
-                    c: "i32".into(),
+                    c: "1xi32".into(),
                     types: vec![],
                 },
                 MonoType::Application {
                     c: "->".into(),
                     types: vec![
                         MonoType::Application {
-                            c: "i32".into(),
+                            c: "1xi32".into(),
                             types: vec![],
                         },
                         MonoType::Application {
-                            c: "i32".into(),
+                            c: "1xi32".into(),
                             types: vec![],
                         },
                     ],
@@ -216,12 +222,20 @@ fn main() -> std::io::Result<()> {
         }),
     );
 
-    println!("{:#?}", consumable_context);
+    // println!("{:#?}", consumable_context);
 
     let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
     println!("\n\n{:#?}\n\n", tir);
 
-    let (_, _, context) = w_algo(ctx, WAlgoInfo { retry_count: 0, req_type: None }, &tir).unwrap();
+    let (_, _, context) = w_algo(
+        ctx,
+        WAlgoInfo {
+            retry_count: 0,
+            req_type: None,
+        },
+        &tir,
+    )
+    .unwrap();
 
     println!("{:#?}", context);
     // println!("{tpe:?}");
