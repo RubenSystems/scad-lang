@@ -24,6 +24,7 @@ fn foldable(val: &SSAValue) -> bool {
             parameters: _,
         } => false,
         SSAValue::Nothing => false,
+        SSAValue::Array(_) => true,
     }
 }
 
@@ -63,6 +64,15 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
             set
         }
         SSAValue::Nothing => HashSet::new(),
+        SSAValue::Array(v) => {
+            let mut set: HashSet<String> = HashSet::new();
+
+            for i in v {
+                let subset = get_referenced_value(&i);
+                set.extend(subset);
+            }
+            set
+        }
     }
 }
 
@@ -207,6 +217,11 @@ fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAV
                 .collect(),
         },
         SSAValue::Nothing => SSAValue::Nothing,
+        SSAValue::Array(v) => SSAValue::Array(
+            v.into_iter()
+                .map(|x| mir_val_variable_fold(x, env))
+                .collect(),
+        ),
         _ => todo!(),
     }
 }

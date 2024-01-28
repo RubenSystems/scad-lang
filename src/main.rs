@@ -130,17 +130,12 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-        fn add_two_numbers() 1xi32;
         fn main() 1xi32; 
 
-        fn add_two_numbers() 1xi32 {
-            let mut i: 1xi32 = 100;
-            i = 200;
-            if true {i} else {scad_core_arithmetic_add(a: 100, b: 200)}
-        };
-
         fn main() 1xi32 {
-            add_two_numbers()
+            let mut x: 1xi32 = {100, 200};
+
+            x
         };
 
     "#;
@@ -167,7 +162,7 @@ fn main() -> std::io::Result<()> {
     let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
-    // println!("{code:#?}");
+    println!("{code:#?}");
 
     let mut consumable_context = Context::new();
 

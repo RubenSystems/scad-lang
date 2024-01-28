@@ -204,6 +204,7 @@ pub enum Expression {
     },
     FunctionCall(FunctionCall),
     Block(ExpressionBlock),
+    Array(Vec<Expression>),
 }
 
 impl FailureCopy for Expression {
@@ -235,6 +236,7 @@ impl FailureCopy for Expression {
             }),
             Expression::Block(b) => Expression::Block(b.fcopy()),
             Expression::Bool(b) => Expression::Bool(*b),
+            Expression::Array(a) => Expression::Array(a.iter().map(|x| x.fcopy()).collect()),
         }
     }
 }

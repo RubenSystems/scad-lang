@@ -16,85 +16,85 @@ fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {
 //         .expect(&format!("Could not find variable {v} in environment"))
 // )
 
-pub fn function_name_mangle_value(val: SSAValue, _context: &Context) -> SSAValue {
-    match val {
-        SSAValue::VariableReference(v) => SSAValue::VariableReference(v),
-        SSAValue::Phi(_) => todo!(),
-        SSAValue::Integer(i) => SSAValue::Integer(i),
-        SSAValue::Float(f) => SSAValue::Float(f),
-        SSAValue::Bool(b) => SSAValue::Bool(b),
-        SSAValue::Operation {
-            lhs: _,
-            op: _,
-            rhs: _,
-        } => todo!(),
-        SSAValue::FunctionCall {
-            name: _,
-            parameters: _,
-        } => todo!(),
-        SSAValue::Nothing => SSAValue::Nothing,
-    }
-}
+// pub fn function_name_mangle_value(val: SSAValue, _context: &Context) -> SSAValue {
+//     match val {
+//         SSAValue::VariableReference(v) => SSAValue::VariableReference(v),
+//         SSAValue::Phi(_) => todo!(),
+//         SSAValue::Integer(i) => SSAValue::Integer(i),
+//         SSAValue::Float(f) => SSAValue::Float(f),
+//         SSAValue::Bool(b) => SSAValue::Bool(b),
+//         SSAValue::Operation {
+//             lhs: _,
+//             op: _,
+//             rhs: _,
+//         } => todo!(),
+//         SSAValue::FunctionCall {
+//             name: _,
+//             parameters: _,
+//         } => todo!(),
+//         SSAValue::Nothing => SSAValue::Nothing,
+//     }
+// }
 
-pub fn function_name_mangle(expr: SSAExpression, context: &Context) -> SSAExpression {
-    match expr {
-        SSAExpression::VariableDecl {
-            name,
-            vtype,
-            e1,
-            e2,
-        } => SSAExpression::VariableDecl {
-            name,
-            vtype,
-            e1: function_name_mangle_value(e1, context),
-            e2: Box::new(function_name_mangle(*e2, context)),
-        },
-        SSAExpression::FuncDecl {
-            name: _,
-            args: _,
-            ret_type: _,
-            block: _,
-            e2: _,
-        } => todo!(),
-        SSAExpression::FuncForwardDecl {
-            name: _,
-            args: _,
-            ret_type: _,
-            e2: _,
-        } => todo!(),
-        SSAExpression::Noop => SSAExpression::Noop,
-        SSAExpression::Return { val } => SSAExpression::Return {
-            val: function_name_mangle_value(val, context),
-        },
-        SSAExpression::Block(b) => {
-            SSAExpression::Block(Box::new(function_name_mangle(*b, context)))
-        }
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => {
-            let inner_if_block = SSALabeledBlock {
-                label: if_block.block.label,
-                block: Box::new(function_name_mangle(*if_block.block.block, context)),
-            };
-            let if_block = SSAConditionalBlock {
-                condition: function_name_mangle_value(if_block.condition, context),
-                block: inner_if_block,
-            };
-            let else_block = SSALabeledBlock {
-                label: else_block.label,
-                block: Box::new(function_name_mangle(*else_block.block, context)),
-            };
+// pub fn function_name_mangle(expr: SSAExpression, context: &Context) -> SSAExpression {
+//     match expr {
+//         SSAExpression::VariableDecl {
+//             name,
+//             vtype,
+//             e1,
+//             e2,
+//         } => SSAExpression::VariableDecl {
+//             name,
+//             vtype,
+//             e1: function_name_mangle_value(e1, context),
+//             e2: Box::new(function_name_mangle(*e2, context)),
+//         },
+//         SSAExpression::FuncDecl {
+//             name: _,
+//             args: _,
+//             ret_type: _,
+//             block: _,
+//             e2: _,
+//         } => todo!(),
+//         SSAExpression::FuncForwardDecl {
+//             name: _,
+//             args: _,
+//             ret_type: _,
+//             e2: _,
+//         } => todo!(),
+//         SSAExpression::Noop => SSAExpression::Noop,
+//         SSAExpression::Return { val } => SSAExpression::Return {
+//             val: function_name_mangle_value(val, context),
+//         },
+//         SSAExpression::Block(b) => {
+//             SSAExpression::Block(Box::new(function_name_mangle(*b, context)))
+//         }
+//         SSAExpression::ConditionalBlock {
+//             if_block,
+//             else_block,
+//             e2,
+//         } => {
+//             let inner_if_block = SSALabeledBlock {
+//                 label: if_block.block.label,
+//                 block: Box::new(function_name_mangle(*if_block.block.block, context)),
+//             };
+//             let if_block = SSAConditionalBlock {
+//                 condition: function_name_mangle_value(if_block.condition, context),
+//                 block: inner_if_block,
+//             };
+//             let else_block = SSALabeledBlock {
+//                 label: else_block.label,
+//                 block: Box::new(function_name_mangle(*else_block.block, context)),
+//             };
 
-            SSAExpression::ConditionalBlock {
-                if_block,
-                else_block,
-                e2: Box::new(function_name_mangle(*e2, context)),
-            }
-        }
-    }
-}
+//             SSAExpression::ConditionalBlock {
+//                 if_block,
+//                 else_block,
+//                 e2: Box::new(function_name_mangle(*e2, context)),
+//             }
+//         }
+//     }
+// }
 
 pub fn rename_variable_reassignment_value(
     val: SSAValue,
@@ -129,6 +129,11 @@ pub fn rename_variable_reassignment_value(
                 .collect(),
         },
         SSAValue::Nothing => SSAValue::Nothing,
+        SSAValue::Array(v) => SSAValue::Array(
+            v.into_iter()
+                .map(|x| rename_variable_reassignment_value(x, tracker))
+                .collect(),
+        ),
     }
 }
 
@@ -220,6 +225,7 @@ pub fn rename_variable_reassignment(
     }
 }
 
+// rename based on scope
 pub fn rename_variables_value(
     value: SSAValue,
     mut scoped_name: Vec<String>,
@@ -272,9 +278,15 @@ pub fn rename_variables_value(
                 .collect(),
         },
         SSAValue::Nothing => SSAValue::Nothing,
+        SSAValue::Array(v) => SSAValue::Array(
+            v.into_iter()
+                .map(|v| rename_variables_value(v, scoped_name.clone(), used_vars))
+                .collect(),
+        ),
     }
 }
 
+// Rename based on scope
 pub fn rename_variables(
     expression: SSAExpression,
     mut scoped_name: Vec<String>,

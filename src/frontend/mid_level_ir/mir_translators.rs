@@ -12,6 +12,33 @@ pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
 pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpression {
     match exp {
+        Expression::Array(v) => {
+            fn aux(
+                mut vec_expr: Vec<Expression>,
+                mut vals: Vec<SSAValue>,
+                k: ContinuationFunction,
+            ) -> SSAExpression {
+                if vec_expr.len() >= 1 {
+                    expression_l1_to_l2(
+                        vec_expr.remove(0),
+                        Box::new(|x| {
+                            vals.push(x);
+                            aux(vec_expr, vals, k)
+                        }),
+                    )
+                } else {
+                    let tmp = generate_register_name();
+                    SSAExpression::VariableDecl {
+                        name: tmp.clone(),
+                        vtype: None,
+                        e1: SSAValue::Array(vals),
+                        e2: Box::new(k(SSAValue::VariableReference(tmp))),
+                    }
+                }
+            }
+
+            aux(v, vec![], k)
+        }
         Expression::InfixOperation(_e) => todo!(),
         Expression::Float(f) => k(SSAValue::Float(f.0)),
         Expression::Bool(f) => k(SSAValue::Bool(f)),
@@ -56,7 +83,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             }
 
             aux(
-                f.args.iter().map(|(_, exp)| exp.fcopy()).collect(),
+                f.args.into_iter().map(|(_, exp)| exp).collect(),
                 vec![],
                 f.identifier.0,
                 k,

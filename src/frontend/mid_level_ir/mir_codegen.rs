@@ -22,6 +22,7 @@ impl SSAValue {
             } => todo!(),
             SSAValue::Bool(_) => todo!(),
             SSAValue::Phi(_) => todo!(),
+            SSAValue::Array(_) => todo!(),
         }
     }
 }

@@ -75,6 +75,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 
             (TIRExpression::Phi(phis.collect()), ctx)
         }
+        SSAValue::Array(_) => todo!(),
     }
 }
 

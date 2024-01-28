@@ -54,7 +54,13 @@ lazy_static! {
 fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
     match tpe.as_rule() {
         Rule::r#type => {
-            let subtype = tpe.clone().into_inner().last().unwrap().as_str().to_string();
+            let subtype = tpe
+                .clone()
+                .into_inner()
+                .last()
+                .unwrap()
+                .as_str()
+                .to_string();
             let dimensions: Vec<u32> = tpe
                 .into_inner()
                 .filter_map(|x| {
@@ -70,18 +76,6 @@ fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
                 subtype: TypeName(subtype),
             }
         }
-        // Rule::simple_type => Type::SimpleType {
-        //     identifier: TypeName(tpe.as_str().into()),
-        // },
-        // Rule::array_type => {
-        //     let mut p = tpe.into_inner();
-        //     let typename = parse_type(p.next().unwrap());
-        //     let size = p.next().unwrap().as_str().parse::<usize>().unwrap();
-        //     Type::Array {
-        //         subtype: Box::new(typename),
-        //         size,
-        //     }
-        // }
         _ => unreachable!("PANICCCCCCCC invalid type"),
     }
 }
@@ -172,257 +166,262 @@ fn parse_expression_conditional_block(
     }
 }
 
+pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
+    match primary.as_rule() {
+        Rule::integer => Statement::Expression(Expression::Integer(Integer(
+            primary.as_str().parse::<i128>().unwrap(),
+        ))),
+        Rule::float => Statement::Expression(Expression::Float(Float(
+            primary.as_str().parse::<f64>().unwrap(),
+        ))),
+        Rule::const_decl => {
+            let mut p = primary.into_inner();
+            let identifier = VariableName(p.next().unwrap().as_str().into());
+            let stype_unparsed = p.next().unwrap();
+            let parsed_stype = parse_type(stype_unparsed);
+
+            let Statement::Expression(expression) = parse(p.next().unwrap().into_inner()) else {
+                unreachable!("NOT AN EXPRESSION!");
+            };
+
+            Statement::ConstDecl(ConstDecl {
+                identifier,
+                subtype: parsed_stype,
+                expression,
+            })
+        }
+        Rule::array => Statement::Expression(Expression::Array(
+            primary
+                .into_inner()
+                .map(|x| {
+                    let Statement::Expression(e) = parse_pair(x) else {
+                        unreachable!("You can't do that bro");
+                    };
+                    e
+                })
+                .collect(),
+        )),
+        Rule::var_decl => {
+            let mut p = primary.into_inner();
+            let identifier = VariableName(p.next().unwrap().as_str().into());
+            let stype_unparsed = p.next().unwrap();
+            let parsed_stype = parse_type(stype_unparsed);
+
+            let Statement::Expression(expression) = parse(p.next().unwrap().into_inner()) else {
+                unreachable!("NOT AN EXPRESSION!");
+            };
+
+            Statement::VariableDecl(VariableDecl {
+                identifier,
+                subtype: Some(parsed_stype),
+                expression,
+            })
+        }
+
+        Rule::var_reassignment => {
+            let mut p = primary.into_inner();
+            let identifier = VariableName(p.next().unwrap().as_str().trim().into());
+            let Statement::Expression(expression) = parse(p.next().unwrap().into_inner()) else {
+                unreachable!("NOT AN EXPRESSION!");
+            };
+            Statement::VariableDecl(VariableDecl {
+                identifier,
+                subtype: None,
+                expression,
+            })
+        }
+        Rule::infix_operation => parse(primary.into_inner()),
+        Rule::binary_infix_operation => parse(primary.into_inner()),
+        Rule::identifier => Statement::Expression(Expression::Identifier(Identifier(
+            primary.as_str().trim().into(),
+        ))),
+        Rule::function_call => {
+            let mut it: Pairs<'_, Rule> = primary.into_inner();
+            let identifier = FunctionName(it.next().unwrap().as_str().into());
+
+            let args = match it.next() {
+                Some(x) => parse_function_call_args(x),
+                _ => vec![],
+            };
+
+            Statement::Expression(Expression::FunctionCall(FunctionCall { identifier, args }))
+        }
+        Rule::function_definition => {
+            // on
+
+            let mut it: Pairs<'_, Rule> = primary.into_inner();
+            let name: String = it.next().unwrap().as_str().into();
+            let mut nxt = it.next().unwrap();
+            let args = match nxt.as_rule() {
+                Rule::function_def_params => {
+                    let res = Some(parse_function_def_args(nxt));
+                    nxt = it.next().unwrap();
+                    res
+                }
+                _ => None,
+            }
+            .unwrap_or(vec![]);
+
+            let return_type = parse_type(nxt);
+            nxt = it.next().unwrap();
+
+            let def = FunctionDefinition {
+                identifier: FunctionName(name),
+                args,
+                return_type,
+                block: parse_expression_block(nxt),
+            };
+
+            Statement::FunctionDefinition(def)
+        }
+        Rule::procedure_definition => {
+            // on
+
+            let mut it: Pairs<'_, Rule> = primary.into_inner();
+            let name: String = it.next().unwrap().as_str().into();
+            let mut nxt = it.next().unwrap();
+            let args = match nxt.as_rule() {
+                Rule::function_def_params => {
+                    let res = Some(parse_function_def_args(nxt));
+                    nxt = it.next().unwrap();
+                    res
+                }
+                _ => None,
+            }
+            .unwrap_or(vec![]);
+
+            let def = ProcedureDefinition {
+                identifier: FunctionName(name),
+                args,
+                block: parse_block(nxt),
+            };
+
+            Statement::ProcedureDefinition(def)
+        }
+
+        Rule::if_statement_block => {
+            todo!();
+            // let mut if_blocks: Vec<ConditionalStatementBlock> = vec![];
+            // let else_block: Option<Box<Block>> = None;
+            // primary.into_inner().for_each(|c| match c.as_rule() {
+            //     Rule::if_statement_block if if_blocks.is_empty() => {
+            //         let cond_block = parse_conditional_block(c);
+            //         if_blocks.push(cond_block)
+            //     }
+            //     Rule::else_if_statement_block => {
+            //         let cond_block = parse_conditional_block(c);
+            //         if_blocks.push(cond_block);
+            //     }
+            //     Rule::else_statement_block => todo!(),
+            //     Rule::if_statement_block if !if_blocks.is_empty() => {
+            //         unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
+            //     }
+            //     _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
+            // });
+            // Statement::ConditionalStatementControlFlow {
+            //     if_blocks,
+            //     else_block,
+            // }
+        }
+        Rule::forward_function_decleration => {
+            let mut it: Pairs<'_, Rule> = primary.into_inner();
+            let name: String = it.next().unwrap().as_str().into();
+            let mut nxt = it.next().unwrap();
+            let args = match nxt.as_rule() {
+                Rule::function_def_params => {
+                    let res = Some(parse_function_def_args(nxt));
+                    nxt = it.next().unwrap();
+                    res
+                }
+                _ => None,
+            }
+            .unwrap_or(vec![]);
+
+            let return_type = parse_type(nxt);
+
+            let def = FunctionDecleration {
+                identifier: FunctionName(name),
+                args,
+                return_type,
+            };
+
+            Statement::FunctionDecleration(def)
+        }
+        Rule::if_expression_block => {
+            todo!()
+
+            // let mut it = primary.into_inner();
+            // let cond_block = parse_expression_conditional_block(it.next().unwrap());
+            // todo!()
+
+            // let mut if_blocks: Vec<ConditionalExpressionBlock> = vec![];
+            // let else_block: Option<Box<ExpressionBlock>> = None;
+            // println!("{:#?}", primary.clone().into_inner());
+            // primary.into_inner().for_each(|c| match c.as_rule() {
+            //     Rule::if_expression_block if if_blocks.is_empty() => {
+            //         let cond_block = parse_expression_conditional_block(c);
+            //         if_blocks.push(cond_block)
+            //     }
+            //     Rule::else_if_expression_block => {
+            //         let cond_block = parse_expression_conditional_block(c);
+            //         if_blocks.push(cond_block);
+            //     }
+            //     Rule::else_expression_block => todo!(),
+            //     Rule::if_expression_block if !if_blocks.is_empty() => {
+            //         unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
+            //     }
+            //     r => unreachable!("{r:#?} TRYING TO DO SOMETHING WEIRD!"),
+            // });
+            // Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
+            //     if_blocks,
+            //     else_block: else_block.unwrap_or_else(|| {
+            //         unreachable!("Expression if must be paired with else!")
+            //     }),
+            // })
+        }
+
+        Rule::statement | Rule::top_level_statement | Rule::expression => {
+            parse(primary.into_inner())
+        }
+        Rule::if_expression_control_flow => {
+            let it = primary.into_inner();
+            let mut if_blocks = Vec::new();
+            let mut else_block = None;
+            for m in it {
+                match m.as_rule() {
+                    Rule::if_expression_block | Rule::else_if_expression_block => {
+                        if_blocks.push(parse_expression_conditional_block(m))
+                    }
+                    Rule::else_expression_block => {
+                        else_block = Some(parse_expression_block(m));
+                    }
+                    x => todo!("rule {x:?}"),
+                };
+            }
+
+            Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
+                if_blocks,
+                else_block: Box::new(else_block.unwrap()),
+            })
+        }
+        Rule::boolean_t => Statement::Expression(Expression::Bool(if primary.as_str() == "true" {
+            true
+        } else if primary.as_str() == "false" {
+            false
+        } else {
+            unreachable!("Undefined boolean")
+        })),
+        rule => {
+            eprintln!("{}", primary);
+            unreachable!("Expr::parse expected atom, found {:?}", rule);
+        }
+    }
+}
+
 pub fn parse(rules: Pairs<Rule>) -> Statement {
     PARSER
         .parser
-        .map_primary(
-            |primary: pest::iterators::Pair<'_, Rule>| match primary.as_rule() {
-                Rule::integer => Statement::Expression(Expression::Integer(Integer(
-                    primary.as_str().parse::<i128>().unwrap(),
-                ))),
-                Rule::float => Statement::Expression(Expression::Float(Float(
-                    primary.as_str().parse::<f64>().unwrap(),
-                ))),
-                Rule::const_decl => {
-                    let mut p = primary.into_inner();
-                    let identifier = VariableName(p.next().unwrap().as_str().into());
-                    let stype_unparsed = p.next().unwrap();
-                    let parsed_stype = parse_type(stype_unparsed);
-
-                    let Statement::Expression(expression) = parse(p.next().unwrap().into_inner())
-                    else {
-                        unreachable!("NOT AN EXPRESSION!");
-                    };
-
-                    Statement::ConstDecl(ConstDecl {
-                        identifier,
-                        subtype: parsed_stype,
-                        expression,
-                    })
-                }
-                Rule::var_decl => {
-                    let mut p = primary.into_inner();
-                    let identifier = VariableName(p.next().unwrap().as_str().into());
-                    let stype_unparsed = p.next().unwrap();
-                    let parsed_stype = parse_type(stype_unparsed);
-
-                    let Statement::Expression(expression) = parse(p.next().unwrap().into_inner())
-                    else {
-                        unreachable!("NOT AN EXPRESSION!");
-                    };
-
-                    Statement::VariableDecl(VariableDecl {
-                        identifier,
-                        subtype: Some(parsed_stype),
-                        expression,
-                    })
-                }
-
-                Rule::var_reassignment => {
-                    let mut p = primary.into_inner();
-                    let identifier = VariableName(p.next().unwrap().as_str().trim().into());
-                    let Statement::Expression(expression) = parse(p.next().unwrap().into_inner())
-                    else {
-                        unreachable!("NOT AN EXPRESSION!");
-                    };
-                    Statement::VariableDecl(VariableDecl {
-                        identifier,
-                        subtype: None,
-                        expression,
-                    })
-                }
-                Rule::infix_operation => parse(primary.into_inner()),
-                Rule::binary_infix_operation => parse(primary.into_inner()),
-                Rule::identifier => Statement::Expression(Expression::Identifier(Identifier(
-                    primary.as_str().trim().into(),
-                ))),
-                Rule::function_call => {
-                    let mut it: Pairs<'_, Rule> = primary.into_inner();
-                    let identifier = FunctionName(it.next().unwrap().as_str().into());
-
-                    let args = match it.next() {
-                        Some(x) => parse_function_call_args(x),
-                        _ => vec![],
-                    };
-
-                    Statement::Expression(Expression::FunctionCall(FunctionCall {
-                        identifier,
-                        args,
-                    }))
-                }
-                Rule::function_definition => {
-                    // on
-
-                    let mut it: Pairs<'_, Rule> = primary.into_inner();
-                    let name: String = it.next().unwrap().as_str().into();
-                    let mut nxt = it.next().unwrap();
-                    let args = match nxt.as_rule() {
-                        Rule::function_def_params => {
-                            let res = Some(parse_function_def_args(nxt));
-                            nxt = it.next().unwrap();
-                            res
-                        }
-                        _ => None,
-                    }
-                    .unwrap_or(vec![]);
-
-                    let return_type = parse_type(nxt);
-                    nxt = it.next().unwrap();
-
-                    let def = FunctionDefinition {
-                        identifier: FunctionName(name),
-                        args,
-                        return_type,
-                        block: parse_expression_block(nxt),
-                    };
-
-                    Statement::FunctionDefinition(def)
-                }
-                Rule::procedure_definition => {
-                    // on
-
-                    let mut it: Pairs<'_, Rule> = primary.into_inner();
-                    let name: String = it.next().unwrap().as_str().into();
-                    let mut nxt = it.next().unwrap();
-                    let args = match nxt.as_rule() {
-                        Rule::function_def_params => {
-                            let res = Some(parse_function_def_args(nxt));
-                            nxt = it.next().unwrap();
-                            res
-                        }
-                        _ => None,
-                    }
-                    .unwrap_or(vec![]);
-
-                    let def = ProcedureDefinition {
-                        identifier: FunctionName(name),
-                        args,
-                        block: parse_block(nxt),
-                    };
-
-                    Statement::ProcedureDefinition(def)
-                }
-
-                Rule::if_statement_block => {
-                    todo!();
-                    // let mut if_blocks: Vec<ConditionalStatementBlock> = vec![];
-                    // let else_block: Option<Box<Block>> = None;
-                    // primary.into_inner().for_each(|c| match c.as_rule() {
-                    //     Rule::if_statement_block if if_blocks.is_empty() => {
-                    //         let cond_block = parse_conditional_block(c);
-                    //         if_blocks.push(cond_block)
-                    //     }
-                    //     Rule::else_if_statement_block => {
-                    //         let cond_block = parse_conditional_block(c);
-                    //         if_blocks.push(cond_block);
-                    //     }
-                    //     Rule::else_statement_block => todo!(),
-                    //     Rule::if_statement_block if !if_blocks.is_empty() => {
-                    //         unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
-                    //     }
-                    //     _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
-                    // });
-                    // Statement::ConditionalStatementControlFlow {
-                    //     if_blocks,
-                    //     else_block,
-                    // }
-                }
-                Rule::forward_function_decleration => {
-                    let mut it: Pairs<'_, Rule> = primary.into_inner();
-                    let name: String = it.next().unwrap().as_str().into();
-                    let mut nxt = it.next().unwrap();
-                    let args = match nxt.as_rule() {
-                        Rule::function_def_params => {
-                            let res = Some(parse_function_def_args(nxt));
-                            nxt = it.next().unwrap();
-                            res
-                        }
-                        _ => None,
-                    }
-                    .unwrap_or(vec![]);
-
-                    let return_type = parse_type(nxt);
-
-                    let def = FunctionDecleration {
-                        identifier: FunctionName(name),
-                        args,
-                        return_type,
-                    };
-
-                    Statement::FunctionDecleration(def)
-                }
-                Rule::if_expression_block => {
-                    todo!()
-
-                    // let mut it = primary.into_inner();
-                    // let cond_block = parse_expression_conditional_block(it.next().unwrap());
-                    // todo!()
-
-                    // let mut if_blocks: Vec<ConditionalExpressionBlock> = vec![];
-                    // let else_block: Option<Box<ExpressionBlock>> = None;
-                    // println!("{:#?}", primary.clone().into_inner());
-                    // primary.into_inner().for_each(|c| match c.as_rule() {
-                    //     Rule::if_expression_block if if_blocks.is_empty() => {
-                    //         let cond_block = parse_expression_conditional_block(c);
-                    //         if_blocks.push(cond_block)
-                    //     }
-                    //     Rule::else_if_expression_block => {
-                    //         let cond_block = parse_expression_conditional_block(c);
-                    //         if_blocks.push(cond_block);
-                    //     }
-                    //     Rule::else_expression_block => todo!(),
-                    //     Rule::if_expression_block if !if_blocks.is_empty() => {
-                    //         unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
-                    //     }
-                    //     r => unreachable!("{r:#?} TRYING TO DO SOMETHING WEIRD!"),
-                    // });
-                    // Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
-                    //     if_blocks,
-                    //     else_block: else_block.unwrap_or_else(|| {
-                    //         unreachable!("Expression if must be paired with else!")
-                    //     }),
-                    // })
-                }
-
-                Rule::statement | Rule::top_level_statement | Rule::expression => {
-                    parse(primary.into_inner())
-                }
-                Rule::if_expression_control_flow => {
-                    let it = primary.into_inner();
-                    let mut if_blocks = Vec::new();
-                    let mut else_block = None;
-                    for m in it {
-                        match m.as_rule() {
-                            Rule::if_expression_block | Rule::else_if_expression_block => {
-                                if_blocks.push(parse_expression_conditional_block(m))
-                            }
-                            Rule::else_expression_block => {
-                                else_block = Some(parse_expression_block(m));
-                            }
-                            x => todo!("rule {x:?}"),
-                        };
-                    }
-
-                    Statement::Expression(Expression::ConditionalExpressionControlFlowControl {
-                        if_blocks,
-                        else_block: Box::new(else_block.unwrap()),
-                    })
-                }
-                Rule::boolean_t => {
-                    Statement::Expression(Expression::Bool(if primary.as_str() == "true" {
-                        true
-                    } else if primary.as_str() == "false" {
-                        false
-                    } else {
-                        unreachable!("Undefined boolean")
-                    }))
-                }
-                rule => {
-                    eprintln!("{}", primary);
-                    unreachable!("Expr::parse expected atom, found {:?}", rule);
-                }
-            },
-        )
+        .map_primary(|p| parse_pair(p))
         .map_infix(|lhs, _, rhs| {
             let (Statement::Expression(lhs), Statement::Expression(rhs)) = (lhs, rhs) else {
                 unreachable!();

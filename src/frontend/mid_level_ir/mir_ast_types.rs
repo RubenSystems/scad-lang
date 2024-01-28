@@ -32,6 +32,7 @@ impl FailureCopy for SSAConditionalBlock {
 
 // SSA Definitions
 #[derive(Debug)]
+#[repr(C)]
 pub enum SSAExpression {
     VariableDecl {
         name: String,
@@ -121,6 +122,8 @@ pub struct Phi {
 }
 
 #[derive(Debug, Clone)]
+#[repr(C)]
+
 pub enum SSAValue {
     VariableReference(String),
     Phi(Vec<Phi>),
@@ -137,11 +140,13 @@ pub enum SSAValue {
         parameters: Vec<SSAValue>,
     },
     Nothing,
+    Array(Vec<SSAValue>),
 }
 
 impl FailureCopy for SSAValue {
     fn fcopy(&self) -> SSAValue {
         match self {
+            SSAValue::Array(v) => SSAValue::Array(v.iter().map(|x| x.fcopy()).collect()),
             SSAValue::Nothing => SSAValue::Nothing,
             SSAValue::VariableReference(r) => SSAValue::VariableReference(r.clone()),
             SSAValue::Integer(i) => SSAValue::Integer(*i),
