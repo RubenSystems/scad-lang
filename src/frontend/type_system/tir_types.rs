@@ -13,7 +13,11 @@ pub fn generate_type_name() -> String {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MonoType {
     Variable(String),
-    Application { c: String, types: Vec<MonoType> },
+    Application {
+        c: String,
+        dimensions: Option<Vec<u32>>,
+        types: Vec<MonoType>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,8 +40,13 @@ impl Instantiatable for MonoType {
                 Some(s) => MonoType::Variable(s.clone()),
                 None => self.clone(),
             },
-            MonoType::Application { c, types } => MonoType::Application {
+            MonoType::Application {
+                c,
+                dimensions,
+                types,
+            } => MonoType::Application {
                 c: c.clone(),
+                dimensions: dimensions.clone(),
                 types: types.iter().map(|x| x.instantiate(map)).collect(),
             },
         }
@@ -70,9 +79,11 @@ impl FreeVarsGettable for MonoType {
     fn free_vars(&self) -> Vec<String> {
         match self {
             MonoType::Variable(v) => vec![v.to_string()],
-            MonoType::Application { c: _, types } => {
-                types.iter().flat_map(|x| x.free_vars()).collect()
-            }
+            MonoType::Application {
+                c,
+                dimensions,
+                types,
+            } => types.iter().flat_map(|x| x.free_vars()).collect(),
         }
     }
 }

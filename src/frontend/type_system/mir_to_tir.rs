@@ -90,12 +90,12 @@ pub fn get_typename(tpe: Type) -> String {
     tpe.to_string()
 }
 
-pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {
-    TIRType::MonoType(MonoType::Application {
-        c: get_typename(tpe),
-        types: vec![],
-    })
-}
+// pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {
+//     TIRType::MonoType(MonoType::Application {
+//         c: get_typename(tpe),
+//         types: vec![],
+//     })
+// }
 
 pub fn transform_mir_function_decl_to_tir(
     args: Vec<(String, Type)>,
@@ -108,7 +108,7 @@ pub fn transform_mir_function_decl_to_tir(
         (
             TIRExpression::FunctionDefinition {
                 arg_name: args[0].0.clone(),
-                arg_type_hint: Some(convert_hir_to_tir_type(args[0].1.fcopy())),
+                arg_type_hint: Some(TIRType::MonoType(args[0].1.fcopy().to_tir_type())),
                 ret_type_hint,
                 e1: Box::new(xp),
             },
@@ -139,9 +139,9 @@ pub fn transform_mir_function_decl_to_tir(
         (
             TIRExpression::FunctionDefinition {
                 arg_name: args[0].0.clone(),
-                arg_type_hint: Some(convert_hir_to_tir_type(args[0].1.fcopy())),
+                arg_type_hint: Some(TIRType::MonoType(args[0].1.fcopy().to_tir_type())),
                 e1: Box::new(xp),
-                ret_type_hint
+                ret_type_hint,
             },
             ctx,
         )
@@ -160,11 +160,13 @@ pub fn transform_mir_function_forward_decl_to_tir(
                 Some(dt) => dt.to_tir_type(),
                 None => MonoType::Application {
                     c: "void".into(),
+                    dimensions: Some(vec![1]),
                     types: vec![],
                 },
             };
             MonoType::Application {
                 c: "->".into(),
+                dimensions: None,
                 types: vec![arg_type, return_type],
             }
         }
@@ -175,6 +177,7 @@ pub fn transform_mir_function_forward_decl_to_tir(
 
             MonoType::Application {
                 c: "->".into(),
+                dimensions: None,
                 types: vec![arg_type, rest_decl],
             }
         }
@@ -183,12 +186,14 @@ pub fn transform_mir_function_forward_decl_to_tir(
                 Some(dt) => dt.to_tir_type(),
                 None => MonoType::Application {
                     c: "void".into(),
+                    dimensions: Some(vec![1]),
                     types: vec![],
                 },
             };
 
             MonoType::Application {
                 c: "->".into(),
+                dimensions: None,
                 types: vec![MonoType::Variable("*".into()), return_type],
             }
         }
@@ -223,8 +228,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             block,
             e2,
         } => {
-
-            let tpe = convert_hir_to_tir_type(ret_type.clone().unwrap());
+            let tpe = TIRType::MonoType(ret_type.clone().unwrap().to_tir_type());
             let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, Some(tpe), ctx);
             let (e2xp, ctx) = transform_mir_to_tir(*e2, ctx);
 

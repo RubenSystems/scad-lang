@@ -60,7 +60,8 @@ impl Type {
 
     pub fn to_tir_type(&self) -> MonoType {
         MonoType::Application {
-            c: self.to_string(),
+            c: self.subtype.0.clone(),
+            dimensions: Some(self.dimensions.clone()),
             types: vec![],
         }
     }

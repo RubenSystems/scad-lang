@@ -38,8 +38,13 @@ impl Substitution {
                 Some(s) => s.clone(),
                 None => MonoType::Variable(v.clone()),
             },
-            MonoType::Application { c, types } => MonoType::Application {
+            MonoType::Application {
+                c,
+                dimensions,
+                types,
+            } => MonoType::Application {
                 c: c.clone(),
+                dimensions: dimensions.clone(),
                 types: types.iter().map(|x| self.substitute_mono(x)).collect(),
             },
         }

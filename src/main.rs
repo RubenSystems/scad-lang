@@ -166,49 +166,55 @@ fn main() -> std::io::Result<()> {
 
     let mut consumable_context = Context::new();
 
+    // consumable_context.add_type_for_name(
+    //     "scad_core_arithmetic_add".into(),
+    //     TIRType::MonoType(MonoType::Application {
+    //         c: "->".into(),
+    //         types: vec![
+    //             MonoType::Application {
+    //                 c: "f32".into(),
+    //                 dimensions: Some()
+    //                 types: vec![],
+    //             },
+    //             MonoType::Application {
+    //                 c: "->".into(),
+    //                 types: vec![
+    //                     MonoType::Application {
+    //                         c: "f32".into(),
+    //                         types: vec![],
+    //                     },
+    //                     MonoType::Application {
+    //                         c: "f32".into(),
+    //                         types: vec![],
+    //                     },
+    //                 ],
+    //             },
+    //         ],
+    //     }),
+    // );
     consumable_context.add_type_for_name(
         "scad_core_arithmetic_add".into(),
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
+            dimensions: None,
             types: vec![
                 MonoType::Application {
-                    c: "f32".into(),
+                    c: "i32".into(),
+                    dimensions: Some(vec![1]),
                     types: vec![],
                 },
                 MonoType::Application {
                     c: "->".into(),
-                    types: vec![
-                        MonoType::Application {
-                            c: "f32".into(),
-                            types: vec![],
-                        },
-                        MonoType::Application {
-                            c: "f32".into(),
-                            types: vec![],
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-    consumable_context.add_type_for_name(
-        "scad_core_arithmetic_add".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "->".into(),
-            types: vec![
-                MonoType::Application {
-                    c: "1xi32".into(),
-                    types: vec![],
-                },
-                MonoType::Application {
-                    c: "->".into(),
+                    dimensions: None,
                     types: vec![
                         MonoType::Application {
                             c: "1xi32".into(),
+                            dimensions: Some(vec![1]),
                             types: vec![],
                         },
                         MonoType::Application {
                             c: "1xi32".into(),
+                            dimensions: Some(vec![1]),
                             types: vec![],
                         },
                     ],

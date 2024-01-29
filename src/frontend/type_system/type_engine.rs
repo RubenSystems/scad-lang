@@ -32,6 +32,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "i32".into(),
+                dimensions: Some(vec![1]),
                 types: vec![],
             },
             context,
@@ -40,6 +41,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "bool".into(),
+                dimensions: Some(vec![1]),
                 types: vec![],
             },
             context,
@@ -48,6 +50,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "void".into(),
+                dimensions: Some(vec![1]),
                 types: vec![],
             },
             context,
@@ -56,6 +59,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "f32".into(),
+                dimensions: Some(vec![1]),
                 types: vec![],
             },
             context,
@@ -171,6 +175,7 @@ pub fn w_algo(
                     &s2.substitute_mono(&t1),
                     &MonoType::Application {
                         c: "->".into(),
+                        dimensions: None,
                         types: vec![t2, MonoType::Variable(b.clone())],
                     },
                 );
@@ -211,6 +216,7 @@ pub fn w_algo(
 
             let x = sub.substitute_mono(&MonoType::Application {
                 c: "->".into(),
+                dimensions: None,
                 types: vec![tir_new_type, tpe],
             });
 
@@ -235,10 +241,7 @@ pub fn w_algo(
             e1,
         } => {
             // 1 type conditon ensure bool
-            let boolean = MonoType::Application {
-                c: "bool".into(),
-                types: vec![],
-            };
+
             let Ok((_, cond_mt, ctx)) = w_algo(
                 context,
                 WAlgoInfo {
@@ -249,9 +252,24 @@ pub fn w_algo(
             ) else {
                 todo!()
             };
-            if cond_mt != boolean {
-                unreachable!("Condition for if statement is not a boolean!");
-            }
+
+            // check to see if all condiitons are a bool
+            match cond_mt {
+                MonoType::Variable(_) => {
+                    unreachable!("cannot type if conditional value so can't check if its a bool")
+                }
+                MonoType::Application {
+                    c,
+                    dimensions,
+                    types,
+                } if c == "bool" => {}
+                MonoType::Application {
+                    c,
+                    dimensions,
+                    types,
+                } => unreachable!("condtype must be bool"),
+            };
+
             let Ok((_, if_mt, if_ctx)) = w_algo(
                 ctx.clone(),
                 WAlgoInfo {
@@ -340,7 +358,7 @@ pub fn w_algo(
             }
 
             let ret = cvt_scalar_to_vector(
-                v.len(),
+                v.len() as u32,
                 match &types[0] {
                     TIRType::MonoType(mt) => mt.clone(),
                     TIRType::PolyType(_) => instantiate(types[0].clone()),
@@ -356,27 +374,28 @@ pub fn w_algo(
 fn get_rettype_of_application(app: MonoType) -> MonoType {
     match app {
         MonoType::Variable(_) => unreachable!("FAILED TO GET APPTYPE"),
-        MonoType::Application { c, types } => {
+        MonoType::Application { c, dimensions, types } => {
             if types.len() == 0 {
-                MonoType::Application { c, types }
+                MonoType::Application { c, dimensions, types }
             } else {
                 get_rettype_of_application(types.last().unwrap().clone())
             }
-        },
+        }
     }
 }
 
-fn cvt_scalar_to_vector(size: usize, mt: MonoType) -> MonoType {
+fn cvt_scalar_to_vector(size: u32, mt: MonoType) -> MonoType {
     match mt {
         MonoType::Variable(v) => MonoType::Variable(v),
-        MonoType::Application { c, types } => {
+        MonoType::Application { c, dimensions, types } => {
             if types.len() == 0 {
                 MonoType::Application {
-                    c: format!("{size}x{c}"),
+                    c,
+                    dimensions: Some(vec![size]),
                     types,
                 }
             } else {
-                MonoType::Application { c, types }
+                MonoType::Application { c, dimensions, types }
             }
         }
     }
@@ -398,7 +417,7 @@ fn generalise(ctx: &Context, tpe: MonoType) -> PolyType {
 fn contains(v: &MonoType, tpe: &String) -> bool {
     match v {
         MonoType::Variable(v) => *v == *tpe,
-        MonoType::Application { c: _, types } => {
+        MonoType::Application { c, dimensions, types } => {
             let inner_contains: Vec<bool> = types
                 .iter()
                 .map(|x| contains(x, tpe))
@@ -414,6 +433,7 @@ pub enum UnificationError {
     InfiniteUnification,
     UnifyingDifferentFunctions,
     UnifyingSameFunctionDifferentArgCount,
+    IncorrectDimensions
 }
 
 fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError> {
@@ -436,8 +456,8 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError>
     };
 
     if let (
-        MonoType::Application { c: c1, types: t1 },
-        MonoType::Application { c: c2, types: t2 },
+        MonoType::Application { c: c1, dimensions: d1, types: t1 },
+        MonoType::Application { c: c2, dimensions: d2, types: t2 },
     ) = (t1, t2)
     {
         if c1 != c2 {
@@ -445,6 +465,9 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError>
         }
         if t1.len() != t2.len() {
             return Err(UnificationError::UnifyingSameFunctionDifferentArgCount);
+        }
+        if d1 != d2 {
+            return Err(UnificationError::IncorrectDimensions)
         }
 
         let mut s = Substitution::new();
