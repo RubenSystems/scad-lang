@@ -75,7 +75,14 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 
             (TIRExpression::Phi(phis.collect()), ctx)
         }
-        SSAValue::Array(_) => todo!(),
+        SSAValue::Array(v) => {
+            let vals = v
+                .into_iter()
+                .map(|x| transform_mir_value_to_tir(x, ctx.clone()).0)
+                .collect();
+
+            (TIRExpression::Array(vals), ctx)
+        }
     }
 }
 
@@ -93,6 +100,7 @@ pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {
 pub fn transform_mir_function_decl_to_tir(
     args: Vec<(String, Type)>,
     block: Box<SSAExpression>,
+    ret_type_hint: Option<TIRType>,
     ctx: Context,
 ) -> (TIRExpression, Context) {
     if args.len() == 1 {
@@ -101,6 +109,7 @@ pub fn transform_mir_function_decl_to_tir(
             TIRExpression::FunctionDefinition {
                 arg_name: args[0].0.clone(),
                 arg_type_hint: Some(convert_hir_to_tir_type(args[0].1.fcopy())),
+                ret_type_hint,
                 e1: Box::new(xp),
             },
             ctx,
@@ -111,6 +120,7 @@ pub fn transform_mir_function_decl_to_tir(
             TIRExpression::FunctionDefinition {
                 arg_name: "a".into(),
                 arg_type_hint: None,
+                ret_type_hint,
                 e1: Box::new(xp),
             },
             ctx,
@@ -122,6 +132,7 @@ pub fn transform_mir_function_decl_to_tir(
                 .map(|(x, y)| (x.clone(), y.fcopy()))
                 .collect(),
             block,
+            ret_type_hint.clone(),
             ctx,
         );
 
@@ -130,6 +141,7 @@ pub fn transform_mir_function_decl_to_tir(
                 arg_name: args[0].0.clone(),
                 arg_type_hint: Some(convert_hir_to_tir_type(args[0].1.fcopy())),
                 e1: Box::new(xp),
+                ret_type_hint
             },
             ctx,
         )
@@ -207,17 +219,19 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
         SSAExpression::FuncDecl {
             name,
             args,
-            ret_type: _,
+            ret_type,
             block,
             e2,
         } => {
-            let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, ctx);
+
+            let tpe = convert_hir_to_tir_type(ret_type.clone().unwrap());
+            let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, Some(tpe), ctx);
             let (e2xp, ctx) = transform_mir_to_tir(*e2, ctx);
 
             (
                 TIRExpression::VariableDecl {
                     name,
-                    type_hint: None,
+                    type_hint: ret_type,
                     e1: Box::new(e1xp),
                     e2: Box::new(e2xp),
                 },

@@ -130,9 +130,9 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-        fn main() 1xi32; 
+        fn main(a: i32, b: i32) 2xi32; 
 
-        fn main() 1xi32 {
+        fn main(a: i32, b: i32) 2xi32 {
             let mut x: 1xi32 = {100, 200};
 
             x

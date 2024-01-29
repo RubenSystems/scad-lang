@@ -13,6 +13,7 @@ pub enum TIRExpression {
     Integer(i128),
     Bool(bool),
     Void,
+    Array(Vec<TIRExpression>),
     Phi(Vec<TIRPhi>),
     Float(f64),
     VariableReference {
@@ -31,6 +32,7 @@ pub enum TIRExpression {
     FunctionDefinition {
         arg_name: String,
         arg_type_hint: Option<TIRType>,
+        ret_type_hint: Option<TIRType>,
         e1: Box<TIRExpression>,
     },
     Conditional {

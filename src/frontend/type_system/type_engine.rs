@@ -31,7 +31,7 @@ pub fn w_algo(
         TIRExpression::Integer(_) => Ok((
             Substitution::new(),
             MonoType::Application {
-                c: "1xi32".into(),
+                c: "i32".into(),
                 types: vec![],
             },
             context,
@@ -112,13 +112,14 @@ pub fn w_algo(
                 }
             }
 
-            if let Some(t) = type_hint {
-                let tir_t = t.to_tir_type();
+            //VARIBLE TYPE CHECKING!!!
+            // if let Some(t) = type_hint {
+            //     let tir_t = t.to_tir_type();
 
-                if tir_t != t1 {
-                    unreachable!("skill issue: attempting to assign expression of type: \n\n{t1:#?} to variable of specified_type \n\n{tir_t:#?}")
-                }
-            }
+            //     if tir_t != t1 {
+            //         unreachable!("skill issue: attempting to assign expression of type: \n\n{t1:#?} to variable of specified_type \n\n{tir_t:#?}")
+            //     }
+            // }
 
             let mut sub_context = context.applying_substitution(&s1).clone();
             if !sub_context.has_type_for_name(name) {
@@ -189,7 +190,8 @@ pub fn w_algo(
         TIRExpression::FunctionDefinition {
             arg_name: name,
             e1,
-            arg_type_hint: _,
+            ret_type_hint,
+            arg_type_hint,
         } => {
             let new_type = generate_type_name();
             let tir_new_type = MonoType::Variable(new_type);
@@ -211,6 +213,18 @@ pub fn w_algo(
                 c: "->".into(),
                 types: vec![tir_new_type, tpe],
             });
+
+            if let Some(hnt) = ret_type_hint {
+                let TIRType::MonoType(a) = hnt else {
+                    unreachable!("CAN't RETURN MONOTYPE");
+                };
+                if *a != get_rettype_of_application(x.clone()) {
+                    println!("x: {a:#?}");
+
+                    // println!("==\nretfail {:#?} \n\n{:#?}\n==", a,  get_rettype_of_application(x.clone()));
+                    unreachable!("Skill issue: Function defines different type to decleration")
+                }
+            }
 
             Ok((sub, x, new_context))
         }
@@ -303,6 +317,67 @@ pub fn w_algo(
             };
 
             Ok((Substitution::new(), ret, context))
+        }
+        TIRExpression::Array(v) => {
+            let types: Vec<TIRType> = v
+                .iter()
+                .map(|val| {
+                    w_algo(
+                        context.clone(),
+                        WAlgoInfo {
+                            retry_count: info.retry_count,
+                            req_type: info.req_type.clone(),
+                        },
+                        &val,
+                    )
+                    .unwrap()
+                    .1
+                })
+                .map(TIRType::MonoType)
+                .collect();
+            if !types.iter().all(|x| *x == types[0]) {
+                unreachable!("you issue: a vector can't have more then one type; scad is not python lollolololol");
+            }
+
+            let ret = cvt_scalar_to_vector(
+                v.len(),
+                match &types[0] {
+                    TIRType::MonoType(mt) => mt.clone(),
+                    TIRType::PolyType(_) => instantiate(types[0].clone()),
+                    TIRType::ForwardDecleration(_) => todo!(),
+                },
+            );
+
+            Ok((Substitution::new(), ret, context))
+        }
+    }
+}
+
+fn get_rettype_of_application(app: MonoType) -> MonoType {
+    match app {
+        MonoType::Variable(_) => unreachable!("FAILED TO GET APPTYPE"),
+        MonoType::Application { c, types } => {
+            if types.len() == 0 {
+                MonoType::Application { c, types }
+            } else {
+                get_rettype_of_application(types.last().unwrap().clone())
+            }
+        },
+    }
+}
+
+fn cvt_scalar_to_vector(size: usize, mt: MonoType) -> MonoType {
+    match mt {
+        MonoType::Variable(v) => MonoType::Variable(v),
+        MonoType::Application { c, types } => {
+            if types.len() == 0 {
+                MonoType::Application {
+                    c: format!("{size}x{c}"),
+                    types,
+                }
+            } else {
+                MonoType::Application { c, types }
+            }
         }
     }
 }

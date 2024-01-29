@@ -61,7 +61,7 @@ fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
                 .unwrap()
                 .as_str()
                 .to_string();
-            let dimensions: Vec<u32> = tpe
+            let mut dimensions: Vec<u32> = tpe
                 .into_inner()
                 .filter_map(|x| {
                     if let Rule::integer = x.as_rule() {
@@ -71,6 +71,9 @@ fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
                     }
                 })
                 .collect();
+            if dimensions.is_empty() {
+                dimensions.push(1);
+            }
             Type {
                 dimensions,
                 subtype: TypeName(subtype),
