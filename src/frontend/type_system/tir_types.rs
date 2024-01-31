@@ -80,8 +80,8 @@ impl FreeVarsGettable for MonoType {
         match self {
             MonoType::Variable(v) => vec![v.to_string()],
             MonoType::Application {
-                c,
-                dimensions,
+                c: _,
+                dimensions: _,
                 types,
             } => types.iter().flat_map(|x| x.free_vars()).collect(),
         }

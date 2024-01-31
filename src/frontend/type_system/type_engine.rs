@@ -196,7 +196,7 @@ pub fn w_algo(
             arg_name: name,
             e1,
             ret_type_hint,
-            arg_type_hint,
+            arg_type_hint: _,
         } => {
             let new_type = generate_type_name();
             let tir_new_type = MonoType::Variable(new_type);
@@ -260,13 +260,13 @@ pub fn w_algo(
                 }
                 MonoType::Application {
                     c,
-                    dimensions,
-                    types,
+                    dimensions: _,
+                    types: _,
                 } if c == "bool" => {}
                 MonoType::Application {
-                    c,
-                    dimensions,
-                    types,
+                    c: _,
+                    dimensions: _,
+                    types: _,
                 } => unreachable!("condtype must be bool"),
             };
 
@@ -374,9 +374,17 @@ pub fn w_algo(
 fn get_rettype_of_application(app: MonoType) -> MonoType {
     match app {
         MonoType::Variable(_) => unreachable!("FAILED TO GET APPTYPE"),
-        MonoType::Application { c, dimensions, types } => {
+        MonoType::Application {
+            c,
+            dimensions,
+            types,
+        } => {
             if types.len() == 0 {
-                MonoType::Application { c, dimensions, types }
+                MonoType::Application {
+                    c,
+                    dimensions,
+                    types,
+                }
             } else {
                 get_rettype_of_application(types.last().unwrap().clone())
             }
@@ -387,7 +395,11 @@ fn get_rettype_of_application(app: MonoType) -> MonoType {
 fn cvt_scalar_to_vector(size: u32, mt: MonoType) -> MonoType {
     match mt {
         MonoType::Variable(v) => MonoType::Variable(v),
-        MonoType::Application { c, dimensions, types } => {
+        MonoType::Application {
+            c,
+            dimensions,
+            types,
+        } => {
             if types.len() == 0 {
                 MonoType::Application {
                     c,
@@ -395,7 +407,11 @@ fn cvt_scalar_to_vector(size: u32, mt: MonoType) -> MonoType {
                     types,
                 }
             } else {
-                MonoType::Application { c, dimensions, types }
+                MonoType::Application {
+                    c,
+                    dimensions,
+                    types,
+                }
             }
         }
     }
@@ -417,7 +433,11 @@ fn generalise(ctx: &Context, tpe: MonoType) -> PolyType {
 fn contains(v: &MonoType, tpe: &String) -> bool {
     match v {
         MonoType::Variable(v) => *v == *tpe,
-        MonoType::Application { c, dimensions, types } => {
+        MonoType::Application {
+            c: _,
+            dimensions: _,
+            types,
+        } => {
             let inner_contains: Vec<bool> = types
                 .iter()
                 .map(|x| contains(x, tpe))
@@ -433,7 +453,7 @@ pub enum UnificationError {
     InfiniteUnification,
     UnifyingDifferentFunctions,
     UnifyingSameFunctionDifferentArgCount,
-    IncorrectDimensions
+    IncorrectDimensions,
 }
 
 fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError> {
@@ -456,8 +476,16 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError>
     };
 
     if let (
-        MonoType::Application { c: c1, dimensions: d1, types: t1 },
-        MonoType::Application { c: c2, dimensions: d2, types: t2 },
+        MonoType::Application {
+            c: c1,
+            dimensions: d1,
+            types: t1,
+        },
+        MonoType::Application {
+            c: c2,
+            dimensions: d2,
+            types: t2,
+        },
     ) = (t1, t2)
     {
         if c1 != c2 {
@@ -467,7 +495,7 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError>
             return Err(UnificationError::UnifyingSameFunctionDifferentArgCount);
         }
         if d1 != d2 {
-            return Err(UnificationError::IncorrectDimensions)
+            return Err(UnificationError::IncorrectDimensions);
         }
 
         let mut s = Substitution::new();

@@ -1,7 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::frontend::type_system::context::Context;
-
 use super::mir_ast_types::{Phi, SSAConditionalBlock, SSAExpression, SSALabeledBlock, SSAValue};
 
 fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {

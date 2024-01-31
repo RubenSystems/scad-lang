@@ -3,6 +3,7 @@ pub mod testing;
 
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
+use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 use crate::frontend::mid_level_ir::mir_opt::{
     get_referenced, mir_variable_fold, remove_unused_variables,
@@ -11,21 +12,17 @@ use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
-use crate::frontend::type_system::tir_types::{MonoType, TIRType};
-use crate::frontend::type_system::type_engine::{instantiate, w_algo, WAlgoInfo};
-use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
+
+use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
+use frontend::mid_level_ir::ffi::FFIHIRExpr;
+use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::Write;
 
-use std::path::Path;
-use std::process::Command;
-
-
-fn compile() -> SSAExpression {
+#[no_mangle]
+pub extern "C" fn compile() -> FFIHIRExpr {
     let _args: Vec<String> = std::env::args().collect();
 
     let test_prog = r#"
@@ -79,5 +76,5 @@ fn compile() -> SSAExpression {
     println!("{:#?}", context);
     // println!("{tpe:?}");
 
-    code
+    ffi_ssa_expr(code) 
 }
