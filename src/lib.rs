@@ -22,17 +22,19 @@ use pest::Parser;
 use std::collections::{HashMap, HashSet};
 
 #[no_mangle]
-pub extern "C" fn compile() -> FFIHIRExpr {
+pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
     let _args: Vec<String> = std::env::args().collect();
 
     let test_prog = r#"
-        fn main(a: i32, b: i32) 2xi32; 
 
-        fn main(a: i32, b: i32) 2xi32 {
-            let mut x: 1xi32 = {100, 200};
 
-            x
-        };
+    fn main() 2xi32;
+
+    fn main() 2xi32 {
+        let mut x: 2xi32 = {500, 600};
+        x
+    };
+
 
     "#;
 
@@ -54,13 +56,13 @@ pub extern "C" fn compile() -> FFIHIRExpr {
 
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
+    // let referenced_vars = get_referenced(&code.0);
+    // let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     let consumable_context = Context::new();
 
-    let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
+    let (tir, ctx) = transform_mir_to_tir(code.0.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
@@ -76,5 +78,6 @@ pub extern "C" fn compile() -> FFIHIRExpr {
     println!("{:#?}", context);
     // println!("{tpe:?}");
 
-    ffi_ssa_expr(code) 
+    let code_res = std::mem::ManuallyDrop::new(code.0);
+    std::mem::ManuallyDrop::new(ffi_ssa_expr(code_res))
 }

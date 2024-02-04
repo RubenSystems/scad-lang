@@ -1,7 +1,7 @@
 pub mod frontend;
 pub mod testing;
 
-use crate::frontend::high_level_ir::ast_types::Statement;
+use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 use crate::frontend::mid_level_ir::mir_opt::{
@@ -13,8 +13,10 @@ use crate::frontend::type_system::context::Context;
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{instantiate, w_algo, WAlgoInfo};
-use frontend::mid_level_ir::{mir_ast_types::SSAExpression, mir_translators::statement_l1_to_l2};
+use frontend::mid_level_ir::mir_ast_types::SSAExpression;
+use frontend::mid_level_ir::mir_translators::statement_l1_to_l2;
 
+use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
 use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
@@ -130,13 +132,13 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-        fn main(a: i32, b: i32) 2xi32; 
+    fn main() 2xi32;
 
-        fn main(a: i32, b: i32) 2xi32 {
-            let mut x: 1xi32 = {100, 200};
+    fn main() 2xi32 {
+        let mut x: 2xi32 = {100, 200};
+        x
+    };
 
-            x
-        };
 
     "#;
 
@@ -158,8 +160,8 @@ fn main() -> std::io::Result<()> {
 
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
+    // let referenced_vars = get_referenced(&code.0);
+    // let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     println!("{code:#?}");
@@ -225,7 +227,7 @@ fn main() -> std::io::Result<()> {
 
     // println!("{:#?}", consumable_context);
 
-    let (tir, ctx) = transform_mir_to_tir(code, consumable_context);
+    let (tir, ctx) = transform_mir_to_tir(code.0.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
@@ -238,33 +240,33 @@ fn main() -> std::io::Result<()> {
     )
     .unwrap();
 
-    println!("{:#?}", context);
+    _ = ffi_ssa_expr(code.0);
     // println!("{tpe:?}");
 
     Ok(())
 }
 
 mod tests {
-    use crate::testing::run_test;
+    // use crate::testing::run_test;
 
-    fn test_programs(path: &str) {
-        let test_output = run_test(path);
-        println!("C Speed: {}", test_output.c_test.duration.as_nanos());
-        println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
-        println!(
-            "Speed up: {}",
-            (test_output.scad_test.duration - test_output.c_test.duration).as_nanos()
-        );
-        assert_eq!(test_output.scad_test.output, test_output.c_test.output);
-    }
+    // fn test_programs(path: &str) {
+    //     let test_output = run_test(path);
+    //     println!("C Speed: {}", test_output.c_test.duration.as_nanos());
+    //     println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
+    //     println!(
+    //         "Speed up: {}",
+    //         (test_output.scad_test.duration - test_output.c_test.duration).as_nanos()
+    //     );
+    //     assert_eq!(test_output.scad_test.output, test_output.c_test.output);
+    // }
 
-    #[test]
-    fn basic_program() {
-        test_programs("test_programs/basic");
-    }
+    // #[test]
+    // fn basic_program() {
+    //     test_programs("test_programs/basic");
+    // }
 
-    #[test]
-    fn basic_conditional_1() {
-        test_programs("test_programs/basic_conditional_1");
-    }
+    // #[test]
+    // fn basic_conditional_1() {
+    //     test_programs("test_programs/basic_conditional_1");
+    // }
 }

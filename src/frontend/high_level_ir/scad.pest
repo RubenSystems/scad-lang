@@ -225,6 +225,7 @@ top_level_statement = {
 	| procedure_definition
 	| forward_function_decleration 
 	| forward_procedure_decleration 
+	| var_decl
 }
 
 
