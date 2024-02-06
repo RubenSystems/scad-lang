@@ -135,7 +135,8 @@ fn main() -> std::io::Result<()> {
     fn main() 2xi32;
 
     fn main() 2xi32 {
-        let mut x: 2xi32 = {100, 200};
+        let mut x: 2xi32 = {500, 600};
+        let mut y: 2xi32 = {700, 800};
         x
     };
 
@@ -160,8 +161,8 @@ fn main() -> std::io::Result<()> {
 
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new());
-    // let referenced_vars = get_referenced(&code.0);
-    // let code = remove_unused_variables(code.0, &referenced_vars);
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     println!("{code:#?}");
@@ -227,7 +228,8 @@ fn main() -> std::io::Result<()> {
 
     // println!("{:#?}", consumable_context);
 
-    let (tir, ctx) = transform_mir_to_tir(code.0.fcopy(), consumable_context);
+    let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
+    println!("\n\n{:#?}\n\n", code);
     println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
@@ -240,7 +242,7 @@ fn main() -> std::io::Result<()> {
     )
     .unwrap();
 
-    _ = ffi_ssa_expr(code.0);
+    _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
     // println!("{tpe:?}");
 
     Ok(())

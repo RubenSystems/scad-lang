@@ -13,8 +13,24 @@ pub enum FFIHIRTag {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+pub struct FFIString {
+    data: *const c_char, 
+    length: usize
+}
+
+impl FFIString {
+    fn from_string(string: String) -> Self{
+        Self {
+            length: string.len(),
+            data: std::ffi::CString::new(string).unwrap().into_raw(), 
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct FFIHIRVariableDecl {
-    name: *const c_char,
+    name: FFIString,
     e1: FFIHIRValue,
     e2: *const FFIHIRExpr,
 }
@@ -22,7 +38,7 @@ pub struct FFIHIRVariableDecl {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRFunctionDecl {
-    name: *const c_char,
+    name: FFIString,
     block: *const FFIHIRExpr,
     e2: *const FFIHIRExpr,
 }
@@ -36,7 +52,7 @@ pub struct FFIHIRReturn {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRForwardFunctionDecl {
-    name: *const c_char,
+    name: FFIString,
     e2: *const FFIHIRExpr,
 }
 
@@ -66,7 +82,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             tag: FFIHIRTag::VariableDecl,
             value: ExpressionUnion {
                 variable_decl: FFIHIRVariableDecl {
-                    name: std::ffi::CString::new(name).unwrap().into_raw(),
+                    name: FFIString::from_string(name),
                     e1: ffi_ssa_val(e1),
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
                 },
@@ -82,7 +98,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             tag: FFIHIRTag::FunctionDecl,
             value: ExpressionUnion {
                 function_decl: FFIHIRFunctionDecl {
-                    name: std::ffi::CString::new(name).unwrap().into_raw(),
+                    name: FFIString::from_string(name),
                     block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*block)))),
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
                 },
@@ -97,7 +113,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             tag: FFIHIRTag::ForwardFunctionDecl,
             value: ExpressionUnion {
                 forward_function_decl: FFIHIRForwardFunctionDecl {
-                    name: std::ffi::CString::new(name).unwrap().into_raw(),
+                    name: FFIString::from_string(name),
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
                 },
             },
@@ -138,16 +154,24 @@ pub struct FFIHIRInteger {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+pub struct FFIHIRVariableReference {
+    pub name: FFIString
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub union ValueUnion {
     array: FFIHIRArray,
     integer: FFIHIRInteger,
+    variable_reference: FFIHIRVariableReference,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub enum FFIHirValueTag {
-    Array,
-    Integer,
+    Array = 0,
+    Integer = 1,
+    VariableReference = 2
 }
 
 #[repr(C)]
@@ -159,7 +183,13 @@ pub struct FFIHIRValue {
 
 pub fn ffi_ssa_val(val: SSAValue) -> FFIHIRValue {
     match val {
-        SSAValue::VariableReference(_) => todo!(),
+        SSAValue::VariableReference(v) => {
+            println!("{v}");
+            FFIHIRValue {
+                tag: FFIHirValueTag::VariableReference,
+                value: ValueUnion { variable_reference: FFIHIRVariableReference { name: FFIString::from_string(v) } },
+            }
+        },
         SSAValue::Phi(_) => todo!(),
         SSAValue::Integer(i) => FFIHIRValue {
             tag: FFIHirValueTag::Integer,
@@ -181,12 +211,15 @@ pub fn ffi_ssa_val(val: SSAValue) -> FFIHIRValue {
         SSAValue::Nothing => todo!(),
         SSAValue::Array(v) => {
             let arr: Vec<FFIHIRValue> = v.into_iter().map(|x| ffi_ssa_val(x)).collect();
+            let arr_ptr = arr.as_ptr();
+            let arr_len = arr.len();
+            std::mem::forget(arr);
             FFIHIRValue {
                 tag: FFIHirValueTag::Array,
                 value: ValueUnion {
                     array: FFIHIRArray {
-                        vals: arr.as_ptr(),
-                        size: arr.len(),
+                        vals: arr_ptr,
+                        size: arr_len,
                     },
                 },
             }

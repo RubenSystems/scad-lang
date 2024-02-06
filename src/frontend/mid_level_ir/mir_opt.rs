@@ -24,7 +24,7 @@ fn foldable(val: &SSAValue) -> bool {
             parameters: _,
         } => false,
         SSAValue::Nothing => false,
-        SSAValue::Array(_) => true,
+        SSAValue::Array(_) => false,
     }
 }
 

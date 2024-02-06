@@ -32,6 +32,7 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
 
     fn main() 2xi32 {
         let mut x: 2xi32 = {500, 600};
+        let mut y: 2xi32 = {700, 800};
         x
     };
 
@@ -56,13 +57,14 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
 
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new());
-    // let referenced_vars = get_referenced(&code.0);
-    // let code = remove_unused_variables(code.0, &referenced_vars);
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     let consumable_context = Context::new();
 
-    let (tir, ctx) = transform_mir_to_tir(code.0.fcopy(), consumable_context);
+    let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
+    println!("\n\n{:#?}\n\n", code);
     println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
@@ -78,6 +80,6 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
     println!("{:#?}", context);
     // println!("{tpe:?}");
 
-    let code_res = std::mem::ManuallyDrop::new(code.0);
+    let code_res = std::mem::ManuallyDrop::new(code);
     std::mem::ManuallyDrop::new(ffi_ssa_expr(code_res))
 }
