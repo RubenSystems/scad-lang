@@ -160,9 +160,9 @@ fn main() -> std::io::Result<()> {
     let code = rename_variable_reassignment(code, &mut HashMap::new());
 
     // Optimiser
-    let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
+    // let code = mir_variable_fold(code, HashMap::new());
+    // let referenced_vars = get_referenced(&code.0);
+    // let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     println!("{code:#?}");
