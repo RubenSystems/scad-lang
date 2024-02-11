@@ -1,6 +1,6 @@
+use super::mir_ast_types::{SSAExpression, SSAValue};
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 use std::os::raw::c_char;
-use super::mir_ast_types::{SSAExpression, SSAValue};
 
 #[repr(C)]
 pub enum FFIHIRTag {
@@ -14,15 +14,15 @@ pub enum FFIHIRTag {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIString {
-    data: *const c_char, 
-    length: usize
+    data: *const c_char,
+    length: usize,
 }
 
 impl FFIString {
-    fn from_string(string: String) -> Self{
+    fn from_string(string: String) -> Self {
         Self {
             length: string.len(),
-            data: std::ffi::CString::new(string).unwrap().into_raw(), 
+            data: std::ffi::CString::new(string).unwrap().into_raw(),
         }
     }
 }
@@ -40,6 +40,8 @@ pub struct FFIHIRVariableDecl {
 pub struct FFIHIRFunctionDecl {
     name: FFIString,
     block: *const FFIHIRExpr,
+    args: *const FFIString,
+    arg_len: usize,
     e2: *const FFIHIRExpr,
 }
 
@@ -90,20 +92,34 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
         },
         SSAExpression::FuncDecl {
             name,
-            args: _,
+            args,
             ret_type: _,
             block,
             e2,
-        } => FFIHIRExpr {
-            tag: FFIHIRTag::FunctionDecl,
-            value: ExpressionUnion {
-                function_decl: FFIHIRFunctionDecl {
-                    name: FFIString::from_string(name),
-                    block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*block)))),
-                    e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+        } => {
+            let a: Vec<FFIString> = args
+                .into_iter()
+                .map(|x| FFIString::from_string(x.0))
+                .collect();
+            let a_len = a.len();
+            let a_ptr = a.as_ptr();
+            std::mem::forget(a);
+
+            FFIHIRExpr {
+                tag: FFIHIRTag::FunctionDecl,
+                value: ExpressionUnion {
+                    function_decl: FFIHIRFunctionDecl {
+                        name: FFIString::from_string(name),
+                        block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
+                            *block,
+                        )))),
+                        e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+                        args: a_ptr,
+                        arg_len: a_len,
+                    },
                 },
-            },
-        },
+            }
+        }
         SSAExpression::FuncForwardDecl {
             name,
             args: _,
@@ -155,7 +171,15 @@ pub struct FFIHIRInteger {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRVariableReference {
-    pub name: FFIString
+    pub name: FFIString,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FFIHIRFunctionCall {
+    pub func_name: FFIString,
+    pub params: *const FFIHIRValue,
+    pub param_len: usize,
 }
 
 #[repr(C)]
@@ -164,6 +188,7 @@ pub union ValueUnion {
     array: FFIHIRArray,
     integer: FFIHIRInteger,
     variable_reference: FFIHIRVariableReference,
+    function_call: FFIHIRFunctionCall,
 }
 
 #[repr(C)]
@@ -171,7 +196,8 @@ pub union ValueUnion {
 pub enum FFIHirValueTag {
     Array = 0,
     Integer = 1,
-    VariableReference = 2
+    VariableReference = 2,
+    FunctionCall = 3,
 }
 
 #[repr(C)]
@@ -187,9 +213,13 @@ pub fn ffi_ssa_val(val: SSAValue) -> FFIHIRValue {
             println!("{v}");
             FFIHIRValue {
                 tag: FFIHirValueTag::VariableReference,
-                value: ValueUnion { variable_reference: FFIHIRVariableReference { name: FFIString::from_string(v) } },
+                value: ValueUnion {
+                    variable_reference: FFIHIRVariableReference {
+                        name: FFIString::from_string(v),
+                    },
+                },
             }
-        },
+        }
         SSAValue::Phi(_) => todo!(),
         SSAValue::Integer(i) => FFIHIRValue {
             tag: FFIHirValueTag::Integer,
@@ -204,10 +234,23 @@ pub fn ffi_ssa_val(val: SSAValue) -> FFIHIRValue {
             op: _,
             rhs: _,
         } => todo!(),
-        SSAValue::FunctionCall {
-            name: _,
-            parameters: _,
-        } => todo!(),
+        SSAValue::FunctionCall { name, parameters } => {
+            let param_transform: Vec<FFIHIRValue> =
+                parameters.into_iter().map(|x| ffi_ssa_val(x)).collect();
+            let len = param_transform.len();
+            let ptr = param_transform.as_ptr();
+            std::mem::forget(param_transform);
+            FFIHIRValue {
+                tag: FFIHirValueTag::FunctionCall,
+                value: ValueUnion {
+                    function_call: FFIHIRFunctionCall {
+                        func_name: FFIString::from_string(name),
+                        params: ptr,
+                        param_len: len,
+                    },
+                },
+            }
+        }
         SSAValue::Nothing => todo!(),
         SSAValue::Array(v) => {
             let arr: Vec<FFIHIRValue> = v.into_iter().map(|x| ffi_ssa_val(x)).collect();

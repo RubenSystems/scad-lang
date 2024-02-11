@@ -132,14 +132,23 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
+
     fn main() 2xi32;
+
+    fn add_and_print() 2xi32;
+
+    fn add_and_print(m: 2xi32) 2xi32 {
+        let mut y: 2xi32 = {700, 800};
+        let mut k: 2xi32 = @add(a: y, b: m);
+        @print(value: k);
+        k
+    };
 
     fn main() 2xi32 {
         let mut x: 2xi32 = {500, 600};
-        let mut y: 2xi32 = {700, 800};
-        x
+        let mut y: 2xi32 = add_and_print(m: x);
+        y
     };
-
 
     "#;
 
@@ -169,57 +178,32 @@ fn main() -> std::io::Result<()> {
 
     let mut consumable_context = Context::new();
 
-    // consumable_context.add_type_for_name(
-    //     "scad_core_arithmetic_add".into(),
-    //     TIRType::MonoType(MonoType::Application {
-    //         c: "->".into(),
-    //         types: vec![
-    //             MonoType::Application {
-    //                 c: "f32".into(),
-    //                 dimensions: Some()
-    //                 types: vec![],
-    //             },
-    //             MonoType::Application {
-    //                 c: "->".into(),
-    //                 types: vec![
-    //                     MonoType::Application {
-    //                         c: "f32".into(),
-    //                         types: vec![],
-    //                     },
-    //                     MonoType::Application {
-    //                         c: "f32".into(),
-    //                         types: vec![],
-    //                     },
-    //                 ],
-    //             },
-    //         ],
-    //     }),
-    // );
     consumable_context.add_type_for_name(
-        "scad_core_arithmetic_add".into(),
+        "@print".into(),
+        TIRType::MonoType(MonoType::Application {
+            dimensions: None,
+                    c: "->".into(),
+                    types: vec![
+                        MonoType::Variable("any_vec_any".into()),
+                        MonoType::Variable("any_vec_any".into()),
+                    ],
+                }),
+    );
+
+
+    consumable_context.add_type_for_name(
+        "@add".into(),
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
             dimensions: None,
             types: vec![
-                MonoType::Application {
-                    c: "i32".into(),
-                    dimensions: Some(vec![1]),
-                    types: vec![],
-                },
+                MonoType::Variable("@any_adding_type".into()),
                 MonoType::Application {
                     c: "->".into(),
                     dimensions: None,
                     types: vec![
-                        MonoType::Application {
-                            c: "1xi32".into(),
-                            dimensions: Some(vec![1]),
-                            types: vec![],
-                        },
-                        MonoType::Application {
-                            c: "1xi32".into(),
-                            dimensions: Some(vec![1]),
-                            types: vec![],
-                        },
+                        MonoType::Variable("@any_adding_type".into()),
+                        MonoType::Variable("@any_adding_type".into()),
                     ],
                 },
             ],

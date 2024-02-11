@@ -13,6 +13,7 @@ use crate::frontend::type_system::context::Context;
 
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
+use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::mid_level_ir::ffi::FFIHIRExpr;
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
@@ -27,22 +28,23 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
 
     let test_prog = r#"
 
-
     fn main() 2xi32;
 
-    fn botajef_drive_yards() 2xi32;
+    fn add_and_print() 2xi32;
 
-    fn botajef_drive_yards() 2xi32 {
-        let mut x: 2xi32 = {500, 600};
+    fn add_and_print(m: 2xi32) 2xi32 {
         let mut y: 2xi32 = {700, 800};
-        x
+        let mut k: 2xi32 = @add(a: y, b: m);
+        @print(value: k);
+        k
     };
 
     fn main() 2xi32 {
         let mut x: 2xi32 = {500, 600};
-        let mut y: 2xi32 = {700, 800};
-        x
+        let mut y: 2xi32 = add_and_print(m: x);
+        y
     };
+
 
 
     "#;
@@ -64,13 +66,43 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
     let code = rename_variable_reassignment(code, &mut HashMap::new());
 
     // Optimiser
-    let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
+    let code = mir_variable_fold(code, HashMap::new()).0;
+    let referenced_vars = get_referenced(&code);
+    // let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
-    let consumable_context = Context::new();
+    let mut consumable_context = Context::new();
 
+    consumable_context.add_type_for_name(
+        "@print".into(),
+        TIRType::MonoType(MonoType::Application {
+            dimensions: None,
+                    c: "->".into(),
+                    types: vec![
+                        MonoType::Variable("@any_printing_type".into()),
+                        MonoType::Variable("@any_printing_type".into()),
+                    ],
+                }),
+    );
+
+    consumable_context.add_type_for_name(
+        "@add".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "->".into(),
+            dimensions: None,
+            types: vec![
+                MonoType::Variable("@any_adding_type".into()),
+                MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable("@any_adding_type".into()),
+                        MonoType::Variable("@any_adding_type".into()),
+                    ],
+                },
+            ],
+        }),
+    );
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", code);
     println!("\n\n{:#?}\n\n", tir);

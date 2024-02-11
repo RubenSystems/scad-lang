@@ -22,6 +22,7 @@ integer = @{ ASCII_DIGIT+ }
 float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
 char_array = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }
+function_call_identifier = { identifier | "@" ~ identifier }
 boolean_t = { "true" | "false" }
 
 
@@ -122,7 +123,7 @@ procedure_definition = {
 
 
 function_call = {
-	function_name ~ "(" ~ function_call_params? ~ ")"
+	function_call_identifier ~ "(" ~ function_call_params? ~ ")"
 }
 
 function_name = {identifier}
