@@ -82,7 +82,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
                 .collect();
 
             (TIRExpression::Tensor(vals), ctx)
-        },
+        }
         SSAValue::ConditionalBlock {
             if_block,
             else_block,

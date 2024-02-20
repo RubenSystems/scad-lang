@@ -60,7 +60,7 @@ pub enum SSAExpression {
     Yield {
         val: SSAValue,
     },
-    Block(Box<SSAExpression>)
+    Block(Box<SSAExpression>),
 }
 
 impl FailureCopy for SSAExpression {
@@ -139,7 +139,6 @@ pub enum SSAValue {
     },
     Nothing,
     Tensor(Vec<SSAValue>),
-
 }
 
 impl FailureCopy for SSAValue {
@@ -167,7 +166,7 @@ impl FailureCopy for SSAValue {
             } => SSAValue::ConditionalBlock {
                 if_block: if_block.fcopy(),
                 else_block: else_block.fcopy(),
-            }
+            },
         }
     }
 }

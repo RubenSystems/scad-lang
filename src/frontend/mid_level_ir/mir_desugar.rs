@@ -141,7 +141,10 @@ pub fn rename_variable_reassignment_value(
                 block: Box::new(rename_variable_reassignment(*if_block.block.block, tracker)),
             };
             let if_block = SSAConditionalBlock {
-                condition: Box::new(rename_variable_reassignment_value(*if_block.condition, tracker)),
+                condition: Box::new(rename_variable_reassignment_value(
+                    *if_block.condition,
+                    tracker,
+                )),
                 block: inner_if_block,
             };
             let else_block = SSALabeledBlock {

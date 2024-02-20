@@ -105,26 +105,30 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             let cond_tmp_name = generate_register_name();
             expression_l1_to_l2(
                 block.condition,
-                Box::new(move |condition| SSAExpression::VariableDecl { name: cond_tmp_name.clone(), vtype: None, e1: SSAValue::ConditionalBlock {
-                    if_block: SSAConditionalBlock {
-                        condition: Box::new(condition),
-                        block: SSALabeledBlock {
-                            label: inner_if_label.clone(),
+                Box::new(move |condition| SSAExpression::VariableDecl {
+                    name: cond_tmp_name.clone(),
+                    vtype: None,
+                    e1: SSAValue::ConditionalBlock {
+                        if_block: SSAConditionalBlock {
+                            condition: Box::new(condition),
+                            block: SSALabeledBlock {
+                                label: inner_if_label.clone(),
+                                block: Box::new(expression_l1_to_l2(
+                                    Expression::Block(block.block),
+                                    Box::new(move |res| SSAExpression::Yield { val: res }),
+                                )),
+                            },
+                        },
+                        else_block: SSALabeledBlock {
+                            label: inner_else_label.clone(),
                             block: Box::new(expression_l1_to_l2(
-                                Expression::Block(block.block),
-                                Box::new(move |res| SSAExpression::Yield { val: res })
-
+                                Expression::Block(*else_block),
+                                Box::new(move |res| SSAExpression::Yield { val: res }),
                             )),
                         },
                     },
-                    else_block: SSALabeledBlock {
-                        label: inner_else_label.clone(),
-                        block: Box::new(expression_l1_to_l2(
-                            Expression::Block(*else_block),
-                            Box::new(move |res| SSAExpression::Yield { val: res }),
-                        )),
-                    },
-                }, e2: Box::new(gen(SSAValue::VariableReference(cond_tmp_name))) }),
+                    e2: Box::new(gen(SSAValue::VariableReference(cond_tmp_name))),
+                }),
             )
         }
     }

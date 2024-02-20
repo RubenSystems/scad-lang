@@ -215,7 +215,7 @@ pub union ValueUnion {
     variable_reference: FFIHIRVariableReference,
     function_call: FFIHIRFunctionCall,
     boolean: u8,
-    conditional: FFIHIRConditional
+    conditional: FFIHIRConditional,
 }
 
 #[repr(C)]
@@ -238,16 +238,14 @@ pub struct FFIHIRValue {
 
 pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
     match val.fcopy() {
-        SSAValue::VariableReference(v) => {
-            FFIHIRValue {
-                tag: FFIHirValueTag::VariableReference,
-                value: ValueUnion {
-                    variable_reference: FFIHIRVariableReference {
-                        name: FFIString::from_string(v),
-                    },
+        SSAValue::VariableReference(v) => FFIHIRValue {
+            tag: FFIHirValueTag::VariableReference,
+            value: ValueUnion {
+                variable_reference: FFIHIRVariableReference {
+                    name: FFIString::from_string(v),
                 },
-            }
-        }
+            },
+        },
         SSAValue::Phi(_) => todo!(),
         SSAValue::Integer(i) => FFIHIRValue {
             tag: FFIHirValueTag::Integer,
@@ -268,8 +266,10 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             rhs: _,
         } => todo!(),
         SSAValue::FunctionCall { name, parameters } => {
-            let param_transform: Vec<FFIHIRValue> =
-                parameters.into_iter().map(|x| ffi_ssa_val(std::mem::ManuallyDrop::new(x))).collect();
+            let param_transform: Vec<FFIHIRValue> = parameters
+                .into_iter()
+                .map(|x| ffi_ssa_val(std::mem::ManuallyDrop::new(x)))
+                .collect();
             let len = param_transform.len();
             let ptr = param_transform.as_ptr();
             std::mem::forget(param_transform);
@@ -286,7 +286,10 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
         }
         SSAValue::Nothing => todo!(),
         SSAValue::Tensor(v) => {
-            let arr: Vec<FFIHIRValue> = v.into_iter().map(|x| ffi_ssa_val(std::mem::ManuallyDrop::new(x))).collect();
+            let arr: Vec<FFIHIRValue> = v
+                .into_iter()
+                .map(|x| ffi_ssa_val(std::mem::ManuallyDrop::new(x)))
+                .collect();
             let arr_ptr = arr.as_ptr();
             let arr_len = arr.len();
             std::mem::forget(arr);
@@ -299,7 +302,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
                     },
                 },
             }
-        },
+        }
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
@@ -308,7 +311,9 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             value: ValueUnion {
                 conditional: FFIHIRConditional {
                     if_arm: FFIExpressionBlock {
-                        condition: Box::into_raw(Box::new(ffi_ssa_val(std::mem::ManuallyDrop::new(*if_block.condition)))),
+                        condition: Box::into_raw(Box::new(ffi_ssa_val(
+                            std::mem::ManuallyDrop::new(*if_block.condition),
+                        ))),
                         block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
                             *if_block.block.block,
                         )))),

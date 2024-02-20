@@ -25,7 +25,10 @@ fn foldable(val: &SSAValue) -> bool {
         } => false,
         SSAValue::Nothing => false,
         SSAValue::Tensor(_) => false,
-        SSAValue::ConditionalBlock { if_block: _, else_block: _ } => false,
+        SSAValue::ConditionalBlock {
+            if_block: _,
+            else_block: _,
+        } => false,
     }
 }
 
@@ -73,7 +76,7 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
                 set.extend(subset);
             }
             set
-        },
+        }
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
@@ -246,7 +249,6 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
                 label: else_block.label,
                 block: Box::new(op_else_block),
             };
-
 
             SSAValue::ConditionalBlock {
                 if_block: op_if,

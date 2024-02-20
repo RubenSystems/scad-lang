@@ -20,8 +20,6 @@ use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 
-
-
 fn main() -> std::io::Result<()> {
     let _args: Vec<String> = std::env::args().collect();
 
