@@ -193,7 +193,7 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
                 expression,
             })
         }
-        Rule::array => Statement::Expression(Expression::Array(
+        Rule::tensor => Statement::Expression(Expression::Tensor(
             primary
                 .into_inner()
                 .map(|x| {
@@ -300,31 +300,6 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
             };
 
             Statement::ProcedureDefinition(def)
-        }
-
-        Rule::if_statement_block => {
-            todo!();
-            // let mut if_blocks: Vec<ConditionalStatementBlock> = vec![];
-            // let else_block: Option<Box<Block>> = None;
-            // primary.into_inner().for_each(|c| match c.as_rule() {
-            //     Rule::if_statement_block if if_blocks.is_empty() => {
-            //         let cond_block = parse_conditional_block(c);
-            //         if_blocks.push(cond_block)
-            //     }
-            //     Rule::else_if_statement_block => {
-            //         let cond_block = parse_conditional_block(c);
-            //         if_blocks.push(cond_block);
-            //     }
-            //     Rule::else_statement_block => todo!(),
-            //     Rule::if_statement_block if !if_blocks.is_empty() => {
-            //         unreachable!("CAN'T HAVE MORE THAN ONE IF BLOCK!!!")
-            //     }
-            //     _ => unreachable!("TRYING TO DO SOMETHING WEIRD!"),
-            // });
-            // Statement::ConditionalStatementControlFlow {
-            //     if_blocks,
-            //     else_block,
-            // }
         }
         Rule::forward_function_decleration => {
             let mut it: Pairs<'_, Rule> = primary.into_inner();

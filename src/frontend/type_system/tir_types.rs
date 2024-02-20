@@ -10,7 +10,7 @@ pub fn generate_type_name() -> String {
     format!("t{val}")
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub enum MonoType {
     Variable(String),
     Application {
@@ -18,6 +18,29 @@ pub enum MonoType {
         dimensions: Option<Vec<u32>>,
         types: Vec<MonoType>,
     },
+}
+
+impl PartialEq for MonoType {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            MonoType::Variable(_) => true,
+            MonoType::Application {
+                c,
+                dimensions,
+                types,
+            } => {
+                let MonoType::Application {
+                    c: o_c,
+                    dimensions: o_d,
+                    types: o_t,
+                } = other
+                else {
+                    return false;
+                };
+                c == o_c && dimensions == o_d && types == o_t
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

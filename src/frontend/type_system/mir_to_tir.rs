@@ -75,13 +75,30 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 
             (TIRExpression::Phi(phis.collect()), ctx)
         }
-        SSAValue::Array(v) => {
+        SSAValue::Tensor(v) => {
             let vals = v
                 .into_iter()
                 .map(|x| transform_mir_value_to_tir(x, ctx.clone()).0)
                 .collect();
 
-            (TIRExpression::Array(vals), ctx)
+            (TIRExpression::Tensor(vals), ctx)
+        },
+        SSAValue::ConditionalBlock {
+            if_block,
+            else_block,
+        } => {
+            let (condition, ctx) = transform_mir_value_to_tir(*if_block.condition, ctx);
+            let (tir_if_block, ctx) = transform_mir_to_tir(*if_block.block.block, ctx);
+            let (tir_else_block, ctx) = transform_mir_to_tir(*else_block.block, ctx);
+
+            (
+                TIRExpression::Conditional {
+                    condition: Box::new(condition),
+                    if_block: (if_block.block.label, Box::new(tir_if_block)),
+                    else_block: (else_block.label, Box::new(tir_else_block)),
+                },
+                ctx,
+            )
         }
     }
 }
@@ -245,26 +262,6 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
         SSAExpression::Noop => (TIRExpression::Void, ctx),
         SSAExpression::Return { val } => transform_mir_value_to_tir(val, ctx),
         SSAExpression::Block(eb) => transform_mir_to_tir(*eb, ctx),
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => {
-            let (condition, ctx) = transform_mir_value_to_tir(if_block.condition, ctx);
-            let (tir_if_block, ctx) = transform_mir_to_tir(*if_block.block.block, ctx);
-            let (tir_else_block, ctx) = transform_mir_to_tir(*else_block.block, ctx);
-            let (e2, ctx) = transform_mir_to_tir(*e2, ctx);
-
-            (
-                TIRExpression::Conditional {
-                    condition: Box::new(condition),
-                    if_block: (if_block.block.label, Box::new(tir_if_block)),
-                    else_block: (else_block.label, Box::new(tir_else_block)),
-                    e1: Box::new(e2),
-                },
-                ctx,
-            )
-        }
         SSAExpression::FuncForwardDecl {
             name,
             args,
@@ -284,5 +281,6 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
 
             (e2tir, e2ctx)
         }
+        SSAExpression::Yield { val } => transform_mir_value_to_tir(val, ctx),
     }
 }

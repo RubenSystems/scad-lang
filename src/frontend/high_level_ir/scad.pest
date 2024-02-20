@@ -33,7 +33,11 @@ boolean_t = { "true" | "false" }
 type = { (integer ~ "x")* ~ simple_type  }
 simple_type = _{ identifier }
 
-array = { "{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
+literal = _{
+	integer
+	| float
+}
+tensor = { "@{" ~ (literal ~ ("," ~ literal)*)? ~ "}" }
 
 
 // Variable declerations
@@ -54,21 +58,21 @@ expression_block = { "{" ~ statements ~ expression ~ "}" }
 
 
 // if statement
-if_statement_control_flow = {
-	if_statement_block ~ else_if_statement_block* ~ else_statement_block?
-}
+// if_statement_control_flow = {
+// 	if_statement_block ~ else_if_statement_block* ~ else_statement_block?
+// }
 
-if_statement_block = {
-	"if" ~ expression ~ block
-}
+// if_statement_block = {
+// 	"if" ~ expression ~ block
+// }
 
-else_if_statement_block = {
-	"else if" ~ expression ~ block
-}
+// else_if_statement_block = {
+// 	"else if" ~ expression ~ block
+// }
 
-else_statement_block = {
-	"else" ~ block
-}
+// else_statement_block = {
+// 	"else" ~ block
+// }
 
 // if exp
 if_expression_control_flow = {
@@ -193,7 +197,7 @@ non_infix_expressions = _{
 	function_call 
 	| if_expression_control_flow 
 	| "(" ~ expression ~ ")" 
-	| array
+	| tensor
 	| expression_block 
 	| float 
 	| integer
@@ -214,7 +218,7 @@ statement = {
 	var_decl 
 	| const_decl 
 	| loop 
-	| if_statement_control_flow 
+	// | if_statement_control_flow 
 	| var_reassignment
 	| expression 
 }
@@ -226,7 +230,6 @@ top_level_statement = {
 	| procedure_definition
 	| forward_function_decleration 
 	| forward_procedure_decleration 
-	| var_decl
 }
 
 

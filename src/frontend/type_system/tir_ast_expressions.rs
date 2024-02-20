@@ -13,7 +13,7 @@ pub enum TIRExpression {
     Integer(i128),
     Bool(bool),
     Void,
-    Array(Vec<TIRExpression>),
+    Tensor(Vec<TIRExpression>),
     Phi(Vec<TIRPhi>),
     Float(f64),
     VariableReference {
@@ -39,6 +39,5 @@ pub enum TIRExpression {
         condition: Box<TIRExpression>,
         if_block: (String, Box<TIRExpression>), //Name, Expr
         else_block: (String, Box<TIRExpression>),
-        e1: Box<TIRExpression>,
     },
 }

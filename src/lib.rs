@@ -27,24 +27,23 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
     let _args: Vec<String> = std::env::args().collect();
 
     let test_prog = r#"
-
     fn main() 2xi32;
 
-    fn add_and_print() 2xi32;
-
-    fn add_and_print(m: 2xi32) 2xi32 {
-        let mut y: 2xi32 = {700, 800};
-        let mut k: 2xi32 = @add(a: y, b: m);
-        @print(value: k);
-        k
-    };
-
     fn main() 2xi32 {
-        let mut x: 2xi32 = {500, 600};
-        let mut y: 2xi32 = add_and_print(m: x);
-        y
-    };
+        let mut x: 2xi32 = @{700, 800};
+        let mut y: 2xi32 = @{800, 900};
+        let mut z: 2xi32 = @{800, 200};
 
+        let mut does_it_work: 2xi32 = if true {
+            x
+        } else {
+            y
+        };
+
+        @print(value: does_it_work);
+
+        does_it_work
+    };
 
 
     "#;
@@ -68,7 +67,7 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new()).0;
     let referenced_vars = get_referenced(&code);
-    // let code = remove_unused_variables(code.0, &referenced_vars);
+    // let code = remove_unused_variables(code, &referenced_vars);
     // endof optimiser
 
     let mut consumable_context = Context::new();
@@ -77,12 +76,12 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
         "@print".into(),
         TIRType::MonoType(MonoType::Application {
             dimensions: None,
-                    c: "->".into(),
-                    types: vec![
-                        MonoType::Variable("@any_printing_type".into()),
-                        MonoType::Variable("@any_printing_type".into()),
-                    ],
-                }),
+            c: "->".into(),
+            types: vec![
+                MonoType::Variable("@any_printing_type".into()),
+                MonoType::Variable("@any_printing_type".into()),
+            ],
+        }),
     );
 
     consumable_context.add_type_for_name(
@@ -103,6 +102,26 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
             ],
         }),
     );
+
+    consumable_context.add_type_for_name(
+        "@index".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "->".into(),
+            dimensions: None,
+            types: vec![
+                MonoType::Variable("@any_tensor_type".into()),
+                MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable("@any_index_type".into()),
+                        MonoType::Variable("@any_tensor_type_2".into()),
+                    ],
+                },
+            ],
+        }),
+    );
+
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", code);
     println!("\n\n{:#?}\n\n", tir);

@@ -24,7 +24,8 @@ fn foldable(val: &SSAValue) -> bool {
             parameters: _,
         } => false,
         SSAValue::Nothing => false,
-        SSAValue::Array(_) => false,
+        SSAValue::Tensor(_) => false,
+        SSAValue::ConditionalBlock { if_block: _, else_block: _ } => false,
     }
 }
 
@@ -64,7 +65,7 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
             set
         }
         SSAValue::Nothing => HashSet::new(),
-        SSAValue::Array(v) => {
+        SSAValue::Tensor(v) => {
             let mut set: HashSet<String> = HashSet::new();
 
             for i in v {
@@ -72,6 +73,16 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
                 set.extend(subset);
             }
             set
+        },
+        SSAValue::ConditionalBlock {
+            if_block,
+            else_block,
+        } => {
+            let mut hs = get_referenced_value(&if_block.condition);
+            hs.extend(get_referenced(&if_block.block.block));
+            hs.extend(get_referenced(&else_block.block));
+
+            hs
         }
     }
 }
@@ -108,18 +119,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
         SSAExpression::Noop => HashSet::new(),
         SSAExpression::Return { val } => get_referenced_value(val),
         SSAExpression::Block(b) => get_referenced(b),
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => {
-            let mut hs = get_referenced_value(&if_block.condition);
-            hs.extend(get_referenced(&if_block.block.block));
-            hs.extend(get_referenced(&else_block.block));
-            hs.extend(get_referenced(e2));
-
-            hs
-        }
+        SSAExpression::Yield { val } => get_referenced_value(val),
     }
 }
 
@@ -171,28 +171,29 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
         SSAExpression::Block(b) => {
             SSAExpression::Block(Box::new(remove_unused_variables(*b, used)))
         }
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => SSAExpression::ConditionalBlock {
-            if_block: SSAConditionalBlock {
-                condition: if_block.condition,
-                block: SSALabeledBlock {
-                    label: if_block.block.label,
-                    block: Box::new(remove_unused_variables(*if_block.block.block, used)),
-                },
-            },
-            else_block: SSALabeledBlock {
-                label: else_block.label,
-                block: Box::new(remove_unused_variables(*else_block.block, used)),
-            },
-            e2: Box::new(remove_unused_variables(*e2, used)),
-        },
+        SSAExpression::Yield { val } => SSAExpression::Yield { val },
+        // SSAExpression::ConditionalBlock {
+        //     if_block,
+        //     else_block,
+        //     e2,
+        // } => SSAExpression::ConditionalBlock {
+        //     if_block: SSAConditionalBlock {
+        //         condition: if_block.condition,
+        //         block: SSALabeledBlock {
+        //             label: if_block.block.label,
+        //             block: Box::new(remove_unused_variables(*if_block.block.block, used)),
+        //         },
+        //     },
+        //     else_block: SSALabeledBlock {
+        //         label: else_block.label,
+        //         block: Box::new(remove_unused_variables(*else_block.block, used)),
+        //     },
+        //     e2: Box::new(remove_unused_variables(*e2, used)),
+        // },
     }
 }
 
-fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAValue {
+fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> SSAValue {
     match val.fcopy() {
         SSAValue::VariableReference(r) => match env.get(&r) {
             Some(nval) => nval.fcopy(),
@@ -217,11 +218,41 @@ fn mir_val_variable_fold(val: SSAValue, env: &HashMap<String, SSAValue>) -> SSAV
                 .collect(),
         },
         SSAValue::Nothing => SSAValue::Nothing,
-        SSAValue::Array(v) => SSAValue::Array(
+        SSAValue::Tensor(v) => SSAValue::Tensor(
             v.into_iter()
                 .map(|x| mir_val_variable_fold(x, env))
                 .collect(),
         ),
+        SSAValue::ConditionalBlock {
+            if_block,
+            else_block,
+        } => {
+            // let ev1: HashMap<String, SSAValue> =
+            //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+            // let ev2: HashMap<String, SSAValue> =
+            //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
+
+            let (op_if_block, mut env) = mir_variable_fold(*if_block.block.block, env.clone());
+            let op_if = SSAConditionalBlock {
+                condition: Box::new(mir_val_variable_fold(*if_block.condition, &mut env)),
+                block: SSALabeledBlock {
+                    label: if_block.block.label,
+                    block: Box::new(op_if_block),
+                },
+            };
+
+            let (op_else_block, env) = mir_variable_fold(*else_block.block, env);
+            let op_else = SSALabeledBlock {
+                label: else_block.label,
+                block: Box::new(op_else_block),
+            };
+
+
+            SSAValue::ConditionalBlock {
+                if_block: op_if,
+                else_block: op_else,
+            }
+        }
         _ => todo!(),
     }
 }
@@ -237,7 +268,7 @@ pub fn mir_variable_fold(
             e1,
             e2,
         } => {
-            let optimised_val = mir_val_variable_fold(e1, &env);
+            let optimised_val = mir_val_variable_fold(e1, &mut env);
             if foldable(&optimised_val) {
                 env.insert(name.clone(), optimised_val.fcopy());
             }
@@ -298,46 +329,16 @@ pub fn mir_variable_fold(
         SSAExpression::Noop => (SSAExpression::Noop, env),
         SSAExpression::Return { val } => (
             SSAExpression::Return {
-                val: mir_val_variable_fold(val, &env),
+                val: mir_val_variable_fold(val, &mut env),
             },
             env,
         ),
         SSAExpression::Block(b) => mir_variable_fold(*b, env),
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => {
-            // let ev1: HashMap<String, SSAValue> =
-            //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
-            // let ev2: HashMap<String, SSAValue> =
-            //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
-
-            let (op_if_block, env) = mir_variable_fold(*if_block.block.block, env);
-            let op_if = SSAConditionalBlock {
-                condition: mir_val_variable_fold(if_block.condition, &env),
-                block: SSALabeledBlock {
-                    label: if_block.block.label,
-                    block: Box::new(op_if_block),
-                },
-            };
-
-            let (op_else_block, env) = mir_variable_fold(*else_block.block, env);
-            let op_else = SSALabeledBlock {
-                label: else_block.label,
-                block: Box::new(op_else_block),
-            };
-
-            let (e2, env) = mir_variable_fold(*e2, env);
-
-            (
-                SSAExpression::ConditionalBlock {
-                    if_block: op_if,
-                    else_block: op_else,
-                    e2: Box::new(e2),
-                },
-                env,
-            )
-        }
+        SSAExpression::Yield { val } => (
+            SSAExpression::Yield {
+                val: mir_val_variable_fold(val, &mut env),
+            },
+            env,
+        ),
     }
 }

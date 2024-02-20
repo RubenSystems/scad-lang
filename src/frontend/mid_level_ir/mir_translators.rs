@@ -12,7 +12,7 @@ pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
 pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpression {
     match exp {
-        Expression::Array(v) => {
+        Expression::Tensor(v) => {
             fn aux(
                 mut vec_expr: Vec<Expression>,
                 mut vals: Vec<SSAValue>,
@@ -31,7 +31,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     SSAExpression::VariableDecl {
                         name: tmp.clone(),
                         vtype: None,
-                        e1: SSAValue::Array(vals),
+                        e1: SSAValue::Tensor(vals),
                         e2: Box::new(k(SSAValue::VariableReference(tmp))),
                     }
                 }
@@ -102,21 +102,18 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             let inner_if_label = if_label.clone();
             let inner_else_label = else_label.clone();
 
+            let cond_tmp_name = generate_register_name();
             expression_l1_to_l2(
                 block.condition,
-                Box::new(move |condition| SSAExpression::ConditionalBlock {
+                Box::new(move |condition| SSAExpression::VariableDecl { name: cond_tmp_name.clone(), vtype: None, e1: SSAValue::ConditionalBlock {
                     if_block: SSAConditionalBlock {
-                        condition,
+                        condition: Box::new(condition),
                         block: SSALabeledBlock {
                             label: inner_if_label.clone(),
                             block: Box::new(expression_l1_to_l2(
                                 Expression::Block(block.block),
-                                Box::new(move |res| SSAExpression::VariableDecl {
-                                    name: format!("{inner_if_label}_result"),
-                                    vtype: None,
-                                    e1: res,
-                                    e2: Box::new(SSAExpression::Noop),
-                                }),
+                                Box::new(move |res| SSAExpression::Yield { val: res })
+
                             )),
                         },
                     },
@@ -124,25 +121,10 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                         label: inner_else_label.clone(),
                         block: Box::new(expression_l1_to_l2(
                             Expression::Block(*else_block),
-                            Box::new(move |res| SSAExpression::VariableDecl {
-                                name: format!("{inner_else_label}_result"),
-                                vtype: None,
-                                e1: res,
-                                e2: Box::new(SSAExpression::Noop),
-                            }),
+                            Box::new(move |res| SSAExpression::Yield { val: res }),
                         )),
                     },
-                    e2: Box::new(gen(SSAValue::Phi(vec![
-                        Phi {
-                            value: SSAValue::VariableReference(format!("{if_label}_result")),
-                            branch_name: if_label,
-                        },
-                        Phi {
-                            value: SSAValue::VariableReference(format!("{else_label}_result")),
-                            branch_name: else_label,
-                        },
-                    ]))),
-                }),
+                }, e2: Box::new(gen(SSAValue::VariableReference(cond_tmp_name))) }),
             )
         }
     }

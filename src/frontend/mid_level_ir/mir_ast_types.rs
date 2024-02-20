@@ -1,6 +1,6 @@
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Type};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SSALabeledBlock {
     pub label: String,
     pub block: Box<SSAExpression>,
@@ -15,23 +15,23 @@ impl FailureCopy for SSALabeledBlock {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SSAConditionalBlock {
-    pub condition: SSAValue,
+    pub condition: Box<SSAValue>,
     pub block: SSALabeledBlock,
 }
 
 impl FailureCopy for SSAConditionalBlock {
     fn fcopy(&self) -> Self {
         SSAConditionalBlock {
-            condition: self.condition.fcopy(),
+            condition: Box::new(self.condition.fcopy()),
             block: self.block.fcopy(),
         }
     }
 }
 
 // SSA Definitions
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub enum SSAExpression {
     VariableDecl {
@@ -57,12 +57,10 @@ pub enum SSAExpression {
     Return {
         val: SSAValue,
     },
-    Block(Box<SSAExpression>),
-    ConditionalBlock {
-        if_block: SSAConditionalBlock,
-        else_block: SSALabeledBlock,
-        e2: Box<SSAExpression>,
+    Yield {
+        val: SSAValue,
     },
+    Block(Box<SSAExpression>)
 }
 
 impl FailureCopy for SSAExpression {
@@ -94,12 +92,8 @@ impl FailureCopy for SSAExpression {
             },
             SSAExpression::Noop => SSAExpression::Noop,
             SSAExpression::Return { val } => SSAExpression::Return { val: val.fcopy() },
+            SSAExpression::Yield { val } => SSAExpression::Yield { val: val.fcopy() },
             SSAExpression::Block(b) => SSAExpression::Block(Box::new(b.fcopy())),
-            SSAExpression::ConditionalBlock {
-                if_block: _,
-                else_block: _,
-                e2: _,
-            } => todo!(),
             SSAExpression::FuncForwardDecl {
                 name,
                 args,
@@ -127,6 +121,10 @@ pub struct Phi {
 pub enum SSAValue {
     VariableReference(String),
     Phi(Vec<Phi>),
+    ConditionalBlock {
+        if_block: SSAConditionalBlock,
+        else_block: SSALabeledBlock,
+    },
     Integer(i128),
     Float(f64),
     Bool(bool),
@@ -140,13 +138,14 @@ pub enum SSAValue {
         parameters: Vec<SSAValue>,
     },
     Nothing,
-    Array(Vec<SSAValue>),
+    Tensor(Vec<SSAValue>),
+
 }
 
 impl FailureCopy for SSAValue {
     fn fcopy(&self) -> SSAValue {
         match self {
-            SSAValue::Array(v) => SSAValue::Array(v.iter().map(|x| x.fcopy()).collect()),
+            SSAValue::Tensor(v) => SSAValue::Tensor(v.iter().map(|x| x.fcopy()).collect()),
             SSAValue::Nothing => SSAValue::Nothing,
             SSAValue::VariableReference(r) => SSAValue::VariableReference(r.clone()),
             SSAValue::Integer(i) => SSAValue::Integer(*i),
@@ -162,6 +161,13 @@ impl FailureCopy for SSAValue {
             },
             SSAValue::Bool(b) => SSAValue::Bool(*b),
             SSAValue::Phi(v) => SSAValue::Phi(v.clone()),
+            SSAValue::ConditionalBlock {
+                if_block,
+                else_block,
+            } => SSAValue::ConditionalBlock {
+                if_block: if_block.fcopy(),
+                else_block: else_block.fcopy(),
+            }
         }
     }
 }

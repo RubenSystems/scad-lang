@@ -127,11 +127,33 @@ pub fn rename_variable_reassignment_value(
                 .collect(),
         },
         SSAValue::Nothing => SSAValue::Nothing,
-        SSAValue::Array(v) => SSAValue::Array(
+        SSAValue::Tensor(v) => SSAValue::Tensor(
             v.into_iter()
                 .map(|x| rename_variable_reassignment_value(x, tracker))
                 .collect(),
         ),
+        SSAValue::ConditionalBlock {
+            if_block,
+            else_block,
+        } => {
+            let inner_if_block = SSALabeledBlock {
+                label: if_block.block.label,
+                block: Box::new(rename_variable_reassignment(*if_block.block.block, tracker)),
+            };
+            let if_block = SSAConditionalBlock {
+                condition: Box::new(rename_variable_reassignment_value(*if_block.condition, tracker)),
+                block: inner_if_block,
+            };
+            let else_block = SSALabeledBlock {
+                label: else_block.label,
+                block: Box::new(rename_variable_reassignment(*else_block.block, tracker)),
+            };
+
+            SSAValue::ConditionalBlock {
+                if_block,
+                else_block,
+            }
+        }
     }
 }
 
@@ -196,30 +218,9 @@ pub fn rename_variable_reassignment(
         SSAExpression::Block(b) => {
             SSAExpression::Block(Box::new(rename_variable_reassignment(*b, tracker)))
         }
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => {
-            let inner_if_block = SSALabeledBlock {
-                label: if_block.block.label,
-                block: Box::new(rename_variable_reassignment(*if_block.block.block, tracker)),
-            };
-            let if_block = SSAConditionalBlock {
-                condition: rename_variable_reassignment_value(if_block.condition, tracker),
-                block: inner_if_block,
-            };
-            let else_block = SSALabeledBlock {
-                label: else_block.label,
-                block: Box::new(rename_variable_reassignment(*else_block.block, tracker)),
-            };
-
-            SSAExpression::ConditionalBlock {
-                if_block,
-                else_block,
-                e2: Box::new(rename_variable_reassignment(*e2, tracker)),
-            }
-        }
+        SSAExpression::Yield { val } => SSAExpression::Yield {
+            val: rename_variable_reassignment_value(val, tracker),
+        },
     }
 }
 
@@ -276,11 +277,43 @@ pub fn rename_variables_value(
                 .collect(),
         },
         SSAValue::Nothing => SSAValue::Nothing,
-        SSAValue::Array(v) => SSAValue::Array(
+        SSAValue::Tensor(v) => SSAValue::Tensor(
             v.into_iter()
                 .map(|v| rename_variables_value(v, scoped_name.clone(), used_vars))
                 .collect(),
         ),
+        SSAValue::ConditionalBlock {
+            if_block,
+            else_block,
+        } => {
+            scoped_name.push(if_block.block.label.clone());
+            let if_block_expr =
+                rename_variables(*if_block.block.block, scoped_name.clone(), used_vars);
+            let if_block_label = scoped_name.pop().unwrap();
+            scoped_name.push(else_block.label);
+
+            let else_block_expr =
+                rename_variables(*else_block.block, scoped_name.clone(), used_vars);
+            let else_block_label = scoped_name.pop().unwrap();
+
+            SSAValue::ConditionalBlock {
+                if_block: SSAConditionalBlock {
+                    condition: Box::new(rename_variables_value(
+                        *if_block.condition,
+                        scoped_name.clone(),
+                        used_vars,
+                    )),
+                    block: SSALabeledBlock {
+                        label: scoped_rename(&if_block_label, &scoped_name),
+                        block: Box::new(if_block_expr),
+                    },
+                },
+                else_block: SSALabeledBlock {
+                    label: scoped_rename(&else_block_label, &scoped_name),
+                    block: Box::new(else_block_expr),
+                },
+            }
+        }
     }
 }
 
@@ -357,39 +390,8 @@ pub fn rename_variables(
         SSAExpression::Block(b) => {
             SSAExpression::Block(Box::new(rename_variables(*b, scoped_name, used_vars)))
         }
-        SSAExpression::ConditionalBlock {
-            if_block,
-            else_block,
-            e2,
-        } => {
-            scoped_name.push(if_block.block.label.clone());
-            let if_block_expr =
-                rename_variables(*if_block.block.block, scoped_name.clone(), used_vars);
-            let if_block_label = scoped_name.pop().unwrap();
-            scoped_name.push(else_block.label);
-
-            let else_block_expr =
-                rename_variables(*else_block.block, scoped_name.clone(), used_vars);
-            let else_block_label = scoped_name.pop().unwrap();
-
-            SSAExpression::ConditionalBlock {
-                if_block: SSAConditionalBlock {
-                    condition: rename_variables_value(
-                        if_block.condition,
-                        scoped_name.clone(),
-                        used_vars,
-                    ),
-                    block: SSALabeledBlock {
-                        label: scoped_rename(&if_block_label, &scoped_name),
-                        block: Box::new(if_block_expr),
-                    },
-                },
-                else_block: SSALabeledBlock {
-                    label: scoped_rename(&else_block_label, &scoped_name),
-                    block: Box::new(else_block_expr),
-                },
-                e2: Box::new(rename_variables(*e2, scoped_name, used_vars)),
-            }
-        }
+        SSAExpression::Yield { val } => SSAExpression::Yield {
+            val: rename_variables_value(val, scoped_name, used_vars),
+        },
     }
 }

@@ -238,7 +238,6 @@ pub fn w_algo(
             condition,
             if_block,
             else_block,
-            e1,
         } => {
             // 1 type conditon ensure bool
 
@@ -270,7 +269,7 @@ pub fn w_algo(
                 } => unreachable!("condtype must be bool"),
             };
 
-            let Ok((_, if_mt, if_ctx)) = w_algo(
+            let Ok((if_sub, if_mt, if_ctx)) = w_algo(
                 ctx.clone(),
                 WAlgoInfo {
                     retry_count: info.retry_count,
@@ -280,7 +279,7 @@ pub fn w_algo(
             ) else {
                 todo!()
             };
-            let Ok((_, else_mt, ctx)) = w_algo(
+            let Ok((else_sub, else_mt, ctx)) = w_algo(
                 if_ctx,
                 WAlgoInfo {
                     retry_count: info.retry_count,
@@ -295,17 +294,17 @@ pub fn w_algo(
                 unreachable!("If and else branches must have the same type!");
             }
 
-            let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(
-                ctx,
-                WAlgoInfo {
-                    retry_count: info.retry_count,
-                    req_type: info.req_type,
-                },
-                e1,
-            ) else {
-                todo!()
-            };
-            Ok((e2_sub, e2_mt, e2_ctx))
+            // let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(
+            //     ctx,
+            //     WAlgoInfo {
+            //         retry_count: info.retry_count,
+            //         req_type: info.req_type,
+            //     },
+            //     e1,
+            // ) else {
+            //     todo!()
+            // };
+            Ok((if_sub.merge(&else_sub), if_mt, ctx))
         }
         TIRExpression::Phi(p) => {
             let types: Vec<TIRType> = p
@@ -336,7 +335,7 @@ pub fn w_algo(
 
             Ok((Substitution::new(), ret, context))
         }
-        TIRExpression::Array(v) => {
+        TIRExpression::Tensor(v) => {
             let types: Vec<TIRType> = v
                 .iter()
                 .map(|val| {
@@ -354,7 +353,7 @@ pub fn w_algo(
                 .map(TIRType::MonoType)
                 .collect();
             if !types.iter().all(|x| *x == types[0]) {
-                unreachable!("you issue: a vector can't have more then one type; scad is not python lollolololol");
+                unreachable!("{:#?} you issue: a vector can't have more then one type; scad is not python lollolololol", types);
             }
 
             let ret = cvt_scalar_to_vector(
