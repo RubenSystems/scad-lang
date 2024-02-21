@@ -25,12 +25,9 @@ use std::ffi::{c_char, CStr};
 use std::fs::File;
 use std::io::Read;
 
-
 #[no_mangle]
 pub extern "C" fn compile(filename: *const c_char) -> std::mem::ManuallyDrop<FFIHIRExpr> {
     let _args: Vec<String> = std::env::args().collect();
-
-
 
     let test_prog = r#"
     fn main() 2xi32;

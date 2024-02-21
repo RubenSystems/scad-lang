@@ -169,7 +169,6 @@ pub fn w_algo(
                     todo!()
                 };
 
-                println!("{s2:#?} {t2:#?};\n\n");
 
                 let s3 = unify(
                     &s2.substitute_mono(&t1),

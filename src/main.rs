@@ -1,7 +1,7 @@
 pub mod frontend;
 pub mod testing;
 
-use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
+use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 use crate::frontend::mid_level_ir::mir_opt::{
@@ -13,10 +13,12 @@ use crate::frontend::type_system::context::Context;
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
-use frontend::mid_level_ir::mir_ast_types::SSAExpression;
+use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
+use crate::frontend::high_level_ir::ast_types::FailureCopy;
+use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 
 use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
-use frontend::high_level_ir::hir_parser::Rule;
+use crate::frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 
@@ -44,7 +46,7 @@ fn main() -> std::io::Result<()> {
         let mut does_it_work: 2xi32 = if true {
             super_x
         } else {
-            x
+            @add(a: x, b: y)
         };
 
         @print(value: does_it_work);
@@ -69,19 +71,31 @@ fn main() -> std::io::Result<()> {
 
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-
+    let code = unalive_vars(code, vec![]).0;
     // Optimiser
     // let code = mir_variable_fold(code, HashMap::new());
     // let referenced_vars = get_referenced(&code.0);
     // let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
-    println!("{code:#?}");
+    // println!("{code:#?}");
 
     let mut consumable_context = Context::new();
 
     consumable_context.add_type_for_name(
         "@print".into(),
+        TIRType::MonoType(MonoType::Application {
+            dimensions: None,
+            c: "->".into(),
+            types: vec![
+                MonoType::Variable("any_vec_any".into()),
+                MonoType::Variable("any_vec_any".into()),
+            ],
+        }),
+    );
+
+    consumable_context.add_type_for_name(
+        "@drop".into(),
         TIRType::MonoType(MonoType::Application {
             dimensions: None,
             c: "->".into(),
@@ -134,7 +148,7 @@ fn main() -> std::io::Result<()> {
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", code);
-    println!("\n\n{:#?}\n\n", tir);
+    // println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
         ctx,
