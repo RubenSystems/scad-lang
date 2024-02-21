@@ -10,15 +10,15 @@ use crate::frontend::mid_level_ir::mir_opt::{
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
+use crate::frontend::high_level_ir::ast_types::FailureCopy;
+use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
+use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
-use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
-use crate::frontend::high_level_ir::ast_types::FailureCopy;
-use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 
-use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
 use crate::frontend::high_level_ir::hir_parser::Rule;
+use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 

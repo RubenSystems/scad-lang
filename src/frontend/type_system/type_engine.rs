@@ -169,7 +169,6 @@ pub fn w_algo(
                     todo!()
                 };
 
-
                 let s3 = unify(
                     &s2.substitute_mono(&t1),
                     &MonoType::Application {

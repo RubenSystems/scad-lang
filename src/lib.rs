@@ -5,9 +5,7 @@ use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
-use crate::frontend::mid_level_ir::mir_opt::{
-    get_referenced, mir_variable_fold, remove_unused_variables,
-};
+use crate::frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold};
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
@@ -29,7 +27,7 @@ use std::io::Read;
 pub extern "C" fn compile(filename: *const c_char) -> std::mem::ManuallyDrop<FFIHIRExpr> {
     let _args: Vec<String> = std::env::args().collect();
 
-    let test_prog = r#"
+    let _test_prog = r#"
     fn main() 2xi32;
 
     fn add_200(a: 2xi32, b: 2xi32) 2xi32 {
@@ -91,7 +89,7 @@ pub extern "C" fn compile(filename: *const c_char) -> std::mem::ManuallyDrop<FFI
 
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new()).0;
-    let referenced_vars = get_referenced(&code);
+    let _referenced_vars = get_referenced(&code);
     // let code = remove_unused_variables(code, &referenced_vars);
     // endof optimiser
 
@@ -151,7 +149,7 @@ pub extern "C" fn compile(filename: *const c_char) -> std::mem::ManuallyDrop<FFI
     println!("\n\n{:#?}\n\n", code);
     // println!("\n\n{:#?}\n\n", tir);
 
-    let (_, _, context) = w_algo(
+    let (_, _, _context) = w_algo(
         ctx,
         WAlgoInfo {
             retry_count: 0,

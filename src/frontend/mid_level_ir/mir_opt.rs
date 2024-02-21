@@ -244,7 +244,7 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
                 },
             };
 
-            let (op_else_block, env) = mir_variable_fold(*else_block.block, env);
+            let (op_else_block, _env) = mir_variable_fold(*else_block.block, env);
             let op_else = SSALabeledBlock {
                 label: else_block.label,
                 block: Box::new(op_else_block),

@@ -4,7 +4,7 @@ use crate::frontend::{
 };
 
 use super::{
-    mir_ast_types::{Phi, SSAExpression, SSALabeledBlock, SSAValue},
+    mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
     parsers::{generate_label_name, generate_register_name, parse_expression_block},
 };
 

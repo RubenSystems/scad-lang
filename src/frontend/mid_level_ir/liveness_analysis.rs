@@ -7,14 +7,21 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
         SSAValue::VariableReference(n) => vec![n.clone()],
         SSAValue::Phi(_) => todo!(),
         SSAValue::ConditionalBlock {
-            if_block,
-            else_block,
+            if_block: _,
+            else_block: _,
         } => vec![],
         SSAValue::Integer(_) => vec![],
         SSAValue::Float(_) => vec![],
         SSAValue::Bool(_) => vec![],
-        SSAValue::Operation { lhs, op, rhs } => todo!(),
-        SSAValue::FunctionCall { name, parameters } => todo!(),
+        SSAValue::Operation {
+            lhs: _,
+            op: _,
+            rhs: _,
+        } => todo!(),
+        SSAValue::FunctionCall {
+            name: _,
+            parameters: _,
+        } => todo!(),
         SSAValue::Nothing => vec![],
         SSAValue::Tensor(_) => vec![],
     }
@@ -38,7 +45,10 @@ fn drop_dead_vars(mut vars: Vec<String>, e2: SSAExpression) -> SSAExpression {
     }
 }
 
-pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> (SSAExpression, Vec<String>) {
+pub fn unalive_vars(
+    blk: SSAExpression,
+    mut alive_vars: Vec<String>,
+) -> (SSAExpression, Vec<String>) {
     match blk {
         SSAExpression::VariableDecl {
             name,
@@ -48,8 +58,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> (SSAExpr
         } => {
             alive_vars.push(name.clone());
 
-
-			let new_cont = unalive_vars(*e2, alive_vars.clone()).0;
+            let new_cont = unalive_vars(*e2, alive_vars.clone()).0;
             (
                 SSAExpression::VariableDecl {
                     name,
@@ -100,25 +109,31 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> (SSAExpr
             )
         }
         SSAExpression::Noop => (SSAExpression::Noop, alive_vars),
-		SSAExpression::Block(b) => {
-			let new_block = unalive_vars(*b, vec![]).0;
+        SSAExpression::Block(b) => {
+            let new_block = unalive_vars(*b, vec![]).0;
 
-			(SSAExpression::Block(Box::new(new_block)), alive_vars)
-		}
-		// Anything returned by return and yield will not die 
+            (SSAExpression::Block(Box::new(new_block)), alive_vars)
+        }
+        // Anything returned by return and yield will not die
         SSAExpression::Return { val } => {
-			let alive = get_alive_vars(&val);
-			println!("{alive_vars:?}");
-			let to_die: Vec<String> = alive_vars.into_iter().filter(|x| !alive.contains(x)).collect();
-			println!("{alive:?}");
-			println!("{to_die:?}\n");
+            let alive = get_alive_vars(&val);
+            println!("{alive_vars:?}");
+            let to_die: Vec<String> = alive_vars
+                .into_iter()
+                .filter(|x| !alive.contains(x))
+                .collect();
+            println!("{alive:?}");
+            println!("{to_die:?}\n");
 
-			(drop_dead_vars(to_die, SSAExpression::Return { val }), alive)
-		},
+            (drop_dead_vars(to_die, SSAExpression::Return { val }), alive)
+        }
         SSAExpression::Yield { val } => {
-			let alive = get_alive_vars(&val);
-			let to_die: Vec<String> = alive_vars.into_iter().filter(|x| alive.contains(x)).collect();
-			(drop_dead_vars(to_die, SSAExpression::Yield { val }), alive)
-		},
+            let alive = get_alive_vars(&val);
+            let to_die: Vec<String> = alive_vars
+                .into_iter()
+                .filter(|x| alive.contains(x))
+                .collect();
+            (drop_dead_vars(to_die, SSAExpression::Yield { val }), alive)
+        }
     }
 }
