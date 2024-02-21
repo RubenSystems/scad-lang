@@ -21,23 +21,37 @@ use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 use frontend::high_level_ir::hir_parser::Rule;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
+use std::ffi::{c_char, CStr};
+use std::fs::File;
+use std::io::Read;
+
 
 #[no_mangle]
-pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
+pub extern "C" fn compile(filename: *const c_char) -> std::mem::ManuallyDrop<FFIHIRExpr> {
     let _args: Vec<String> = std::env::args().collect();
+
+
 
     let test_prog = r#"
     fn main() 2xi32;
+
+    fn add_200(a: 2xi32, b: 2xi32) 2xi32 {
+        @add(a: a, b: @add(a: b, b: @{200, 200}))
+    };
 
     fn main() 2xi32 {
         let mut x: 2xi32 = @{700, 800};
         let mut y: 2xi32 = @{800, 900};
         let mut z: 2xi32 = @{800, 200};
 
+        let mut super_x : 2xi32 = add_200(a: x, b: y);
+
+        @print(val: super_x);
+
         let mut does_it_work: 2xi32 = if true {
-            x
+            super_x
         } else {
-            y
+            x
         };
 
         @print(value: does_it_work);
@@ -45,10 +59,24 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
         does_it_work
     };
 
-
     "#;
 
-    let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
+    let c_str = unsafe { CStr::from_ptr(filename) };
+
+    // Convert CStr to a string slice
+    let str_slice: &str = c_str.to_str().expect("Failed to convert CStr to str");
+
+    // Convert string slice to a String
+
+    println!("reading from {str_slice}");
+
+    let mut file = File::open(str_slice).unwrap();
+
+    // Read the contents of the file into a string
+    let mut program = String::new();
+    file.read_to_string(&mut program).unwrap();
+
+    let parsed_result = SCADParser::parse(Rule::program, program.as_str()).unwrap();
 
     let raw_statements: Vec<Statement> = parsed_result
         .flat_map(|pair| {
@@ -124,7 +152,7 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", code);
-    println!("\n\n{:#?}\n\n", tir);
+    // println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
         ctx,
@@ -136,7 +164,7 @@ pub extern "C" fn compile() -> std::mem::ManuallyDrop<FFIHIRExpr> {
     )
     .unwrap();
 
-    println!("{:#?}", context);
+    // println!("{:#?}", context);
     // println!("{tpe:?}");
 
     let code_res = std::mem::ManuallyDrop::new(code);

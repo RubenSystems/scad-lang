@@ -28,21 +28,30 @@ fn main() -> std::io::Result<()> {
     let test_prog = r#"
     fn main() 2xi32;
 
+    fn add_200(a: 2xi32, b: 2xi32) 2xi32 {
+        @add(a: a, b: @add(a: b, b: @{200, 200}))
+    };
+
     fn main() 2xi32 {
         let mut x: 2xi32 = @{700, 800};
         let mut y: 2xi32 = @{800, 900};
         let mut z: 2xi32 = @{800, 200};
 
+        let mut super_x : 2xi32 = add_200(a: x, b: y);
+
+        @print(val: super_x);
+
         let mut does_it_work: 2xi32 = if true {
-            x
+            super_x
         } else {
-            y
+            x
         };
 
         @print(value: does_it_work);
 
         does_it_work
     };
+
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
