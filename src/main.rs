@@ -28,31 +28,22 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-    fn main() 2xi32;
-
-    fn add_200(a: 2xi32, b: 2xi32) 2xi32 {
-        @add(a: a, b: @add(a: b, b: @{200, 200}))
+    fn do(a: 2xi32, b: 2xi32) 2xi32 {
+        @{300, 400}
     };
-
-    fn main() 2xi32 {
-        let mut x: 2xi32 = @{700, 800};
-        let mut y: 2xi32 = @{800, 900};
-        let mut z: 2xi32 = @{800, 200};
-
-        let mut super_x : 2xi32 = add_200(a: x, b: y);
-
-        @print(val: super_x);
-
-        let mut does_it_work: 2xi32 = if true {
-            super_x
-        } else {
-            @add(a: x, b: y)
-        };
-
-        @print(value: does_it_work);
-
-        does_it_work
+    
+    fn main() i32 {
+        let mut x: i32 = 100;
+        
+        let mut container: 2xi32 = @{x, x};
+    
+    
+        let mut y: 2xi32 = do(a: container, b: container);
+    
+        x
     };
+    
+
 
     "#;
 
@@ -71,7 +62,7 @@ fn main() -> std::io::Result<()> {
 
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-    let code = unalive_vars(code, vec![]).0;
+    let code = unalive_vars(code, vec![]);
     // Optimiser
     // let code = mir_variable_fold(code, HashMap::new());
     // let referenced_vars = get_referenced(&code.0);
@@ -148,7 +139,6 @@ fn main() -> std::io::Result<()> {
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", code);
-    // println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
         ctx,
@@ -160,6 +150,7 @@ fn main() -> std::io::Result<()> {
     )
     .unwrap();
 
+    println!("\n\n{:#?}\n\n", context);
     _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
     // println!("{tpe:?}");
 

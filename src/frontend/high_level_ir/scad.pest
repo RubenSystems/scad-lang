@@ -37,7 +37,7 @@ literal = _{
 	integer
 	| float
 }
-tensor = { "@{" ~ (literal ~ ("," ~ literal)*)? ~ "}" }
+tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 
 
 // Variable declerations
