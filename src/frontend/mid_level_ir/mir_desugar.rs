@@ -237,7 +237,7 @@ pub fn rename_variable_reassignment(
             tracker.remove(&iv);
 
             SSAExpression::ForLoop {
-                iv,
+                iv: format!("{iv}.0"),
                 from,
                 to,
                 block: Box::new(new_block),
