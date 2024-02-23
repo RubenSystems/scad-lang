@@ -53,7 +53,6 @@ fn main() -> std::io::Result<()> {
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
-    println!("{parsed_result:#?}");
     let raw_statements: Vec<Statement> = parsed_result
         .flat_map(|pair| {
             if let Rule::EOI = pair.as_rule() {
