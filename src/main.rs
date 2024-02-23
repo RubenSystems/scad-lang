@@ -4,9 +4,7 @@ pub mod testing;
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
-use crate::frontend::mid_level_ir::mir_opt::{
-    get_referenced, mir_variable_fold, remove_unused_variables,
-};
+
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 

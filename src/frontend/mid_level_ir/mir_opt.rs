@@ -124,11 +124,11 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
         SSAExpression::Block(b) => get_referenced(b),
         SSAExpression::Yield { val } => get_referenced_value(val),
         SSAExpression::ForLoop {
-            iv,
-            from,
-            to,
-            block,
-            e2,
+            iv: _,
+            from: _,
+            to: _,
+            block: _,
+            e2: _,
         } => todo!(),
     }
 }
@@ -183,11 +183,11 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
         }
         SSAExpression::Yield { val } => SSAExpression::Yield { val },
         SSAExpression::ForLoop {
-            iv,
-            from,
-            to,
-            block,
-            e2,
+            iv: _,
+            from: _,
+            to: _,
+            block: _,
+            e2: _,
         } => todo!(),
         // SSAExpression::ConditionalBlock {
         //     if_block,
@@ -357,11 +357,11 @@ pub fn mir_variable_fold(
             env,
         ),
         SSAExpression::ForLoop {
-            iv,
-            from,
-            to,
-            block,
-            e2,
+            iv: _,
+            from: _,
+            to: _,
+            block: _,
+            e2: _,
         } => todo!(),
     }
 }

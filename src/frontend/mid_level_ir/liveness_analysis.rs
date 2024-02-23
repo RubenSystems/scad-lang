@@ -1,4 +1,4 @@
-use std::fmt::format;
+
 
 use super::mir_ast_types::{SSAExpression, SSAValue};
 
@@ -59,7 +59,7 @@ fn drop_dead_vars(mut vars: Vec<String>, e2: SSAExpression, context: &Context) -
         let MonoType::Application {
             c,
             dimensions,
-            types,
+            types: _,
         } = tpe
         else {
             unreachable!("Untyped drop unavailable");

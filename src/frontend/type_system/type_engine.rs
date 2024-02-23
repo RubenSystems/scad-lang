@@ -233,7 +233,7 @@ pub fn w_algo(
             });
 
             if let Some(hnt) = ret_type_hint {
-                let TIRType::MonoType(a) = hnt else {
+                let TIRType::MonoType(_a) = hnt else {
                     unreachable!("CAN't RETURN MONOTYPE");
                 };
 
