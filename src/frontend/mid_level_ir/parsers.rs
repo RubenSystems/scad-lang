@@ -9,7 +9,9 @@
 /// reperesented in AST form and convert it into a L2 (MIR) code
 ///
 //===----------------------------------------------------------------------===//
-use crate::frontend::high_level_ir::ast_types::{Block, ExpressionBlock, Statement};
+use crate::frontend::high_level_ir::ast_types::{
+    Block, ExpressionBlock, Statement, StatementBlock,
+};
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
@@ -96,5 +98,24 @@ pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> 
             )
         }
         [] => expression_l1_to_l2(*blk.expression, k),
+    }
+}
+
+pub fn parse_statement_block(blk: StatementBlock) -> SSAExpression {
+    match blk.statements.as_slice() {
+        [head] => statement_l1_to_l2(head.fcopy(), Box::new(|_| SSAExpression::Noop)),
+        [head, rest @ ..] => {
+            let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
+            statement_l1_to_l2(
+                head.fcopy(),
+                Box::new(|_| {
+                    let new_blk = StatementBlock {
+                        statements: rest_clone,
+                    };
+                    parse_statement_block(new_blk)
+                }),
+            )
+        }
+        [] => SSAExpression::Noop,
     }
 }

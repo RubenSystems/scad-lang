@@ -32,7 +32,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "i32".into(),
-                dimensions: Some(vec![1]),
+                dimensions: None,
                 types: vec![],
             },
             context,
@@ -41,7 +41,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "bool".into(),
-                dimensions: Some(vec![1]),
+                dimensions: None,
                 types: vec![],
             },
             context,
@@ -50,7 +50,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "void".into(),
-                dimensions: Some(vec![1]),
+                dimensions: None,
                 types: vec![],
             },
             context,
@@ -59,7 +59,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: "f32".into(),
-                dimensions: Some(vec![1]),
+                dimensions: None,
                 types: vec![],
             },
             context,
@@ -157,7 +157,6 @@ pub fn w_algo(
                     },
                     e1,
                 )?;
-                let b = generate_type_name();
                 let Ok((s2, t2, context)) = w_algo(
                     context.applying_substitution(&s1),
                     WAlgoInfo {
@@ -168,13 +167,15 @@ pub fn w_algo(
                 ) else {
                     todo!()
                 };
+                println!("t1:: {t1:#?}");
 
+                let b = generate_type_name();
                 let s3 = unify(
                     &s2.substitute_mono(&t1),
                     &MonoType::Application {
                         c: "->".into(),
                         dimensions: None,
-                        types: vec![t2, MonoType::Variable(b.clone())],
+                        types: vec![t2.clone(), MonoType::Variable(b.clone())],
                     },
                 );
 
@@ -186,7 +187,20 @@ pub fn w_algo(
                             context,
                         ))
                     }
-                    _ => retry_count += 1,
+                    Err(e) => {
+                        println!("{:?}", &s2.substitute_mono(&t1));
+                        println!(
+                            "{:?}",
+                            &MonoType::Application {
+                                c: "->".into(),
+                                dimensions: None,
+                                types: vec![t2.clone(), MonoType::Variable(b.clone())],
+                            }
+                        );
+
+                        println!("{e:?}");
+                        retry_count += 1
+                    }
                 };
             }
         }
@@ -222,12 +236,15 @@ pub fn w_algo(
                 let TIRType::MonoType(a) = hnt else {
                     unreachable!("CAN't RETURN MONOTYPE");
                 };
-                if *a != get_rettype_of_application(x.clone()) {
-                    println!("x: {a:#?}");
 
-                    // println!("==\nretfail {:#?} \n\n{:#?}\n==", a,  get_rettype_of_application(x.clone()));
-                    unreachable!("Skill issue: Function defines different type to decleration")
-                }
+                // let rettype = get_rettype_of_application(x.clone());
+                // if *a != rettype {
+                //     println!("x: {a:#?}");
+                //     println!("rettype: {rettype:#?}");
+
+                //     // println!("==\nretfail {:#?} \n\n{:#?}\n==", a,  get_rettype_of_application(x.clone()));
+                //     unreachable!("Skill issue: Function defines different type to decleration")
+                // }
             }
 
             Ok((sub, x, new_context))
@@ -304,35 +321,7 @@ pub fn w_algo(
             // };
             Ok((if_sub.merge(&else_sub), if_mt, ctx))
         }
-        TIRExpression::Phi(p) => {
-            let types: Vec<TIRType> = p
-                .iter()
-                .map(|phi| {
-                    w_algo(
-                        context.clone(),
-                        WAlgoInfo {
-                            retry_count: info.retry_count,
-                            req_type: info.req_type.clone(),
-                        },
-                        &phi.value,
-                    )
-                    .unwrap()
-                    .1
-                })
-                .map(TIRType::MonoType)
-                .collect();
-            if !types.iter().all(|x| *x == types[0]) {
-                unreachable!("you issue: All branches on phi node are not equal and so you have done something wrong");
-            }
-
-            let ret = match &types[0] {
-                TIRType::MonoType(mt) => mt.clone(),
-                TIRType::PolyType(_) => instantiate(types[0].clone()),
-                TIRType::ForwardDecleration(_) => todo!(),
-            };
-
-            Ok((Substitution::new(), ret, context))
-        }
+        TIRExpression::Phi(_) => todo!(),
         TIRExpression::Tensor(v) => {
             let types: Vec<TIRType> = v
                 .iter()
@@ -369,6 +358,8 @@ pub fn w_algo(
 }
 
 fn get_rettype_of_application(app: MonoType) -> MonoType {
+    println!("{app:#?}");
+
     match app {
         MonoType::Variable(_) => unreachable!("FAILED TO GET APPTYPE"),
         MonoType::Application {
@@ -454,6 +445,7 @@ pub enum UnificationError {
 }
 
 fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError> {
+    // println!("----UNIFYING-----\n\n{t1:#?}\n\n{t2:#?}\n---------");
     if let (MonoType::Variable(a), MonoType::Variable(b)) = (&t1, &t2) {
         if a == b {
             return Ok(Substitution::new());

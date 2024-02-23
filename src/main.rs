@@ -32,23 +32,28 @@ fn main() -> std::io::Result<()> {
         @{300, 400}
     };
     
+    
     fn main() i32 {
         let mut x: i32 = 100;
         
         let mut container: 2xi32 = @{x, x};
+        let mut jeff: i32 = @index.i32(container: container, idx: 2);
+
+        for i: 0 -> 10 {
+            @print(val: 0);
+        };
     
     
-        let mut y: 2xi32 = do(a: container, b: container);
-    
-        x
+        jeff
     };
+    
     
 
 
     "#;
 
     let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
-
+    println!("{parsed_result:#?}");
     let raw_statements: Vec<Statement> = parsed_result
         .flat_map(|pair| {
             if let Rule::EOI = pair.as_rule() {
@@ -62,7 +67,6 @@ fn main() -> std::io::Result<()> {
 
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-    let code = unalive_vars(code, vec![]);
     // Optimiser
     // let code = mir_variable_fold(code, HashMap::new());
     // let referenced_vars = get_referenced(&code.0);
@@ -86,13 +90,25 @@ fn main() -> std::io::Result<()> {
     );
 
     consumable_context.add_type_for_name(
-        "@drop".into(),
+        "@drop.i32".into(),
         TIRType::MonoType(MonoType::Application {
             dimensions: None,
             c: "->".into(),
             types: vec![
-                MonoType::Variable("any_vec_any".into()),
-                MonoType::Variable("any_vec_any".into()),
+                MonoType::Variable("@drop.a".into()),
+                MonoType::Variable("@drop.b".into()),
+            ],
+        }),
+    );
+
+    consumable_context.add_type_for_name(
+        "@drop.tensori32".into(),
+        TIRType::MonoType(MonoType::Application {
+            dimensions: None,
+            c: "->".into(),
+            types: vec![
+                MonoType::Variable("@drop.a".into()),
+                MonoType::Variable("@drop.b".into()),
             ],
         }),
     );
@@ -117,7 +133,7 @@ fn main() -> std::io::Result<()> {
     );
 
     consumable_context.add_type_for_name(
-        "@index".into(),
+        "@index.i32".into(),
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
             dimensions: None,
@@ -128,7 +144,11 @@ fn main() -> std::io::Result<()> {
                     dimensions: None,
                     types: vec![
                         MonoType::Variable("@any_index_type".into()),
-                        MonoType::Variable("@any_tensor_type_2".into()),
+                        MonoType::Application {
+                            c: "i32".into(),
+                            dimensions: None,
+                            types: vec![],
+                        },
                     ],
                 },
             ],
@@ -151,6 +171,7 @@ fn main() -> std::io::Result<()> {
     .unwrap();
 
     println!("\n\n{:#?}\n\n", context);
+    let code = unalive_vars(code, vec![], &context);
     _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
     // println!("{tpe:?}");
 

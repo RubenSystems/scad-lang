@@ -25,7 +25,10 @@ use std::fs::File;
 use std::io::Read;
 
 #[no_mangle]
-pub extern "C" fn query(query_engine: *mut c_void, query: *const c_char) -> std::mem::ManuallyDrop<FFIType> {
+pub extern "C" fn query(
+    query_engine: *mut c_void,
+    query: *const c_char,
+) -> std::mem::ManuallyDrop<FFIType> {
     let qep: &TypeQueryEngine =
         unsafe { std::mem::transmute(query_engine as *mut TypeQueryEngine) };
     let c_str = unsafe { CStr::from_ptr(query) };
@@ -70,7 +73,6 @@ pub extern "C" fn compile(
 
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-    let code = unalive_vars(code, vec![]);
     // Optimiser
     // let code = mir_variable_fold(code, HashMap::new()).0;
     // let _referenced_vars = get_referenced(&code);
@@ -111,7 +113,7 @@ pub extern "C" fn compile(
     );
 
     consumable_context.add_type_for_name(
-        "@index".into(),
+        "@index.i32".into(),
         TIRType::MonoType(MonoType::Application {
             c: "->".into(),
             dimensions: None,
@@ -122,27 +124,30 @@ pub extern "C" fn compile(
                     dimensions: None,
                     types: vec![
                         MonoType::Variable("@any_index_type".into()),
-                        MonoType::Variable("@any_tensor_type_2".into()),
+                        MonoType::Application {
+                            c: "i32".into(),
+                            dimensions: None,
+                            types: vec![],
+                        },
                     ],
                 },
             ],
         }),
     );
 
-    consumable_context.add_type_for_name(
-        "@drop".into(),
-        TIRType::MonoType(MonoType::Application {
-            dimensions: None,
-            c: "->".into(),
-            types: vec![
-                MonoType::Variable("any_vec_any".into()),
-                MonoType::Variable("any_vec_any".into()),
-            ],
-        }),
-    );
+    // consumable_context.add_type_for_name(
+    //     "@drop".into(),
+    //     TIRType::MonoType(MonoType::Application {
+    //         dimensions: None,
+    //         c: "->".into(),
+    //         types: vec![
+    //             MonoType::Variable("any_vec_any".into()),
+    //             MonoType::Variable("any_vec_any".into()),
+    //         ],
+    //     }),
+    // );
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
-    println!("\n\n{:#?}\n\n", code);
     // println!("\n\n{:#?}\n\n", tir);
 
     let (_, _, context) = w_algo(
@@ -155,6 +160,8 @@ pub extern "C" fn compile(
     )
     .unwrap();
 
+    println!("{context:#?} == context");
+    let code = unalive_vars(code, vec![], &context);
     let query_engine = TypeQueryEngine::new(context);
     let qep = Box::into_raw(Box::new(query_engine));
 
@@ -163,6 +170,7 @@ pub extern "C" fn compile(
     // println!("{:#?}", context);
     // println!("{tpe:?}");
 
+    println!("\n\n{:#?}\n\n", code);
     let code_res = std::mem::ManuallyDrop::new(code);
     std::mem::ManuallyDrop::new(ffi_ssa_expr(code_res))
 }

@@ -61,7 +61,11 @@ impl Type {
     pub fn to_tir_type(&self) -> MonoType {
         MonoType::Application {
             c: self.subtype.0.clone(),
-            dimensions: Some(self.dimensions.clone()),
+            dimensions: if self.dimensions.is_empty() {
+                None
+            } else {
+                Some(self.dimensions.clone())
+            },
             types: vec![],
         }
     }
@@ -94,11 +98,24 @@ pub struct ExpressionBlock {
     pub expression: Box<Expression>,
 }
 
+#[derive(Debug)]
+pub struct StatementBlock {
+    pub statements: Vec<Statement>, // List of statements within the block
+}
+
 impl FailureCopy for ExpressionBlock {
     fn fcopy(&self) -> Self {
         ExpressionBlock {
             statements: self.statements.iter().map(|e| e.fcopy()).collect(),
             expression: Box::new(self.expression.fcopy()),
+        }
+    }
+}
+
+impl FailureCopy for StatementBlock {
+    fn fcopy(&self) -> Self {
+        Self {
+            statements: self.statements.iter().map(|e| e.fcopy()).collect(),
         }
     }
 }
@@ -163,6 +180,25 @@ impl FailureCopy for ConditionalExpressionBlock {
     fn fcopy(&self) -> Self {
         ConditionalExpressionBlock {
             condition: self.condition.fcopy(),
+            block: self.block.fcopy(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ForLoop {
+    pub variable: Identifier, // Condition for the block (boolean expression)
+    pub from: Integer,
+    pub to: Integer,
+    pub block: StatementBlock, // Block of statements to be executed if the condition is met
+}
+
+impl FailureCopy for ForLoop {
+    fn fcopy(&self) -> Self {
+        Self {
+            variable: Identifier(self.variable.0.clone()),
+            from: Integer(self.from.0),
+            to: Integer(self.to.0),
             block: self.block.fcopy(),
         }
     }
@@ -250,6 +286,7 @@ pub enum Statement {
     Expression(Expression),     // Expression statement
     FunctionDefinition(FunctionDefinition),
     ProcedureDefinition(ProcedureDefinition),
+    ForLoop(ForLoop),
 
     FunctionDecleration(FunctionDecleration),
     ProcedureDecleration(ProcedureDecleration),
@@ -310,6 +347,7 @@ impl FailureCopy for Statement {
                 })
             }
             Statement::ProcedureDecleration(_) => todo!(),
+            Statement::ForLoop(f) => Statement::ForLoop(f.fcopy()),
         }
     }
 }

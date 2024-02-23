@@ -5,7 +5,9 @@ use crate::frontend::{
 
 use super::{
     mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
-    parsers::{generate_label_name, generate_register_name, parse_expression_block},
+    parsers::{
+        generate_label_name, generate_register_name, parse_expression_block, parse_statement_block,
+    },
 };
 
 pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
@@ -136,7 +138,7 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 
 pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSAExpression {
     match statement {
-        Statement::ConstDecl(_) => todo!(),
+        Statement::ConstDecl(_) => todo!("bota"),
         Statement::VariableDecl(v) => {
             let gen = _k;
 
@@ -183,5 +185,15 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             }
         }
         Statement::ProcedureDecleration(_) => todo!(),
+        Statement::ForLoop(f) => {
+            let gen = _k;
+            SSAExpression::ForLoop {
+                iv: f.variable.0,
+                from: SSAValue::Integer(f.from.0),
+                to: SSAValue::Integer(f.to.0),
+                block: Box::new(parse_statement_block(f.block)),
+                e2: Box::new(gen(SSAValue::Nothing)),
+            }
+        }
     }
 }

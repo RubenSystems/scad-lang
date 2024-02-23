@@ -1,6 +1,15 @@
+use std::fmt::format;
+
 use super::mir_ast_types::{SSAExpression, SSAValue};
 
-use crate::frontend::mid_level_ir::parsers::generate_register_name;
+use crate::frontend::{
+    mid_level_ir::parsers::generate_register_name,
+    type_system::{
+        context::Context,
+        tir_types::{MonoType, TIRType},
+        type_engine::instantiate,
+    },
+};
 
 fn get_alive_vars(val: &SSAValue) -> Vec<String> {
     match val {
@@ -27,25 +36,53 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
     }
 }
 
-fn drop_dead_vars(mut vars: Vec<String>, e2: SSAExpression) -> SSAExpression {
+fn drop_dead_vars(mut vars: Vec<String>, e2: SSAExpression, context: &Context) -> SSAExpression {
     if vars.len() == 0 {
         e2
     } else {
         let cvar = vars.pop().unwrap();
+        let tpe = context
+            .get_type_for_name(&cvar)
+            .expect(&format!("Can't drop unknown type for {cvar}"))
+            .first()
+            .unwrap();
+
+        // let TIRType::MonoType(tpe) = tpe else {
+        //     unreachable!("Can't work with polytypes")
+        // };
+        let tpe = match tpe.clone() {
+            TIRType::MonoType(m) => m,
+            TIRType::PolyType(p) => instantiate(TIRType::PolyType(p)),
+            TIRType::ForwardDecleration(_) => todo!(),
+        };
+
+        let MonoType::Application {
+            c,
+            dimensions,
+            types,
+        } = tpe
+        else {
+            unreachable!("Untyped drop unavailable");
+        };
+        let drop_extension = format!("{}{}", if dimensions.is_none() { "" } else { "tensor" }, c);
 
         SSAExpression::VariableDecl {
             name: generate_register_name(),
             vtype: None,
             e1: SSAValue::FunctionCall {
-                name: "@drop".into(),
+                name: format!("@drop.{drop_extension}"),
                 parameters: vec![SSAValue::VariableReference(cvar)],
             },
-            e2: Box::new(drop_dead_vars(vars, e2)),
+            e2: Box::new(drop_dead_vars(vars, e2, context)),
         }
     }
 }
 
-pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpression {
+pub fn unalive_vars(
+    blk: SSAExpression,
+    mut alive_vars: Vec<String>,
+    ctx: &Context,
+) -> SSAExpression {
     match blk {
         SSAExpression::VariableDecl {
             name,
@@ -55,7 +92,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
         } => {
             alive_vars.push(name.clone());
 
-            let new_cont = unalive_vars(*e2, alive_vars);
+            let new_cont = unalive_vars(*e2, alive_vars, ctx);
             SSAExpression::VariableDecl {
                 name,
                 vtype,
@@ -70,8 +107,8 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             block,
             e2,
         } => {
-            let new_block = unalive_vars(*block, vec![]);
-            let new_cont = unalive_vars(*e2, alive_vars);
+            let new_block = unalive_vars(*block, vec![], ctx);
+            let new_cont = unalive_vars(*e2, alive_vars, ctx);
 
             SSAExpression::FuncDecl {
                 name,
@@ -87,7 +124,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             ret_type,
             e2,
         } => {
-            let new_cont = unalive_vars(*e2, alive_vars);
+            let new_cont = unalive_vars(*e2, alive_vars, ctx);
 
             SSAExpression::FuncForwardDecl {
                 name,
@@ -98,7 +135,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
         }
         SSAExpression::Noop => SSAExpression::Noop,
         SSAExpression::Block(b) => {
-            let new_block = unalive_vars(*b, vec![]);
+            let new_block = unalive_vars(*b, vec![], ctx);
 
             SSAExpression::Block(Box::new(new_block))
         }
@@ -113,7 +150,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             println!("{alive:?}");
             println!("{to_die:?}\n");
 
-            drop_dead_vars(to_die, SSAExpression::Return { val })
+            drop_dead_vars(to_die, SSAExpression::Return { val }, ctx)
         }
         SSAExpression::Yield { val } => {
             let alive = get_alive_vars(&val);
@@ -121,7 +158,25 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
                 .into_iter()
                 .filter(|x| alive.contains(x))
                 .collect();
-            drop_dead_vars(to_die, SSAExpression::Yield { val })
+            drop_dead_vars(to_die, SSAExpression::Yield { val }, ctx)
+        }
+        SSAExpression::ForLoop {
+            iv,
+            from,
+            to,
+            block,
+            e2,
+        } => {
+            let new_block = unalive_vars(*block, vec![iv.clone()], ctx);
+            let new_cont = unalive_vars(*e2, alive_vars, ctx);
+
+            SSAExpression::ForLoop {
+                iv,
+                from,
+                to,
+                block: Box::new(new_block),
+                e2: Box::new(new_cont),
+            }
         }
     }
 }

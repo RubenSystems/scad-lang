@@ -8,9 +8,9 @@ use pest_derive::Parser;
 use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName};
 
 use super::ast_types::{
-    ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, FunctionCall,
-    FunctionDecleration, Identifier, Integer, ProcedureDefinition, Statement, Type, TypeName,
-    VariableDecl, VariableName,
+    ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, ForLoop,
+    FunctionCall, FunctionDecleration, Identifier, Integer, ProcedureDefinition, Statement,
+    StatementBlock, Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -61,7 +61,7 @@ fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
                 .unwrap()
                 .as_str()
                 .to_string();
-            let mut dimensions: Vec<u32> = tpe
+            let dimensions: Vec<u32> = tpe
                 .into_inner()
                 .filter_map(|x| {
                     if let Rule::integer = x.as_rule() {
@@ -71,9 +71,7 @@ fn parse_type(tpe: pest::iterators::Pair<'_, Rule>) -> Type {
                     }
                 })
                 .collect();
-            if dimensions.is_empty() {
-                dimensions.push(1);
-            }
+
             Type {
                 dimensions,
                 subtype: TypeName(subtype),
@@ -105,6 +103,21 @@ fn parse_function_call_arg(arg: pest::iterators::Pair<'_, Rule>) -> (Identifier,
     }
 }
 
+fn parse_for_loop(lp: pest::iterators::Pair<'_, Rule>) -> Statement {
+    let mut it = lp.into_inner();
+    let identifier = Identifier(it.next().unwrap().as_str().to_string());
+    let from = Integer(it.next().unwrap().as_str().parse::<i128>().unwrap());
+    let to = Integer(it.next().unwrap().as_str().parse::<i128>().unwrap());
+    let block = parse_statement_block(it.next().unwrap());
+
+    Statement::ForLoop(ForLoop {
+        variable: identifier,
+        from,
+        to,
+        block,
+    })
+}
+
 fn parse_function_call_args(tpe: pest::iterators::Pair<'_, Rule>) -> Vec<(Identifier, Expression)> {
     tpe.into_inner().map(parse_function_call_arg).collect()
 }
@@ -113,6 +126,12 @@ fn parse_block(blk: pest::iterators::Pair<'_, Rule>) -> Block {
     let statements = blk.into_inner().map(|x| parse(x.into_inner())).collect();
 
     Block { statements }
+}
+
+fn parse_statement_block(blk: pest::iterators::Pair<'_, Rule>) -> StatementBlock {
+    let statements = blk.into_inner().map(|x| parse(x.into_inner())).collect();
+
+    StatementBlock { statements }
 }
 
 fn parse_expression_block(blk: pest::iterators::Pair<'_, Rule>) -> ExpressionBlock {
@@ -193,6 +212,7 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
                 expression,
             })
         }
+        Rule::for_loop => parse_for_loop(primary),
         Rule::tensor => Statement::Expression(Expression::Tensor(
             primary
                 .into_inner()
