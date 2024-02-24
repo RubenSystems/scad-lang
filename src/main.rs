@@ -31,21 +31,6 @@ fn main() -> std::io::Result<()> {
     };
     
     
-    fn main() i32 {
-        let mut x: i32 = 100;
-        
-        let mut container: 2xi32 = @{x, x};
-        let mut jeff: i32 = @index.i32(container: container, idx: 2);
-
-        for i: 0 -> 10 {
-            @print(val: 0);
-        };
-    
-    
-        jeff
-    };
-    
-    
 
 
     "#;

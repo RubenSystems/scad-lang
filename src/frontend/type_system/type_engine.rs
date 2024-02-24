@@ -100,7 +100,7 @@ pub fn w_algo(
                 // TODO: make it so polymorphic types are allowed
                 match x.first().unwrap() {
                     TIRType::ForwardDecleration(_) => {
-                        context.remove_type_for_name(name);
+                        // context.remove_type_for_name(name);
                     },
                     TIRType::MonoType(m) => {
                         let unification = unify(m, &t1);
@@ -208,10 +208,19 @@ pub fn w_algo(
             arg_name: name,
             e1,
             ret_type_hint,
-            arg_type_hint: _,
+            arg_type_hint,
         } => {
             let new_type = generate_type_name();
-            let tir_new_type = MonoType::Variable(new_type);
+            let tir_new_type = match arg_type_hint {
+                Some(s) => {
+                    let TIRType::MonoType(a) = s.clone() else {
+                        unreachable!()
+                    };
+                    a
+                },
+                None => MonoType::Variable(new_type)
+            };
+                
 
             let mut new_context = context.clone();
             new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
@@ -246,7 +255,7 @@ pub fn w_algo(
                 //     unreachable!("Skill issue: Function defines different type to decleration")
                 // }
             }
-
+            
             Ok((sub, x, new_context))
         }
         TIRExpression::Conditional {
