@@ -11,8 +11,8 @@ fn foldable(val: &SSAValue) -> bool {
     match val {
         SSAValue::VariableReference(_) => true,
         SSAValue::Phi(_) => false,
-        SSAValue::Integer(_) => true,
-        SSAValue::Float(_) => true,
+        SSAValue::Integer { value, width } => true,
+        SSAValue::Float { value, width } => true,
         SSAValue::Bool(_) => true,
         SSAValue::Operation {
             lhs: _,
@@ -48,8 +48,8 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
             }
             set
         }
-        SSAValue::Integer(_) => HashSet::new(),
-        SSAValue::Float(_) => HashSet::new(),
+        SSAValue::Integer { value, width } => HashSet::new(),
+        SSAValue::Float { value, width }=> HashSet::new(),
         SSAValue::Bool(_) => HashSet::new(),
         SSAValue::Operation {
             lhs: _,
@@ -224,8 +224,8 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
                 })
                 .collect(),
         ),
-        SSAValue::Integer(i) => SSAValue::Integer(i),
-        SSAValue::Float(f) => SSAValue::Float(f),
+        SSAValue::Integer { value, width } => SSAValue::Integer { value, width },
+        SSAValue::Float { value, width } => SSAValue::Float { value, width },
         SSAValue::Bool(b) => SSAValue::Bool(b),
         SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
             name,

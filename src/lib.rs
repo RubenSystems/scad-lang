@@ -135,6 +135,44 @@ pub extern "C" fn compile(
         }),
     );
 
+    consumable_context.add_type_for_name(
+        "@set.i32".into(),
+        TIRType::MonoType(MonoType::Application {
+            c: "->".into(),
+            dimensions: None,
+            types: vec![
+                MonoType::Variable("@set.i32.anytensor".into()),
+                MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Application {
+                            c: "i32".into(),
+                            dimensions: None,
+                            types: vec![],
+                        },
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Application {
+                                    c: "i32".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                                MonoType::Application {
+                                    c: "i32".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        }),
+    );
+
     // consumable_context.add_type_for_name(
     //     "@drop".into(),
     //     TIRType::MonoType(MonoType::Application {

@@ -18,8 +18,21 @@ WHITESPACE = _{ " " | "\t" | "\n" | "\r" | "\r\n"  }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
 // Terminals
+
+widths = {
+	"8"
+	| "16"
+	| "32"
+	| "64"
+	| "128"
+}
+
 integer = @{ ASCII_DIGIT+ }
 float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+
+integer_literal = { integer ~ "." ~ widths }
+float_literal = { float ~ "." ~ widths}
+
 char_array = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }
 dot_identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_" | ".")*) }
@@ -36,8 +49,8 @@ type = { (integer ~ "x")* ~ simple_type  }
 simple_type = _{ identifier }
 
 literal = _{
-	integer
-	| float
+	integer_literal
+	| float_literal
 }
 tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 
@@ -204,8 +217,7 @@ non_infix_expressions = _{
 	| "(" ~ expression ~ ")" 
 	| tensor
 	| expression_block 
-	| float 
-	| integer
+	| literal
 	| boolean_t 
 	| char_array
 	| identifier 

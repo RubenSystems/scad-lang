@@ -19,11 +19,23 @@ pub trait FailureCopy {
     fn fcopy(&self) -> Self;
 }
 
-#[derive(Debug)]
-pub struct Integer(pub i128); // Terminal symbol for integer values
+#[derive(Debug, Clone, Copy)]
+pub enum IntegerWidth {
+    IndexType,
+    Variable(u32),
+}
 
 #[derive(Debug)]
-pub struct Float(pub f64); // Terminal symbol for floating-point values
+pub struct Integer {
+    pub value: i128,
+    pub width: IntegerWidth,
+}
+
+#[derive(Debug)]
+pub struct Float {
+    pub value: f64,
+    pub width: u32,
+} // Terminal symbol for floating-point values
 
 #[derive(Debug)]
 pub struct CharArray(pub String); // Terminal symbol for character arrays
@@ -188,8 +200,8 @@ impl FailureCopy for ConditionalExpressionBlock {
 #[derive(Debug)]
 pub struct ForLoop {
     pub variable: Identifier, // Condition for the block (boolean expression)
-    pub from: Integer,
-    pub to: Integer,
+    pub from: usize,
+    pub to: usize,
     pub block: StatementBlock, // Block of statements to be executed if the condition is met
 }
 
@@ -197,8 +209,8 @@ impl FailureCopy for ForLoop {
     fn fcopy(&self) -> Self {
         Self {
             variable: Identifier(self.variable.0.clone()),
-            from: Integer(self.from.0),
-            to: Integer(self.to.0),
+            from: self.from,
+            to: self.to,
             block: self.block.fcopy(),
         }
     }
@@ -252,8 +264,14 @@ impl FailureCopy for Expression {
                 op: InfixOperator(i.op.0.clone()),
                 rhs: Box::new(i.rhs.fcopy()),
             }),
-            Expression::Float(f) => Expression::Float(Float(f.0)),
-            Expression::Integer(i) => Expression::Integer(Integer(i.0)),
+            Expression::Float(f) => Expression::Float(Float {
+                value: f.value,
+                width: f.width,
+            }),
+            Expression::Integer(i) => Expression::Integer(Integer {
+                value: i.value,
+                width: i.width,
+            }),
             Expression::CharArray(_) => todo!(),
             Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
             Expression::ConditionalExpressionControlFlowControl {

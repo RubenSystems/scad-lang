@@ -1,4 +1,4 @@
-use crate::frontend::high_level_ir::ast_types::{FailureCopy, Type};
+use crate::frontend::high_level_ir::ast_types::{FailureCopy, IntegerWidth, Type};
 
 #[derive(Debug, Clone)]
 pub struct SSALabeledBlock {
@@ -146,8 +146,14 @@ pub enum SSAValue {
         if_block: SSAConditionalBlock,
         else_block: SSALabeledBlock,
     },
-    Integer(i128),
-    Float(f64),
+    Integer {
+        value: i128,
+        width: IntegerWidth,
+    },
+    Float {
+        value: f64,
+        width: u32,
+    },
     Bool(bool),
     Operation {
         lhs: Box<SSAValue>,
@@ -168,8 +174,8 @@ impl FailureCopy for SSAValue {
             SSAValue::Tensor(v) => SSAValue::Tensor(v.iter().map(|x| x.fcopy()).collect()),
             SSAValue::Nothing => SSAValue::Nothing,
             SSAValue::VariableReference(r) => SSAValue::VariableReference(r.clone()),
-            SSAValue::Integer(i) => SSAValue::Integer(*i),
-            SSAValue::Float(f) => SSAValue::Float(*f),
+            SSAValue::Integer { value, width } => SSAValue::Integer { value: *value, width: *width },
+            SSAValue::Float { value, width } => SSAValue::Float { value: *value, width: *width },
             SSAValue::Operation { lhs, op, rhs: _ } => SSAValue::Operation {
                 lhs: Box::new(lhs.fcopy()),
                 op: op.clone(),

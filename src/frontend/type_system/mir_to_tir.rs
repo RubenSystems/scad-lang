@@ -13,8 +13,8 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
     match mir {
         SSAValue::Bool(b) => (TIRExpression::Bool(b), ctx),
         SSAValue::VariableReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
-        SSAValue::Integer(i) => (TIRExpression::Integer(i), ctx),
-        SSAValue::Float(f) => (TIRExpression::Float(f), ctx),
+        SSAValue::Integer { value, width } => (TIRExpression::Integer(value, width), ctx),
+        SSAValue::Float { value, width } => (TIRExpression::Float(value, width), ctx),
         SSAValue::Operation {
             lhs: _,
             op: _,

@@ -26,8 +26,8 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-    fn do(a: 2xi32, b: 2xi32) 2xi32 {
-        @{300, 400}
+    fn do(a: 2xi64, b: 2xi64, c: 2xi64) 2xi64 {
+        @{300.64, 400.64}
     };
     
     

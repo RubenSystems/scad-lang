@@ -1,4 +1,4 @@
-use crate::frontend::high_level_ir::ast_types::Type;
+use crate::frontend::high_level_ir::ast_types::{IntegerWidth, Type};
 
 use super::tir_types::TIRType;
 
@@ -10,12 +10,12 @@ pub struct TIRPhi {
 
 #[derive(Debug)]
 pub enum TIRExpression {
-    Integer(i128),
+    Integer(i128, IntegerWidth),
+    Float(f64, u32),
     Bool(bool),
     Void,
     Tensor(Vec<TIRExpression>),
     Phi(Vec<TIRPhi>),
-    Float(f64),
     VariableReference {
         name: String,
     },

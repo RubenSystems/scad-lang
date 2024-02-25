@@ -111,8 +111,8 @@ pub fn rename_variable_reassignment_value(
                 })
                 .collect(),
         ),
-        SSAValue::Integer(i) => SSAValue::Integer(i),
-        SSAValue::Float(f) => SSAValue::Float(f),
+        SSAValue::Integer { value, width } => SSAValue::Integer { value, width },
+        SSAValue::Float { value, width } => SSAValue::Float { value, width },
         SSAValue::Bool(b) => SSAValue::Bool(b),
         SSAValue::Operation {
             lhs: _,
@@ -284,8 +284,8 @@ pub fn rename_variables_value(
                 })
                 .collect(),
         ),
-        SSAValue::Integer(i) => SSAValue::Integer(i),
-        SSAValue::Float(f) => SSAValue::Float(f),
+        SSAValue::Integer { value, width } => SSAValue::Integer { value, width },
+        SSAValue::Float { value, width } => SSAValue::Float { value, width },
         SSAValue::Bool(b) => SSAValue::Bool(b),
         SSAValue::Operation {
             lhs: _,

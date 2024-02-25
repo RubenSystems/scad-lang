@@ -1,5 +1,5 @@
 use crate::frontend::{
-    high_level_ir::ast_types::{Expression, FailureCopy, Statement},
+    high_level_ir::ast_types::{Expression, FailureCopy, IntegerWidth, Statement},
     mid_level_ir::mir_ast_types::SSAConditionalBlock,
 };
 
@@ -42,9 +42,9 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
             aux(v, vec![], k)
         }
         Expression::InfixOperation(_e) => todo!(),
-        Expression::Float(f) => k(SSAValue::Float(f.0)),
+        Expression::Float(f) => k(SSAValue::Float { value: f.value, width: f.width }),
         Expression::Bool(f) => k(SSAValue::Bool(f)),
-        Expression::Integer(i) => k(SSAValue::Integer(i.0)),
+        Expression::Integer(i) => k(SSAValue::Integer { value: i.value, width: i.width }),
         Expression::CharArray(_) => todo!(),
         Expression::Identifier(x) => k(SSAValue::VariableReference(x.0)),
         Expression::Block(b) => SSAExpression::Block(Box::new(parse_expression_block(b, k))),
@@ -189,8 +189,8 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
             let gen = _k;
             SSAExpression::ForLoop {
                 iv: f.variable.0,
-                from: SSAValue::Integer(f.from.0),
-                to: SSAValue::Integer(f.to.0),
+                from: SSAValue::Integer { value: f.from as i128, width: IntegerWidth::IndexType },
+                to: SSAValue::Integer { value: f.to as i128, width: IntegerWidth::IndexType },
                 block: Box::new(parse_statement_block(f.block)),
                 e2: Box::new(gen(SSAValue::Nothing)),
             }

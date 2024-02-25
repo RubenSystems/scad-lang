@@ -9,8 +9,8 @@ use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, Funct
 
 use super::ast_types::{
     ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, ForLoop,
-    FunctionCall, FunctionDecleration, Identifier, Integer, ProcedureDefinition, Statement,
-    StatementBlock, Type, TypeName, VariableDecl, VariableName,
+    FunctionCall, FunctionDecleration, Identifier, Integer, IntegerWidth, ProcedureDefinition,
+    Statement, StatementBlock, Type, TypeName, VariableDecl, VariableName,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -106,8 +106,8 @@ fn parse_function_call_arg(arg: pest::iterators::Pair<'_, Rule>) -> (Identifier,
 fn parse_for_loop(lp: pest::iterators::Pair<'_, Rule>) -> Statement {
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
-    let from = Integer(it.next().unwrap().as_str().parse::<i128>().unwrap());
-    let to = Integer(it.next().unwrap().as_str().parse::<i128>().unwrap());
+    let from = it.next().unwrap().as_str().parse::<usize>().unwrap();
+    let to = it.next().unwrap().as_str().parse::<usize>().unwrap();
     let block = parse_statement_block(it.next().unwrap());
 
     Statement::ForLoop(ForLoop {
@@ -190,12 +190,23 @@ fn parse_expression_conditional_block(
 
 pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
     match primary.as_rule() {
-        Rule::integer => Statement::Expression(Expression::Integer(Integer(
-            primary.as_str().parse::<i128>().unwrap(),
-        ))),
-        Rule::float => Statement::Expression(Expression::Float(Float(
-            primary.as_str().parse::<f64>().unwrap(),
-        ))),
+        Rule::integer_literal => {
+            let mut p = primary.into_inner();
+            // unreachable!("{}", p);
+            let value = p.next().unwrap().as_str().parse::<i128>().unwrap();
+            let width = match p.next().unwrap().as_str() {
+                "i" => IntegerWidth::IndexType,
+                a => IntegerWidth::Variable(a.parse::<u32>().unwrap()),
+            };
+
+            Statement::Expression(Expression::Integer(Integer { value, width }))
+        }
+        Rule::float_literal => {
+            let mut p = primary.into_inner();
+            let value = p.next().unwrap().as_str().parse::<f64>().unwrap();
+            let width = p.next().unwrap().as_str().parse::<u32>().unwrap();
+            Statement::Expression(Expression::Float(Float { value, width }))
+        }
         Rule::const_decl => {
             let mut p = primary.into_inner();
             let identifier = VariableName(p.next().unwrap().as_str().into());

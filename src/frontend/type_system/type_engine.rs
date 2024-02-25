@@ -4,6 +4,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::frontend::high_level_ir::ast_types::IntegerWidth;
+
 use super::{
     context::Context,
     substitution::Substitution,
@@ -28,10 +30,13 @@ pub fn w_algo(
     exp: &TIRExpression,
 ) -> Result<(Substitution, MonoType, Context), WAlgoError> {
     match exp {
-        TIRExpression::Integer(_) => Ok((
+        TIRExpression::Integer(_, width) => Ok((
             Substitution::new(),
             MonoType::Application {
-                c: "i32".into(),
+                c: match width {
+                    IntegerWidth::IndexType => "isize".into(),
+                    IntegerWidth::Variable(v) => format!("i{v}"),
+                },
                 dimensions: None,
                 types: vec![],
             },
@@ -55,10 +60,10 @@ pub fn w_algo(
             },
             context,
         )),
-        TIRExpression::Float(_) => Ok((
+        TIRExpression::Float(_, width) => Ok((
             Substitution::new(),
             MonoType::Application {
-                c: "f32".into(),
+                c: format!("f{width}"),
                 dimensions: None,
                 types: vec![],
             },
@@ -217,10 +222,9 @@ pub fn w_algo(
                         unreachable!()
                     };
                     a
-                },
-                None => MonoType::Variable(new_type)
+                }
+                None => MonoType::Variable(new_type),
             };
-                
 
             let mut new_context = context.clone();
             new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
@@ -255,7 +259,7 @@ pub fn w_algo(
                 //     unreachable!("Skill issue: Function defines different type to decleration")
                 // }
             }
-            
+
             Ok((sub, x, new_context))
         }
         TIRExpression::Conditional {

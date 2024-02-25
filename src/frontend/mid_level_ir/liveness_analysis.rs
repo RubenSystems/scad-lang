@@ -1,5 +1,3 @@
-
-
 use super::mir_ast_types::{SSAExpression, SSAValue};
 
 use crate::frontend::{
@@ -19,8 +17,8 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
             if_block: _,
             else_block: _,
         } => vec![],
-        SSAValue::Integer(_) => vec![],
-        SSAValue::Float(_) => vec![],
+        SSAValue::Integer { value, width } => vec![],
+        SSAValue::Float { value, width } => vec![],
         SSAValue::Bool(_) => vec![],
         SSAValue::Operation {
             lhs: _,

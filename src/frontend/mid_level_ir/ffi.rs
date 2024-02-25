@@ -1,6 +1,6 @@
 use super::mir_ast_types::{SSAExpression, SSAValue};
 use crate::frontend::{
-    high_level_ir::ast_types::FailureCopy,
+    high_level_ir::ast_types::{FailureCopy, IntegerWidth},
     type_system::{
         context::Context,
         tir_types::{MonoType, TIRType},
@@ -356,6 +356,14 @@ pub struct FFIHIRTensor {
 #[derive(Clone, Copy)]
 pub struct FFIHIRInteger {
     pub value: usize,
+    pub width: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FFIHIRFloat {
+    pub value: f64,
+    pub width: u32,
 }
 
 #[repr(C)]
@@ -381,6 +389,7 @@ pub union ValueUnion {
     function_call: FFIHIRFunctionCall,
     boolean: u8,
     conditional: FFIHIRConditional,
+    float: FFIHIRFloat,
 }
 
 #[repr(C)]
@@ -392,6 +401,7 @@ pub enum FFIHirValueTag {
     FunctionCall = 3,
     Boolean = 4,
     Conditional = 5,
+    Float = 6,
 }
 
 #[repr(C)]
@@ -412,13 +422,24 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             },
         },
         SSAValue::Phi(_) => todo!(),
-        SSAValue::Integer(i) => FFIHIRValue {
+        SSAValue::Integer { value, width } => FFIHIRValue {
             tag: FFIHirValueTag::Integer,
             value: ValueUnion {
-                integer: FFIHIRInteger { value: i as usize },
+                integer: FFIHIRInteger {
+                    value: value as usize,
+                    width: match width {
+                        IntegerWidth::IndexType => u32::MAX,
+                        IntegerWidth::Variable(v) => v,
+                    },
+                },
             },
         },
-        SSAValue::Float(_) => todo!(),
+        SSAValue::Float { value, width } => FFIHIRValue {
+            tag: FFIHirValueTag::Float,
+            value: ValueUnion {
+                float: FFIHIRFloat { value, width },
+            },
+        },
         SSAValue::Bool(b) => FFIHIRValue {
             tag: FFIHirValueTag::Boolean,
             value: ValueUnion {
