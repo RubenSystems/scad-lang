@@ -34,53 +34,25 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
     }
 }
 
-fn drop_dead_vars(mut vars: Vec<String>, e2: SSAExpression, context: &Context) -> SSAExpression {
+fn drop_dead_vars(mut vars: Vec<String>, e2: SSAExpression) -> SSAExpression {
     if vars.len() == 0 {
         e2
     } else {
         let cvar = vars.pop().unwrap();
-        let tpe = context
-            .get_type_for_name(&cvar)
-            .expect(&format!("Can't drop unknown type for {cvar}"))
-            .first()
-            .unwrap();
-
-        // let TIRType::MonoType(tpe) = tpe else {
-        //     unreachable!("Can't work with polytypes")
-        // };
-        let tpe = match tpe.clone() {
-            TIRType::MonoType(m) => m,
-            TIRType::PolyType(p) => instantiate(TIRType::PolyType(p)),
-            TIRType::ForwardDecleration(_) => todo!(),
-        };
-
-        let MonoType::Application {
-            c,
-            dimensions,
-            types: _,
-        } = tpe
-        else {
-            unreachable!("Untyped drop unavailable");
-        };
-        let drop_extension = format!("{}{}", if dimensions.is_none() { "" } else { "tensor" }, c);
 
         SSAExpression::VariableDecl {
             name: generate_register_name(),
             vtype: None,
             e1: SSAValue::FunctionCall {
-                name: format!("@drop.{drop_extension}"),
+                name: "@drop".into(),
                 parameters: vec![SSAValue::VariableReference(cvar)],
             },
-            e2: Box::new(drop_dead_vars(vars, e2, context)),
+            e2: Box::new(drop_dead_vars(vars, e2)),
         }
     }
 }
 
-pub fn unalive_vars(
-    blk: SSAExpression,
-    mut alive_vars: Vec<String>,
-    ctx: &Context,
-) -> SSAExpression {
+pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpression {
     match blk {
         SSAExpression::VariableDecl {
             name,
@@ -90,7 +62,7 @@ pub fn unalive_vars(
         } => {
             alive_vars.push(name.clone());
 
-            let new_cont = unalive_vars(*e2, alive_vars, ctx);
+            let new_cont = unalive_vars(*e2, alive_vars);
             SSAExpression::VariableDecl {
                 name,
                 vtype,
@@ -105,8 +77,8 @@ pub fn unalive_vars(
             block,
             e2,
         } => {
-            let new_block = unalive_vars(*block, vec![], ctx);
-            let new_cont = unalive_vars(*e2, alive_vars, ctx);
+            let new_block = unalive_vars(*block, vec![]);
+            let new_cont = unalive_vars(*e2, alive_vars);
 
             SSAExpression::FuncDecl {
                 name,
@@ -122,7 +94,7 @@ pub fn unalive_vars(
             ret_type,
             e2,
         } => {
-            let new_cont = unalive_vars(*e2, alive_vars, ctx);
+            let new_cont = unalive_vars(*e2, alive_vars);
 
             SSAExpression::FuncForwardDecl {
                 name,
@@ -133,22 +105,19 @@ pub fn unalive_vars(
         }
         SSAExpression::Noop => SSAExpression::Noop,
         SSAExpression::Block(b) => {
-            let new_block = unalive_vars(*b, vec![], ctx);
+            let new_block = unalive_vars(*b, vec![]);
 
             SSAExpression::Block(Box::new(new_block))
         }
         // Anything returned by return and yield will not die
         SSAExpression::Return { val } => {
             let alive = get_alive_vars(&val);
-            println!("{alive_vars:?}");
             let to_die: Vec<String> = alive_vars
                 .into_iter()
                 .filter(|x| !alive.contains(x))
                 .collect();
-            println!("{alive:?}");
-            println!("{to_die:?}\n");
 
-            drop_dead_vars(to_die, SSAExpression::Return { val }, ctx)
+            drop_dead_vars(to_die, SSAExpression::Return { val })
         }
         SSAExpression::Yield { val } => {
             let alive = get_alive_vars(&val);
@@ -156,7 +125,7 @@ pub fn unalive_vars(
                 .into_iter()
                 .filter(|x| alive.contains(x))
                 .collect();
-            drop_dead_vars(to_die, SSAExpression::Yield { val }, ctx)
+            drop_dead_vars(to_die, SSAExpression::Yield { val })
         }
         SSAExpression::ForLoop {
             iv,
@@ -165,8 +134,8 @@ pub fn unalive_vars(
             block,
             e2,
         } => {
-            let new_block = unalive_vars(*block, vec![iv.clone()], ctx);
-            let new_cont = unalive_vars(*e2, alive_vars, ctx);
+            let new_block = unalive_vars(*block, vec![iv.clone()]);
+            let new_cont = unalive_vars(*e2, alive_vars);
 
             SSAExpression::ForLoop {
                 iv,

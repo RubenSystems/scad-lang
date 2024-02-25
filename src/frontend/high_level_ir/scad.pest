@@ -30,8 +30,8 @@ widths = {
 integer = @{ ASCII_DIGIT+ }
 float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
 
-integer_literal = { integer ~ "." ~ widths }
-float_literal = { float ~ "." ~ widths}
+integer_literal = { integer ~ "_i" ~ (widths | "i") }
+float_literal = { float ~ "_f" ~ widths}
 
 char_array = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }

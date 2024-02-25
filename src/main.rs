@@ -1,6 +1,8 @@
+pub mod core;
 pub mod frontend;
 pub mod testing;
 
+use crate::core::typedefs::create_types_for_core;
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
@@ -12,7 +14,7 @@ use crate::frontend::high_level_ir::ast_types::FailureCopy;
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
-use crate::frontend::type_system::tir_types::{MonoType, TIRType};
+use crate::frontend::type_system::tir_types::{MonoType, PolyType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 
 use crate::frontend::high_level_ir::hir_parser::Rule;
@@ -26,8 +28,12 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-    fn do(a: 2xi64, b: 2xi64, c: 2xi64) 2xi64 {
-        @{300.64, 400.64}
+    fn add(a: 10000xi64, b: 10000xi64, result: 10000xi64) i64 {
+	
+        let mut m: 2xi64 = @{0_i64, 2_i64};
+    
+        @set.i64(c: m, i: 0_ii, v: 1000_i64);
+        @index.i64(c: m, i: 0_ii)
     };
     
     
@@ -57,88 +63,8 @@ fn main() -> std::io::Result<()> {
 
     // println!("{code:#?}");
 
-    let mut consumable_context = Context::new();
-
-    consumable_context.add_type_for_name(
-        "@print".into(),
-        TIRType::MonoType(MonoType::Application {
-            dimensions: None,
-            c: "->".into(),
-            types: vec![
-                MonoType::Variable("any_vec_any".into()),
-                MonoType::Variable("any_vec_any".into()),
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@drop.i32".into(),
-        TIRType::MonoType(MonoType::Application {
-            dimensions: None,
-            c: "->".into(),
-            types: vec![
-                MonoType::Variable("@drop.a".into()),
-                MonoType::Variable("@drop.b".into()),
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@drop.tensori32".into(),
-        TIRType::MonoType(MonoType::Application {
-            dimensions: None,
-            c: "->".into(),
-            types: vec![
-                MonoType::Variable("@drop.a".into()),
-                MonoType::Variable("@drop.b".into()),
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@add".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "->".into(),
-            dimensions: None,
-            types: vec![
-                MonoType::Variable("@any_adding_type".into()),
-                MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Variable("@any_adding_type".into()),
-                        MonoType::Variable("@any_adding_type".into()),
-                    ],
-                },
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@index.i32".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "->".into(),
-            dimensions: None,
-            types: vec![
-                MonoType::Variable("@any_tensor_type".into()),
-                MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Variable("@any_index_type".into()),
-                        MonoType::Application {
-                            c: "i32".into(),
-                            dimensions: None,
-                            types: vec![],
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-
     // println!("{:#?}", consumable_context);
-
+    let consumable_context = create_types_for_core();
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("\n\n{:#?}\n\n", code);
 
@@ -153,7 +79,7 @@ fn main() -> std::io::Result<()> {
     .unwrap();
 
     println!("\n\n{:#?}\n\n", context);
-    let code = unalive_vars(code, vec![], &context);
+    let code = unalive_vars(code, vec![]);
     _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
     // println!("{tpe:?}");
 

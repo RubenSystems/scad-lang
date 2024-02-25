@@ -428,7 +428,8 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
                 integer: FFIHIRInteger {
                     value: value as usize,
                     width: match width {
-                        IntegerWidth::IndexType => u32::MAX,
+                        // This is not very clever and will blow up in ur face at some point in time
+                        IntegerWidth::IndexType => 1000,
                         IntegerWidth::Variable(v) => v,
                     },
                 },

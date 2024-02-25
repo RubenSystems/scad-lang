@@ -1,6 +1,8 @@
 pub mod frontend;
 pub mod testing;
+pub mod core;
 
+use crate::core::typedefs::create_types_for_core;
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, TypeQueryEngine};
@@ -12,7 +14,7 @@ use crate::frontend::type_system::context::Context;
 
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
-use crate::frontend::type_system::tir_types::{MonoType, TIRType};
+use crate::frontend::type_system::tir_types::{MonoType, PolyType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
@@ -79,111 +81,7 @@ pub extern "C" fn compile(
     // let code = remove_unused_variables(code, &referenced_vars);
     // endof optimiser
 
-    let mut consumable_context = Context::new();
-
-    consumable_context.add_type_for_name(
-        "@print".into(),
-        TIRType::MonoType(MonoType::Application {
-            dimensions: None,
-            c: "->".into(),
-            types: vec![
-                MonoType::Variable("@any_printing_type".into()),
-                MonoType::Variable("@any_printing_type".into()),
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@add".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "->".into(),
-            dimensions: None,
-            types: vec![
-                MonoType::Variable("@any_adding_type".into()),
-                MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Variable("@any_adding_type".into()),
-                        MonoType::Variable("@any_adding_type".into()),
-                    ],
-                },
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@index.i32".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "->".into(),
-            dimensions: None,
-            types: vec![
-                MonoType::Variable("@any_tensor_type".into()),
-                MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Variable("@any_index_type".into()),
-                        MonoType::Application {
-                            c: "i32".into(),
-                            dimensions: None,
-                            types: vec![],
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-
-    consumable_context.add_type_for_name(
-        "@set.i32".into(),
-        TIRType::MonoType(MonoType::Application {
-            c: "->".into(),
-            dimensions: None,
-            types: vec![
-                MonoType::Variable("@set.i32.anytensor".into()),
-                MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Application {
-                            c: "i32".into(),
-                            dimensions: None,
-                            types: vec![],
-                        },
-                        MonoType::Application {
-                            c: "->".into(),
-                            dimensions: None,
-                            types: vec![
-                                MonoType::Application {
-                                    c: "i32".into(),
-                                    dimensions: None,
-                                    types: vec![],
-                                },
-                                MonoType::Application {
-                                    c: "i32".into(),
-                                    dimensions: None,
-                                    types: vec![],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        }),
-    );
-
-    // consumable_context.add_type_for_name(
-    //     "@drop".into(),
-    //     TIRType::MonoType(MonoType::Application {
-    //         dimensions: None,
-    //         c: "->".into(),
-    //         types: vec![
-    //             MonoType::Variable("any_vec_any".into()),
-    //             MonoType::Variable("any_vec_any".into()),
-    //         ],
-    //     }),
-    // );
+    let consumable_context = create_types_for_core();
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     // println!("\n\n{:#?}\n\n", tir);
@@ -199,7 +97,7 @@ pub extern "C" fn compile(
     .unwrap();
 
     println!("{context:#?} == context");
-    let code = unalive_vars(code, vec![], &context);
+    let code = unalive_vars(code, vec![]);
     let query_engine = TypeQueryEngine::new(context);
     let qep = Box::into_raw(Box::new(query_engine));
 

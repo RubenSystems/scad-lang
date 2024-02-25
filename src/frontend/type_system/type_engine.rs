@@ -34,7 +34,7 @@ pub fn w_algo(
             Substitution::new(),
             MonoType::Application {
                 c: match width {
-                    IntegerWidth::IndexType => "isize".into(),
+                    IntegerWidth::IndexType => "ii".into(),
                     IntegerWidth::Variable(v) => format!("i{v}"),
                 },
                 dimensions: None,

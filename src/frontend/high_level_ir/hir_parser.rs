@@ -194,9 +194,9 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
             let mut p = primary.into_inner();
             // unreachable!("{}", p);
             let value = p.next().unwrap().as_str().parse::<i128>().unwrap();
-            let width = match p.next().unwrap().as_str() {
-                "i" => IntegerWidth::IndexType,
-                a => IntegerWidth::Variable(a.parse::<u32>().unwrap()),
+            let width = match p.next() {
+                Some(a) => IntegerWidth::Variable(a.as_str().parse::<u32>().unwrap()),
+                None => IntegerWidth::IndexType,
             };
 
             Statement::Expression(Expression::Integer(Integer { value, width }))
