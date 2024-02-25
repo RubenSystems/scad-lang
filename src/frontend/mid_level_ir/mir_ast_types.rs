@@ -174,8 +174,14 @@ impl FailureCopy for SSAValue {
             SSAValue::Tensor(v) => SSAValue::Tensor(v.iter().map(|x| x.fcopy()).collect()),
             SSAValue::Nothing => SSAValue::Nothing,
             SSAValue::VariableReference(r) => SSAValue::VariableReference(r.clone()),
-            SSAValue::Integer { value, width } => SSAValue::Integer { value: *value, width: *width },
-            SSAValue::Float { value, width } => SSAValue::Float { value: *value, width: *width },
+            SSAValue::Integer { value, width } => SSAValue::Integer {
+                value: *value,
+                width: *width,
+            },
+            SSAValue::Float { value, width } => SSAValue::Float {
+                value: *value,
+                width: *width,
+            },
             SSAValue::Operation { lhs, op, rhs: _ } => SSAValue::Operation {
                 lhs: Box::new(lhs.fcopy()),
                 op: op.clone(),

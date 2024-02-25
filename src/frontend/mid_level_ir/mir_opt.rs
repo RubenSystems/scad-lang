@@ -11,8 +11,8 @@ fn foldable(val: &SSAValue) -> bool {
     match val {
         SSAValue::VariableReference(_) => true,
         SSAValue::Phi(_) => false,
-        SSAValue::Integer { value, width } => true,
-        SSAValue::Float { value, width } => true,
+        SSAValue::Integer { value: _, width: _ } => true,
+        SSAValue::Float { value: _, width: _ } => true,
         SSAValue::Bool(_) => true,
         SSAValue::Operation {
             lhs: _,
@@ -48,8 +48,8 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
             }
             set
         }
-        SSAValue::Integer { value, width } => HashSet::new(),
-        SSAValue::Float { value, width }=> HashSet::new(),
+        SSAValue::Integer { value: _, width: _ } => HashSet::new(),
+        SSAValue::Float { value: _, width: _ } => HashSet::new(),
         SSAValue::Bool(_) => HashSet::new(),
         SSAValue::Operation {
             lhs: _,

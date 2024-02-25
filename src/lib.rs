@@ -6,7 +6,7 @@ use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, TypeQueryEngine};
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
-use crate::frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold};
+
 use crate::frontend::mid_level_ir::parsers::parse_program;
 use crate::frontend::type_system::context::Context;
 
@@ -14,7 +14,7 @@ use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
 use crate::frontend::type_system::tir_types::{MonoType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
-use frontend::mid_level_ir::ffi::{FFIApplication, FFIHIRExpr, FFIType};
+use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;

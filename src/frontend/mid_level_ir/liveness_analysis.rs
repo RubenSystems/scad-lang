@@ -17,8 +17,8 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
             if_block: _,
             else_block: _,
         } => vec![],
-        SSAValue::Integer { value, width } => vec![],
-        SSAValue::Float { value, width } => vec![],
+        SSAValue::Integer { value: _, width: _ } => vec![],
+        SSAValue::Float { value: _, width: _ } => vec![],
         SSAValue::Bool(_) => vec![],
         SSAValue::Operation {
             lhs: _,
