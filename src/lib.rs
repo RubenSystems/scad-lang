@@ -1,6 +1,6 @@
+pub mod core;
 pub mod frontend;
 pub mod testing;
-pub mod core;
 
 use crate::core::typedefs::create_types_for_core;
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};

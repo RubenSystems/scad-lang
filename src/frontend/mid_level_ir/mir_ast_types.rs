@@ -146,6 +146,10 @@ pub enum SSAValue {
         if_block: SSAConditionalBlock,
         else_block: SSALabeledBlock,
     },
+    Cast {
+        value: Box<SSAValue>,
+        to: Type,
+    },
     Integer {
         value: i128,
         width: IntegerWidth,
@@ -199,6 +203,10 @@ impl FailureCopy for SSAValue {
             } => SSAValue::ConditionalBlock {
                 if_block: if_block.fcopy(),
                 else_block: else_block.fcopy(),
+            },
+            SSAValue::Cast { value, to } => SSAValue::Cast {
+                value: Box::new(value.fcopy()),
+                to: to.fcopy(),
             },
         }
     }

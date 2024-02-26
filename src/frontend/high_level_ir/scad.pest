@@ -42,11 +42,15 @@ boolean_t = { "true" | "false" }
 
 
 
+
 // type
 // type = _{ array_type | simple_type }
 // array_type = { "[" ~ type ~ ";" ~ integer ~ "]" }
 type = { (integer ~ "x")* ~ simple_type  }
 simple_type = _{ identifier }
+
+
+
 
 literal = _{
 	integer_literal
@@ -209,6 +213,7 @@ less = { "<" }
 less_equal = { "<=" }
 equal = { "==" }
 
+cast = { non_infix_expressions ~ "as" ~ type }
 
 // Major building blocks
 
@@ -226,6 +231,7 @@ non_infix_expressions = _{
 expression = { 
 	binary_infix_operation 
 	| infix_operation 
+	| cast
 	| non_infix_expressions  
 }
 

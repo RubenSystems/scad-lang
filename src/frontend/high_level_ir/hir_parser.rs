@@ -8,7 +8,7 @@ use pest_derive::Parser;
 use crate::frontend::high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName};
 
 use super::ast_types::{
-    ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, ForLoop,
+    Cast, ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, ForLoop,
     FunctionCall, FunctionDecleration, Identifier, Integer, IntegerWidth, ProcedureDefinition,
     Statement, StatementBlock, Type, TypeName, VariableDecl, VariableName,
 };
@@ -206,6 +206,17 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
             let value = p.next().unwrap().as_str().parse::<f64>().unwrap();
             let width = p.next().unwrap().as_str().parse::<u32>().unwrap();
             Statement::Expression(Expression::Float(Float { value, width }))
+        }
+        Rule::cast => {
+            let mut p = primary.into_inner();
+            let Statement::Expression(e) = parse_pair(p.next().unwrap()) else {
+                unreachable!("bad")
+            };
+            let tpe = parse_type(p.next().unwrap());
+            Statement::Expression(Expression::Cast(Cast {
+                expr: Box::new(e),
+                to_type: tpe,
+            }))
         }
         Rule::const_decl => {
             let mut p = primary.into_inner();

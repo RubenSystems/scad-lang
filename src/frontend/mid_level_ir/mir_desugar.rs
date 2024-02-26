@@ -157,6 +157,10 @@ pub fn rename_variable_reassignment_value(
                 else_block,
             }
         }
+        SSAValue::Cast { value, to } => SSAValue::Cast {
+            value: Box::new(rename_variable_reassignment_value(*value, tracker)),
+            to,
+        },
     }
 }
 
@@ -337,6 +341,10 @@ pub fn rename_variables_value(
                 },
             }
         }
+        SSAValue::Cast { value, to } => SSAValue::Cast {
+            value: Box::new(rename_variables_value(*value, scoped_name, used_vars)),
+            to,
+        },
     }
 }
 

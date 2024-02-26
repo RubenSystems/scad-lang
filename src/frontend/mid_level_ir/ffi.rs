@@ -11,7 +11,7 @@ use std::{os::raw::c_char, ptr::null};
 
 // Types
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FFIApplication {
     pub c: FFIString,
     pub dimensions: *const u32,
@@ -382,6 +382,13 @@ pub struct FFIHIRFunctionCall {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+pub struct FFIHIRCast {
+    expr: *const FFIHIRValue,
+    to: FFIApplication,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub union ValueUnion {
     tensor: FFIHIRTensor,
     integer: FFIHIRInteger,
@@ -390,6 +397,7 @@ pub union ValueUnion {
     boolean: u8,
     conditional: FFIHIRConditional,
     float: FFIHIRFloat,
+    cast: FFIHIRCast,
 }
 
 #[repr(C)]
@@ -402,6 +410,7 @@ pub enum FFIHirValueTag {
     Boolean = 4,
     Conditional = 5,
     Float = 6,
+    Cast = 7,
 }
 
 #[repr(C)]
@@ -508,6 +517,17 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
                     else_arm: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
                         *else_block.block,
                     )))),
+                },
+            },
+        },
+        SSAValue::Cast { value, to } => FFIHIRValue {
+            tag: FFIHirValueTag::Cast,
+            value: ValueUnion {
+                cast: FFIHIRCast {
+                    expr: Box::into_raw(Box::new(ffi_ssa_val(std::mem::ManuallyDrop::new(*value)))),
+                    to: unsafe {
+                        *convert_type_to_ffi(TIRType::MonoType(to.to_tir_type())).applications
+                    },
                 },
             },
         },

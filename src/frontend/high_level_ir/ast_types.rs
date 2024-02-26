@@ -238,6 +238,12 @@ pub struct InfixOperation {
     pub rhs: Box<Expression>,
 }
 
+#[derive(Debug)]
+pub struct Cast {
+    pub expr: Box<Expression>,
+    pub to_type: Type,
+}
+
 // Enumeration of major building blocks of the language expressions
 #[derive(Debug)]
 pub enum Expression {
@@ -254,6 +260,7 @@ pub enum Expression {
     FunctionCall(FunctionCall),
     Block(ExpressionBlock),
     Tensor(Vec<Expression>),
+    Cast(Cast),
 }
 
 impl FailureCopy for Expression {
@@ -292,6 +299,10 @@ impl FailureCopy for Expression {
             Expression::Block(b) => Expression::Block(b.fcopy()),
             Expression::Bool(b) => Expression::Bool(*b),
             Expression::Tensor(a) => Expression::Tensor(a.iter().map(|x| x.fcopy()).collect()),
+            Expression::Cast(c) => Expression::Cast(Cast {
+                expr: Box::new(c.expr.fcopy()),
+                to_type: c.to_type.fcopy(),
+            }),
         }
     }
 }

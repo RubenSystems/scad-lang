@@ -1,6 +1,5 @@
+use super::tir_types::{MonoType, TIRType};
 use crate::frontend::high_level_ir::ast_types::{IntegerWidth, Type};
-
-use super::tir_types::TIRType;
 
 #[derive(Debug)]
 pub struct TIRPhi {
@@ -39,5 +38,9 @@ pub enum TIRExpression {
         condition: Box<TIRExpression>,
         if_block: (String, Box<TIRExpression>), //Name, Expr
         else_block: (String, Box<TIRExpression>),
+    },
+    Cast {
+        from: Box<TIRExpression>,
+        to_type: MonoType,
     },
 }

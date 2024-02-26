@@ -172,7 +172,6 @@ pub fn w_algo(
                 ) else {
                     todo!()
                 };
-                println!("t1:: {t1:#?}");
 
                 let b = generate_type_name();
                 let s3 = unify(
@@ -366,6 +365,10 @@ pub fn w_algo(
             );
 
             Ok((Substitution::new(), ret, context))
+        }
+        TIRExpression::Cast { from: _, to_type } => {
+
+            Ok((Substitution::new(), to_type.clone(), context))
         }
     }
 }

@@ -139,6 +139,16 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 }),
             )
         }
+        // Expression::Cast(c) => k(SSAValue::Cast { value: Box::new(expression_l1_to_l2(c.expr, k)), to: c.to_type }),
+        Expression::Cast(c) => expression_l1_to_l2(
+            *c.expr,
+            Box::new(|value| {
+                k(SSAValue::Cast {
+                    value: Box::new(value),
+                    to: c.to_type,
+                })
+            }),
+        ),
     }
 }
 

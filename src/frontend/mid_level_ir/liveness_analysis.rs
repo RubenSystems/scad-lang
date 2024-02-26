@@ -31,6 +31,7 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
         } => todo!(),
         SSAValue::Nothing => vec![],
         SSAValue::Tensor(_) => vec![],
+        SSAValue::Cast { value, to: _ } => get_alive_vars(value),
     }
 }
 

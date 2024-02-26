@@ -29,6 +29,7 @@ fn foldable(val: &SSAValue) -> bool {
             if_block: _,
             else_block: _,
         } => false,
+        SSAValue::Cast { value, to } => true,
     }
 }
 
@@ -87,6 +88,7 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
 
             hs
         }
+        SSAValue::Cast { value, to } => todo!(),
     }
 }
 

@@ -100,6 +100,17 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
                 ctx,
             )
         }
+        SSAValue::Cast { value, to } => {
+            let (tpe, ctx) = transform_mir_value_to_tir(*value, ctx);
+
+            (
+                TIRExpression::Cast {
+                    from: Box::new(tpe),
+                    to_type: to.to_tir_type(),
+                },
+                ctx,
+            )
+        }
     }
 }
 
