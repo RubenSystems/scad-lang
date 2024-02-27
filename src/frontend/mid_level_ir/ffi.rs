@@ -187,6 +187,7 @@ pub struct FFIHIRForLoop {
     start: FFIHIRValue,
     end: FFIHIRValue,
     block: *const FFIHIRExpr,
+    parallel: bool,
     e2: *const FFIHIRExpr,
 }
 
@@ -322,13 +323,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
                 },
             },
         },
-        SSAExpression::ForLoop {
-            iv,
-            from,
-            to,
-            block,
-            e2,
-        } => FFIHIRExpr {
+        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => FFIHIRExpr {
             tag: FFIHIRTag::ForLoop,
             value: ExpressionUnion {
                 floop: FFIHIRForLoop {
@@ -338,6 +333,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
                     block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
                         *block,
                     )))),
+                    parallel,
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
                 },
             },

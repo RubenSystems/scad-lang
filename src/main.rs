@@ -30,10 +30,13 @@ fn main() -> std::io::Result<()> {
     let test_prog = r#"
     fn add(a: 10000xi64, b: 10000xi64, result: 10000xi64) i64 {
 	
-        let mut m: 2xi64 = @{0_i64, 2_i64};
-        
-        @set.i64(c: m, i: 0_ii, v: 1000_i32 as i64);
-        @index.i64(c: m, i: 0_ii)
+        let mut m: 2xi32 = @{1_i32, 2_i32};
+        let mut idx: i64 = 1_i64;
+        let mut j: i32 = @index.i32(container: m, index: (idx -> ii));
+    
+        @print(v: j);
+    
+        10000_i64
     };
     
     

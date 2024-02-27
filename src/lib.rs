@@ -10,11 +10,11 @@ use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
 use crate::frontend::mid_level_ir::parsers::parse_program;
-use crate::frontend::type_system::context::Context;
+
 
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
-use crate::frontend::type_system::tir_types::{MonoType, PolyType, TIRType};
+
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
@@ -25,6 +25,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
+
 
 #[no_mangle]
 pub extern "C" fn query(

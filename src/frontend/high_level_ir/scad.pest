@@ -62,6 +62,9 @@ tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 for_loop = {
 	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ statement_block 
 }
+parallel_loop = {
+	"parallel" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ statement_block 
+}
 
 // Variable declerations
 const_decl = { "let" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
@@ -213,7 +216,7 @@ less = { "<" }
 less_equal = { "<=" }
 equal = { "==" }
 
-cast = { non_infix_expressions ~ "as" ~ type }
+cast = { non_infix_expressions ~ "->" ~ type }
 
 // Major building blocks
 
@@ -229,21 +232,17 @@ non_infix_expressions = _{
 }
 
 expression = { 
-	binary_infix_operation 
-	| infix_operation 
-	| cast
-	| non_infix_expressions  
+	cast | non_infix_expressions  
 }
 
 
 
 statement = { 
 	for_loop 
+	| parallel_loop
 	| var_decl
-	| loop 
-	// | if_statement_control_flow 
-	| var_reassignment
 	| expression 
+	| var_reassignment
 }
 
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }

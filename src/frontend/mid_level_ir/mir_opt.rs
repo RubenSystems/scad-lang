@@ -29,7 +29,7 @@ fn foldable(val: &SSAValue) -> bool {
             if_block: _,
             else_block: _,
         } => false,
-        SSAValue::Cast { value, to } => true,
+        SSAValue::Cast { value: _, to: _ } => true,
     }
 }
 
@@ -88,7 +88,7 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
 
             hs
         }
-        SSAValue::Cast { value, to } => todo!(),
+        SSAValue::Cast { value: _, to: _ } => todo!(),
     }
 }
 
@@ -125,13 +125,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
         SSAExpression::Return { val } => get_referenced_value(val),
         SSAExpression::Block(b) => get_referenced(b),
         SSAExpression::Yield { val } => get_referenced_value(val),
-        SSAExpression::ForLoop {
-            iv: _,
-            from: _,
-            to: _,
-            block: _,
-            e2: _,
-        } => todo!(),
+        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => todo!(),
     }
 }
 
@@ -184,13 +178,7 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
             SSAExpression::Block(Box::new(remove_unused_variables(*b, used)))
         }
         SSAExpression::Yield { val } => SSAExpression::Yield { val },
-        SSAExpression::ForLoop {
-            iv: _,
-            from: _,
-            to: _,
-            block: _,
-            e2: _,
-        } => todo!(),
+        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => todo!(),
         // SSAExpression::ConditionalBlock {
         //     if_block,
         //     else_block,
@@ -358,12 +346,6 @@ pub fn mir_variable_fold(
             },
             env,
         ),
-        SSAExpression::ForLoop {
-            iv: _,
-            from: _,
-            to: _,
-            block: _,
-            e2: _,
-        } => todo!(),
+        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => todo!(),
     }
 }

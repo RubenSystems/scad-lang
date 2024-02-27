@@ -203,6 +203,7 @@ pub struct ForLoop {
     pub from: usize,
     pub to: usize,
     pub block: StatementBlock, // Block of statements to be executed if the condition is met
+    pub parallel : bool
 }
 
 impl FailureCopy for ForLoop {
@@ -212,6 +213,7 @@ impl FailureCopy for ForLoop {
             from: self.from,
             to: self.to,
             block: self.block.fcopy(),
+            parallel: self.parallel
         }
     }
 }

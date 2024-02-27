@@ -103,7 +103,7 @@ fn parse_function_call_arg(arg: pest::iterators::Pair<'_, Rule>) -> (Identifier,
     }
 }
 
-fn parse_for_loop(lp: pest::iterators::Pair<'_, Rule>) -> Statement {
+fn parse_for_loop(lp: pest::iterators::Pair<'_, Rule>, parallel: bool) -> Statement {
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
     let from = it.next().unwrap().as_str().parse::<usize>().unwrap();
@@ -115,6 +115,7 @@ fn parse_for_loop(lp: pest::iterators::Pair<'_, Rule>) -> Statement {
         from,
         to,
         block,
+        parallel
     })
 }
 
@@ -234,7 +235,8 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>) -> Statement {
                 expression,
             })
         }
-        Rule::for_loop => parse_for_loop(primary),
+        Rule::for_loop => parse_for_loop(primary, false),
+        Rule::parallel_loop => parse_for_loop(primary, true),
         Rule::tensor => Statement::Expression(Expression::Tensor(
             primary
                 .into_inner()

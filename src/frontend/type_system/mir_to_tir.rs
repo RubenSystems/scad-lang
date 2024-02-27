@@ -293,13 +293,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             (e2tir, e2ctx)
         }
         SSAExpression::Yield { val } => transform_mir_value_to_tir(val, ctx),
-        SSAExpression::ForLoop {
-            iv: _,
-            from: _,
-            to: _,
-            block: _,
-            e2,
-        } => {
+        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => {
             // don't convert for loop as it does not have a type
             transform_mir_to_tir(*e2, ctx)
         }

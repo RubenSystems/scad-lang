@@ -213,6 +213,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                     value: f.to as i128,
                     width: IntegerWidth::IndexType,
                 },
+                parallel: f.parallel,
                 block: Box::new(parse_statement_block(f.block)),
                 e2: Box::new(gen(SSAValue::Nothing)),
             }
