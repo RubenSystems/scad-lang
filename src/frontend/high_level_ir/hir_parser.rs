@@ -115,7 +115,7 @@ fn parse_for_loop(lp: pest::iterators::Pair<'_, Rule>, parallel: bool) -> Statem
         from,
         to,
         block,
-        parallel
+        parallel,
     })
 }
 

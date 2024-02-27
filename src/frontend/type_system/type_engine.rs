@@ -367,7 +367,6 @@ pub fn w_algo(
             Ok((Substitution::new(), ret, context))
         }
         TIRExpression::Cast { from: _, to_type } => {
-
             Ok((Substitution::new(), to_type.clone(), context))
         }
     }

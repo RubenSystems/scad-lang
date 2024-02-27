@@ -114,7 +114,14 @@ impl FailureCopy for SSAExpression {
                 ret_type: ret_type.as_ref().map(|x| x.fcopy()),
                 e2: Box::new(e2.fcopy()),
             },
-            SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => SSAExpression::ForLoop {
+            SSAExpression::ForLoop {
+                iv,
+                from,
+                to,
+                block,
+                parallel,
+                e2,
+            } => SSAExpression::ForLoop {
                 iv: iv.clone(),
                 from: from.fcopy(),
                 to: to.fcopy(),

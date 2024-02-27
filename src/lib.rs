@@ -11,9 +11,7 @@ use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, r
 
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
-
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
-
 
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
@@ -25,7 +23,6 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
-
 
 #[no_mangle]
 pub extern "C" fn query(

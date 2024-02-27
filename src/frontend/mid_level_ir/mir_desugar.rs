@@ -228,7 +228,14 @@ pub fn rename_variable_reassignment(
         SSAExpression::Yield { val } => SSAExpression::Yield {
             val: rename_variable_reassignment_value(val, tracker),
         },
-        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => {
+        SSAExpression::ForLoop {
+            iv,
+            from,
+            to,
+            block,
+            parallel,
+            e2,
+        } => {
             let counter = *tracker.get(&iv).unwrap_or(&-1) + 1;
             tracker.insert(iv.clone(), counter);
             let new_block = rename_variable_reassignment(*block, tracker);
@@ -419,7 +426,14 @@ pub fn rename_variables(
         SSAExpression::Yield { val } => SSAExpression::Yield {
             val: rename_variables_value(val, scoped_name, used_vars),
         },
-        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => {
+        SSAExpression::ForLoop {
+            iv,
+            from,
+            to,
+            block,
+            parallel,
+            e2,
+        } => {
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
             scoped_name.push("in_for".into());
             let new_iv = scoped_rename(&iv, &scoped_name);

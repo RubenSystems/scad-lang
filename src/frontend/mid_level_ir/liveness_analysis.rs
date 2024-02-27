@@ -1,8 +1,6 @@
 use super::mir_ast_types::{SSAExpression, SSAValue};
 
-use crate::frontend::{
-    mid_level_ir::parsers::generate_register_name,
-};
+use crate::frontend::mid_level_ir::parsers::generate_register_name;
 
 fn get_alive_vars(val: &SSAValue) -> Vec<String> {
     match val {
@@ -123,7 +121,14 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
                 .collect();
             drop_dead_vars(to_die, SSAExpression::Yield { val })
         }
-        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => {
+        SSAExpression::ForLoop {
+            iv,
+            from,
+            to,
+            block,
+            parallel,
+            e2,
+        } => {
             let new_block = unalive_vars(*block, vec![iv.clone()]);
             let new_cont = unalive_vars(*e2, alive_vars);
 

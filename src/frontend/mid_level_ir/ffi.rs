@@ -323,7 +323,14 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
                 },
             },
         },
-        SSAExpression::ForLoop { iv, from, to, block, parallel, e2 } => FFIHIRExpr {
+        SSAExpression::ForLoop {
+            iv,
+            from,
+            to,
+            block,
+            parallel,
+            e2,
+        } => FFIHIRExpr {
             tag: FFIHIRTag::ForLoop,
             value: ExpressionUnion {
                 floop: FFIHIRForLoop {
