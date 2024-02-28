@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // Definition of terminal symbols representing basic data types and identifiers
-use crate::frontend::type_system::tir_types::MonoType;
+use crate::frontend::{error::PoolID, type_system::tir_types::MonoType};
 
 // When you are a failure, you copy. When you are a succes, you move
 pub trait FailureCopy {
@@ -249,62 +249,82 @@ pub struct Cast {
 // Enumeration of major building blocks of the language expressions
 #[derive(Debug)]
 pub enum Expression {
-    InfixOperation(InfixOperation), // Boolean expressions
-    Float(Float),                   // Floating-point value
-    Bool(bool),
-    Integer(Integer),       // Integer values
-    CharArray(CharArray),   // Character arrays
-    Identifier(Identifier), // Identifiers
+    InfixOperation(InfixOperation, PoolID), // Boolean expressions
+    Float(Float, PoolID),                   // Floating-point value
+    Bool(bool, PoolID),
+    Integer(Integer, PoolID),       // Integer values
+    CharArray(CharArray, PoolID),   // Character arrays
+    Identifier(Identifier, PoolID), // Identifiers
     ConditionalExpressionControlFlowControl {
         if_blocks: Vec<ConditionalExpressionBlock>, // List of else-if condition blocks
         else_block: Box<ExpressionBlock>,           // Optional else block if no conditions are met
+        pool_id: PoolID,
     },
-    FunctionCall(FunctionCall),
-    Block(ExpressionBlock),
-    Tensor(Vec<Expression>),
-    Cast(Cast),
+    FunctionCall(FunctionCall, PoolID),
+    Block(ExpressionBlock, PoolID),
+    Tensor(Vec<Expression>, PoolID),
+    Cast(Cast, PoolID),
 }
 
 impl FailureCopy for Expression {
     fn fcopy(&self) -> Expression {
         match self {
-            Expression::InfixOperation(i) => Expression::InfixOperation(InfixOperation {
-                lhs: Box::new(i.lhs.fcopy()),
-                op: InfixOperator(i.op.0.clone()),
-                rhs: Box::new(i.rhs.fcopy()),
-            }),
-            Expression::Float(f) => Expression::Float(Float {
-                value: f.value,
-                width: f.width,
-            }),
-            Expression::Integer(i) => Expression::Integer(Integer {
-                value: i.value,
-                width: i.width,
-            }),
-            Expression::CharArray(_) => todo!(),
-            Expression::Identifier(i) => Expression::Identifier(Identifier(i.0.clone())),
+            Expression::InfixOperation(i, pid) => Expression::InfixOperation(
+                InfixOperation {
+                    lhs: Box::new(i.lhs.fcopy()),
+                    op: InfixOperator(i.op.0.clone()),
+                    rhs: Box::new(i.rhs.fcopy()),
+                },
+                *pid,
+            ),
+            Expression::Float(f, pid) => Expression::Float(
+                Float {
+                    value: f.value,
+                    width: f.width,
+                },
+                *pid,
+            ),
+            Expression::Integer(i, pid) => Expression::Integer(
+                Integer {
+                    value: i.value,
+                    width: i.width,
+                },
+                *pid,
+            ),
+            Expression::CharArray(_, _) => todo!(),
+            Expression::Identifier(i, pid) => Expression::Identifier(Identifier(i.0.clone()), *pid),
             Expression::ConditionalExpressionControlFlowControl {
                 if_blocks,
                 else_block,
+                pool_id,
             } => Expression::ConditionalExpressionControlFlowControl {
                 if_blocks: if_blocks.iter().map(|x| x.fcopy()).collect(),
                 else_block: Box::new(else_block.fcopy()),
+                pool_id: *pool_id,
             },
-            Expression::FunctionCall(f) => Expression::FunctionCall(FunctionCall {
-                identifier: FunctionName(f.identifier.0.clone()),
-                args: f
-                    .args
-                    .iter()
-                    .map(|(id, exp)| (Identifier(id.0.clone()), exp.fcopy()))
-                    .collect(),
-            }),
-            Expression::Block(b) => Expression::Block(b.fcopy()),
-            Expression::Bool(b) => Expression::Bool(*b),
-            Expression::Tensor(a) => Expression::Tensor(a.iter().map(|x| x.fcopy()).collect()),
-            Expression::Cast(c) => Expression::Cast(Cast {
-                expr: Box::new(c.expr.fcopy()),
-                to_type: c.to_type.fcopy(),
-            }),
+            Expression::FunctionCall(f, pid) => Expression::FunctionCall(
+                FunctionCall {
+                    identifier: FunctionName(f.identifier.0.clone()),
+                    args: f
+                        .args
+                        .iter()
+                        .map(|(id, exp)| (Identifier(id.0.clone()), exp.fcopy()))
+                        .collect(),
+                },
+                *pid,
+            ),
+            Expression::Block(b, pid) => Expression::Block(b.fcopy(), *pid),
+            Expression::Bool(b, pid) => Expression::Bool(*b, *pid),
+            Expression::Tensor(a, pid) => {
+                Expression::Tensor(a.iter().map(|x| x.fcopy()).collect(), *pid)
+            }
+            Expression::Cast(c, pid) => Expression::Cast(
+                Cast {
+                    expr: Box::new(c.expr.fcopy()),
+                    to_type: c.to_type.fcopy(),
+                },
+                *pid,
+            ),
         }
     }
 }
@@ -312,73 +332,80 @@ impl FailureCopy for Expression {
 // Enumeration of different types of statements in the language
 #[derive(Debug)]
 pub enum Statement {
-    ConstDecl(ConstDecl),       // Constant declaration statement
-    VariableDecl(VariableDecl), // Constant declaration statement
-    Expression(Expression),     // Expression statement
-    FunctionDefinition(FunctionDefinition),
-    ProcedureDefinition(ProcedureDefinition),
-    ForLoop(ForLoop),
+    ConstDecl(ConstDecl, PoolID),       // Constant declaration statement
+    VariableDecl(VariableDecl, PoolID), // Constant declaration statement
+    Expression(Expression, PoolID),     // Expression statement
+    FunctionDefinition(FunctionDefinition, PoolID),
+    ProcedureDefinition(ProcedureDefinition, PoolID),
+    ForLoop(ForLoop, PoolID),
 
-    FunctionDecleration(FunctionDecleration),
-    ProcedureDecleration(ProcedureDecleration),
-    Block(Block),
+    FunctionDecleration(FunctionDecleration, PoolID),
+    ProcedureDecleration(ProcedureDecleration, PoolID),
+    Block(Block, PoolID),
 }
 
 impl FailureCopy for Statement {
     fn fcopy(&self) -> Self {
         match self {
-            Self::ConstDecl(c) => Statement::ConstDecl(ConstDecl {
-                identifier: VariableName(c.identifier.0.clone()),
-                subtype: c.subtype.fcopy(),
-                expression: c.expression.fcopy(),
-            }),
-            Self::VariableDecl(v) => Statement::VariableDecl(VariableDecl {
-                identifier: VariableName(v.identifier.0.clone()),
-                subtype: v.subtype.as_ref().map(|x| x.fcopy()),
-                expression: v.expression.fcopy(),
-            }),
-            Self::Expression(e) => Statement::Expression(e.fcopy()),
-            Self::FunctionDefinition(f) => {
+            Self::ConstDecl(c, pid) => Statement::ConstDecl(
+                ConstDecl {
+                    identifier: VariableName(c.identifier.0.clone()),
+                    subtype: c.subtype.fcopy(),
+                    expression: c.expression.fcopy(),
+                },
+                *pid,
+            ),
+            Self::VariableDecl(v, pid) => Statement::VariableDecl(
+                VariableDecl {
+                    identifier: VariableName(v.identifier.0.clone()),
+                    subtype: v.subtype.as_ref().map(|x| x.fcopy()),
+                    expression: v.expression.fcopy(),
+                },
+                *pid,
+            ),
+            Self::Expression(e, pid) => Statement::Expression(e.fcopy(), *pid),
+            Self::FunctionDefinition(f, pid) => {
                 let ret_type = f.return_type.fcopy();
 
-                Self::FunctionDefinition(FunctionDefinition {
-                    identifier: FunctionName(f.identifier.0.clone()),
-                    args: f
-                        .args
-                        .iter()
-                        .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
-                        .collect(),
-                    return_type: ret_type,
-                    block: f.block.fcopy(),
-                })
+                Self::FunctionDefinition(
+                    FunctionDefinition {
+                        identifier: FunctionName(f.identifier.0.clone()),
+                        args: f
+                            .args
+                            .iter()
+                            .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
+                            .collect(),
+                        return_type: ret_type,
+                        block: f.block.fcopy(),
+                    },
+                    *pid,
+                )
             }
-            Self::ProcedureDefinition(p) => Self::ProcedureDefinition(ProcedureDefinition {
-                identifier: FunctionName(p.identifier.0.clone()),
-                args: p
-                    .args
-                    .iter()
-                    .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
-                    .collect(),
-                block: p.block.fcopy(),
-            }),
-            Statement::Block(b) => Statement::Block(Block {
-                statements: b.statements.iter().map(|s| s.fcopy()).collect(),
-            }),
-            Statement::FunctionDecleration(f) => {
+            Self::ProcedureDefinition(p, pid) => todo!(),
+            Statement::Block(b, pid) => Statement::Block(
+                Block {
+                    statements: b.statements.iter().map(|s| s.fcopy()).collect(),
+                },
+                *pid,
+            ),
+            Statement::FunctionDecleration(f, pid) => {
                 let ret_type = f.return_type.fcopy();
 
-                Self::FunctionDecleration(FunctionDecleration {
-                    identifier: FunctionName(f.identifier.0.clone()),
-                    args: f
-                        .args
-                        .iter()
-                        .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
-                        .collect(),
-                    return_type: ret_type,
-                })
+                Self::FunctionDecleration(
+                    FunctionDecleration {
+                        identifier: FunctionName(f.identifier.0.clone()),
+                        args: f
+                            .args
+                            .iter()
+                            .map(|(id, tpe)| (Identifier(id.0.clone()), tpe.fcopy()))
+                            .collect(),
+                        return_type: ret_type,
+                    },
+                    *pid,
+                )
             }
-            Statement::ProcedureDecleration(_) => todo!(),
-            Statement::ForLoop(f) => Statement::ForLoop(f.fcopy()),
+            Statement::ProcedureDecleration(_, _) => todo!(),
+            Statement::ForLoop(f, pid) => Statement::ForLoop(f.fcopy(), *pid),
         }
     }
 }

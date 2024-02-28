@@ -7,102 +7,18 @@ fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {
     format!("{sn}.{existing_name}")
 }
 
-// format!(
-//     "{v}.{}",
-//     tracker
-//         .get(&v)
-//         .expect(&format!("Could not find variable {v} in environment"))
-// )
-
-// pub fn function_name_mangle_value(val: SSAValue, _context: &Context) -> SSAValue {
-//     match val {
-//         SSAValue::VariableReference(v) => SSAValue::VariableReference(v),
-//         SSAValue::Phi(_) => todo!(),
-//         SSAValue::Integer(i) => SSAValue::Integer(i),
-//         SSAValue::Float(f) => SSAValue::Float(f),
-//         SSAValue::Bool(b) => SSAValue::Bool(b),
-//         SSAValue::Operation {
-//             lhs: _,
-//             op: _,
-//             rhs: _,
-//         } => todo!(),
-//         SSAValue::FunctionCall {
-//             name: _,
-//             parameters: _,
-//         } => todo!(),
-//         SSAValue::Nothing => SSAValue::Nothing,
-//     }
-// }
-
-// pub fn function_name_mangle(expr: SSAExpression, context: &Context) -> SSAExpression {
-//     match expr {
-//         SSAExpression::VariableDecl {
-//             name,
-//             vtype,
-//             e1,
-//             e2,
-//         } => SSAExpression::VariableDecl {
-//             name,
-//             vtype,
-//             e1: function_name_mangle_value(e1, context),
-//             e2: Box::new(function_name_mangle(*e2, context)),
-//         },
-//         SSAExpression::FuncDecl {
-//             name: _,
-//             args: _,
-//             ret_type: _,
-//             block: _,
-//             e2: _,
-//         } => todo!(),
-//         SSAExpression::FuncForwardDecl {
-//             name: _,
-//             args: _,
-//             ret_type: _,
-//             e2: _,
-//         } => todo!(),
-//         SSAExpression::Noop => SSAExpression::Noop,
-//         SSAExpression::Return { val } => SSAExpression::Return {
-//             val: function_name_mangle_value(val, context),
-//         },
-//         SSAExpression::Block(b) => {
-//             SSAExpression::Block(Box::new(function_name_mangle(*b, context)))
-//         }
-//         SSAExpression::ConditionalBlock {
-//             if_block,
-//             else_block,
-//             e2,
-//         } => {
-//             let inner_if_block = SSALabeledBlock {
-//                 label: if_block.block.label,
-//                 block: Box::new(function_name_mangle(*if_block.block.block, context)),
-//             };
-//             let if_block = SSAConditionalBlock {
-//                 condition: function_name_mangle_value(if_block.condition, context),
-//                 block: inner_if_block,
-//             };
-//             let else_block = SSALabeledBlock {
-//                 label: else_block.label,
-//                 block: Box::new(function_name_mangle(*else_block.block, context)),
-//             };
-
-//             SSAExpression::ConditionalBlock {
-//                 if_block,
-//                 else_block,
-//                 e2: Box::new(function_name_mangle(*e2, context)),
-//             }
-//         }
-//     }
-// }
-
 pub fn rename_variable_reassignment_value(
     val: SSAValue,
     tracker: &mut HashMap<String, i32>,
 ) -> SSAValue {
     match val {
-        SSAValue::VariableReference(v) => SSAValue::VariableReference(match tracker.get(&v) {
-            Some(x) => format!("{v}.{x}"),
-            None => v,
-        }),
+        SSAValue::VariableReference(v, pid) => SSAValue::VariableReference(
+            match tracker.get(&v) {
+                Some(x) => format!("{v}.{x}"),
+                None => v,
+            },
+            pid,
+        ),
         SSAValue::Phi(p) => SSAValue::Phi(
             p.into_iter()
                 .map(|x| Phi {
@@ -111,30 +27,54 @@ pub fn rename_variable_reassignment_value(
                 })
                 .collect(),
         ),
-        SSAValue::Integer { value, width } => SSAValue::Integer { value, width },
-        SSAValue::Float { value, width } => SSAValue::Float { value, width },
-        SSAValue::Bool(b) => SSAValue::Bool(b),
+        SSAValue::Integer {
+            value,
+            width,
+            pool_id,
+        } => SSAValue::Integer {
+            value,
+            width,
+            pool_id,
+        },
+        SSAValue::Float {
+            value,
+            width,
+            pool_id,
+        } => SSAValue::Float {
+            value,
+            width,
+            pool_id,
+        },
+        SSAValue::Bool(b, p) => SSAValue::Bool(b, p),
         SSAValue::Operation {
             lhs: _,
             op: _,
             rhs: _,
+            pool_id,
         } => todo!(),
-        SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
+        SSAValue::FunctionCall {
+            name,
+            parameters,
+            pool_id,
+        } => SSAValue::FunctionCall {
             name,
             parameters: parameters
                 .into_iter()
                 .map(|x| rename_variable_reassignment_value(x, tracker))
                 .collect(),
+            pool_id,
         },
         SSAValue::Nothing => SSAValue::Nothing,
-        SSAValue::Tensor(v) => SSAValue::Tensor(
+        SSAValue::Tensor(v, pid) => SSAValue::Tensor(
             v.into_iter()
                 .map(|x| rename_variable_reassignment_value(x, tracker))
                 .collect(),
+            pid,
         ),
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
+            pool_id,
         } => {
             let inner_if_block = SSALabeledBlock {
                 label: if_block.block.label,
@@ -155,11 +95,13 @@ pub fn rename_variable_reassignment_value(
             SSAValue::ConditionalBlock {
                 if_block,
                 else_block,
+                pool_id,
             }
         }
-        SSAValue::Cast { value, to } => SSAValue::Cast {
+        SSAValue::Cast { value, to, pool_id } => SSAValue::Cast {
             value: Box::new(rename_variable_reassignment_value(*value, tracker)),
             to,
+            pool_id,
         },
     }
 }
@@ -174,6 +116,7 @@ pub fn rename_variable_reassignment(
             vtype,
             e1,
             e2,
+            pool_id,
         } => {
             let counter = *tracker.get(&name).unwrap_or(&-1) + 1;
             tracker.insert(name.clone(), counter);
@@ -183,6 +126,7 @@ pub fn rename_variable_reassignment(
                 vtype,
                 e1: rename_variable_reassignment_value(e1, tracker),
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),
+                pool_id,
             }
         }
         SSAExpression::FuncDecl {
@@ -191,6 +135,7 @@ pub fn rename_variable_reassignment(
             ret_type,
             block,
             e2,
+            pool_id,
         } => {
             args.iter().for_each(|(name, _)| {
                 tracker.insert(name.clone(), 0);
@@ -205,6 +150,7 @@ pub fn rename_variable_reassignment(
                 ret_type,
                 block: Box::new(rename_variable_reassignment(*block, tracker)),
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),
+                pool_id,
             }
         }
         SSAExpression::FuncForwardDecl {
@@ -212,21 +158,25 @@ pub fn rename_variable_reassignment(
             args,
             ret_type,
             e2,
+            pool_id,
         } => SSAExpression::FuncForwardDecl {
             name,
             args,
             ret_type,
             e2: Box::new(rename_variable_reassignment(*e2, tracker)),
+            pool_id,
         },
         SSAExpression::Noop => SSAExpression::Noop,
-        SSAExpression::Return { val } => SSAExpression::Return {
+        SSAExpression::Return { val, pool_id } => SSAExpression::Return {
             val: rename_variable_reassignment_value(val, tracker),
+            pool_id,
         },
-        SSAExpression::Block(b) => {
-            SSAExpression::Block(Box::new(rename_variable_reassignment(*b, tracker)))
+        SSAExpression::Block(b, pid) => {
+            SSAExpression::Block(Box::new(rename_variable_reassignment(*b, tracker)), pid)
         }
-        SSAExpression::Yield { val } => SSAExpression::Yield {
+        SSAExpression::Yield { val, pool_id } => SSAExpression::Yield {
             val: rename_variable_reassignment_value(val, tracker),
+            pool_id,
         },
         SSAExpression::ForLoop {
             iv,
@@ -235,6 +185,7 @@ pub fn rename_variable_reassignment(
             block,
             parallel,
             e2,
+            pool_id,
         } => {
             let counter = *tracker.get(&iv).unwrap_or(&-1) + 1;
             tracker.insert(iv.clone(), counter);
@@ -248,6 +199,7 @@ pub fn rename_variable_reassignment(
                 block: Box::new(new_block),
                 parallel,
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),
+                pool_id,
             }
         }
     }
@@ -260,7 +212,7 @@ pub fn rename_variables_value(
     used_vars: &mut HashSet<String>,
 ) -> SSAValue {
     match value {
-        SSAValue::VariableReference(name) => {
+        SSAValue::VariableReference(name, pid) => {
             let saved_scoped_name = scoped_name.clone();
             loop {
                 if scoped_name.is_empty() {
@@ -276,7 +228,7 @@ pub fn rename_variables_value(
                 }
             }
 
-            SSAValue::VariableReference(scoped_rename(&name, &scoped_name))
+            SSAValue::VariableReference(scoped_rename(&name, &scoped_name), pid)
         }
         SSAValue::Phi(p) => SSAValue::Phi(
             p.into_iter()
@@ -290,30 +242,54 @@ pub fn rename_variables_value(
                 })
                 .collect(),
         ),
-        SSAValue::Integer { value, width } => SSAValue::Integer { value, width },
-        SSAValue::Float { value, width } => SSAValue::Float { value, width },
-        SSAValue::Bool(b) => SSAValue::Bool(b),
+        SSAValue::Integer {
+            value,
+            width,
+            pool_id,
+        } => SSAValue::Integer {
+            value,
+            width,
+            pool_id,
+        },
+        SSAValue::Float {
+            value,
+            width,
+            pool_id,
+        } => SSAValue::Float {
+            value,
+            width,
+            pool_id,
+        },
+        SSAValue::Bool(b, p) => SSAValue::Bool(b, p),
         SSAValue::Operation {
             lhs: _,
             op: _,
             rhs: _,
+            pool_id,
         } => todo!(),
-        SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
+        SSAValue::FunctionCall {
+            name,
+            parameters,
+            pool_id,
+        } => SSAValue::FunctionCall {
             name,
             parameters: parameters
                 .into_iter()
                 .map(|v| rename_variables_value(v, scoped_name.clone(), used_vars))
                 .collect(),
+            pool_id,
         },
         SSAValue::Nothing => SSAValue::Nothing,
-        SSAValue::Tensor(v) => SSAValue::Tensor(
+        SSAValue::Tensor(v, p) => SSAValue::Tensor(
             v.into_iter()
                 .map(|v| rename_variables_value(v, scoped_name.clone(), used_vars))
                 .collect(),
+            p,
         ),
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
+            pool_id,
         } => {
             scoped_name.push(if_block.block.label.clone());
             let if_block_expr =
@@ -341,11 +317,13 @@ pub fn rename_variables_value(
                     label: scoped_rename(&else_block_label, &scoped_name),
                     block: Box::new(else_block_expr),
                 },
+                pool_id,
             }
         }
-        SSAValue::Cast { value, to } => SSAValue::Cast {
+        SSAValue::Cast { value, to, pool_id } => SSAValue::Cast {
             value: Box::new(rename_variables_value(*value, scoped_name, used_vars)),
             to,
+            pool_id,
         },
     }
 }
@@ -362,6 +340,7 @@ pub fn rename_variables(
             vtype,
             e1,
             e2,
+            pool_id,
         } => {
             let new_name = scoped_rename(&name, &scoped_name);
             used_vars.insert(new_name);
@@ -370,6 +349,7 @@ pub fn rename_variables(
                 vtype,
                 e1: rename_variables_value(e1, scoped_name.clone(), used_vars),
                 e2: Box::new(rename_variables(*e2, scoped_name, used_vars)),
+                pool_id,
             }
         }
         SSAExpression::FuncDecl {
@@ -378,6 +358,7 @@ pub fn rename_variables(
             ret_type,
             block,
             e2,
+            pool_id,
         } => {
             scoped_name.push(name.clone());
             let args: Vec<(String, crate::frontend::high_level_ir::ast_types::Type)> = args
@@ -400,6 +381,7 @@ pub fn rename_variables(
                 args,
                 e2: Box::new(rename_variables(*e2, scoped_name, used_vars)),
                 ret_type,
+                pool_id,
             }
         }
         SSAExpression::FuncForwardDecl {
@@ -407,6 +389,7 @@ pub fn rename_variables(
             args,
             ret_type,
             e2,
+            pool_id,
         } => SSAExpression::FuncForwardDecl {
             name,
             args: args
@@ -415,16 +398,19 @@ pub fn rename_variables(
                 .collect(),
             e2: Box::new(rename_variables(*e2, scoped_name, used_vars)),
             ret_type,
+            pool_id,
         },
         SSAExpression::Noop => SSAExpression::Noop,
-        SSAExpression::Return { val } => SSAExpression::Return {
+        SSAExpression::Return { val, pool_id } => SSAExpression::Return {
             val: rename_variables_value(val, scoped_name, used_vars),
+            pool_id,
         },
-        SSAExpression::Block(b) => {
-            SSAExpression::Block(Box::new(rename_variables(*b, scoped_name, used_vars)))
+        SSAExpression::Block(b, p) => {
+            SSAExpression::Block(Box::new(rename_variables(*b, scoped_name, used_vars)), p)
         }
-        SSAExpression::Yield { val } => SSAExpression::Yield {
+        SSAExpression::Yield { val, pool_id } => SSAExpression::Yield {
             val: rename_variables_value(val, scoped_name, used_vars),
+            pool_id,
         },
         SSAExpression::ForLoop {
             iv,
@@ -433,6 +419,7 @@ pub fn rename_variables(
             block,
             parallel,
             e2,
+            pool_id,
         } => {
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
             scoped_name.push("in_for".into());
@@ -446,6 +433,7 @@ pub fn rename_variables(
                 block,
                 parallel,
                 e2,
+                pool_id,
             }
         }
     }

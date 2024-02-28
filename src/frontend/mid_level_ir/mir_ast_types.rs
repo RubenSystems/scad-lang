@@ -1,4 +1,7 @@
-use crate::frontend::high_level_ir::ast_types::{FailureCopy, IntegerWidth, Type};
+use crate::frontend::{
+    error::PoolID,
+    high_level_ir::ast_types::{FailureCopy, IntegerWidth, Type},
+};
 
 #[derive(Debug, Clone)]
 pub struct SSALabeledBlock {
@@ -39,6 +42,7 @@ pub enum SSAExpression {
         vtype: Option<Type>,
         e1: SSAValue,
         e2: Box<SSAExpression>,
+        pool_id: PoolID,
     },
     FuncDecl {
         name: String,
@@ -46,19 +50,23 @@ pub enum SSAExpression {
         ret_type: Option<Type>,
         block: Box<SSAExpression>,
         e2: Box<SSAExpression>,
+        pool_id: PoolID,
     },
     FuncForwardDecl {
         name: String,
         args: Vec<(String, Type)>,
         ret_type: Option<Type>,
         e2: Box<SSAExpression>,
+        pool_id: PoolID,
     },
     Noop,
     Return {
         val: SSAValue,
+        pool_id: PoolID,
     },
     Yield {
         val: SSAValue,
+        pool_id: PoolID,
     },
     ForLoop {
         iv: String,
@@ -67,9 +75,10 @@ pub enum SSAExpression {
         block: Box<SSAExpression>,
         parallel: bool,
         e2: Box<SSAExpression>,
+        pool_id: PoolID,
     },
 
-    Block(Box<SSAExpression>),
+    Block(Box<SSAExpression>, PoolID),
 }
 
 impl FailureCopy for SSAExpression {
@@ -80,11 +89,13 @@ impl FailureCopy for SSAExpression {
                 vtype,
                 e1,
                 e2,
+                pool_id,
             } => Self::VariableDecl {
                 name: name.clone(),
                 vtype: vtype.as_ref().map(|x| x.fcopy()),
                 e1: e1.fcopy(),
                 e2: Box::new(e2.fcopy()),
+                pool_id: *pool_id,
             },
             SSAExpression::FuncDecl {
                 name,
@@ -92,27 +103,37 @@ impl FailureCopy for SSAExpression {
                 ret_type,
                 block,
                 e2,
+                pool_id,
             } => Self::FuncDecl {
                 name: name.clone(),
                 args: args.iter().map(|(n, t)| (n.clone(), t.fcopy())).collect(),
                 ret_type: ret_type.as_ref().map(|x| x.fcopy()),
                 block: Box::new(block.fcopy()),
                 e2: Box::new(e2.fcopy()),
+                pool_id: *pool_id,
             },
             SSAExpression::Noop => SSAExpression::Noop,
-            SSAExpression::Return { val } => SSAExpression::Return { val: val.fcopy() },
-            SSAExpression::Yield { val } => SSAExpression::Yield { val: val.fcopy() },
-            SSAExpression::Block(b) => SSAExpression::Block(Box::new(b.fcopy())),
+            SSAExpression::Return { val, pool_id } => SSAExpression::Return {
+                val: val.fcopy(),
+                pool_id: *pool_id,
+            },
+            SSAExpression::Yield { val, pool_id } => SSAExpression::Yield {
+                val: val.fcopy(),
+                pool_id: *pool_id,
+            },
+            SSAExpression::Block(b, pool_id) => SSAExpression::Block(Box::new(b.fcopy()), *pool_id),
             SSAExpression::FuncForwardDecl {
                 name,
                 args,
                 ret_type,
                 e2,
+                pool_id,
             } => Self::FuncForwardDecl {
                 name: name.clone(),
                 args: args.iter().map(|(n, t)| (n.clone(), t.fcopy())).collect(),
                 ret_type: ret_type.as_ref().map(|x| x.fcopy()),
                 e2: Box::new(e2.fcopy()),
+                pool_id: *pool_id,
             },
             SSAExpression::ForLoop {
                 iv,
@@ -121,6 +142,7 @@ impl FailureCopy for SSAExpression {
                 block,
                 parallel,
                 e2,
+                pool_id,
             } => SSAExpression::ForLoop {
                 iv: iv.clone(),
                 from: from.fcopy(),
@@ -128,6 +150,7 @@ impl FailureCopy for SSAExpression {
                 block: Box::new(block.fcopy()),
                 parallel: *parallel,
                 e2: Box::new(e2.fcopy()),
+                pool_id: *pool_id,
             },
         }
     }
@@ -143,73 +166,105 @@ pub struct Phi {
 #[repr(C)]
 
 pub enum SSAValue {
-    VariableReference(String),
+    VariableReference(String, PoolID),
     Phi(Vec<Phi>),
     ConditionalBlock {
         if_block: SSAConditionalBlock,
         else_block: SSALabeledBlock,
+        pool_id: PoolID,
     },
     Cast {
         value: Box<SSAValue>,
         to: Type,
+        pool_id: PoolID,
     },
     Integer {
         value: i128,
         width: IntegerWidth,
+        pool_id: PoolID,
     },
     Float {
         value: f64,
         width: u32,
+        pool_id: PoolID,
     },
-    Bool(bool),
+    Bool(bool, PoolID),
     Operation {
         lhs: Box<SSAValue>,
         op: String,
         rhs: Box<SSAValue>,
+        pool_id: PoolID,
     },
     FunctionCall {
         name: String,
         parameters: Vec<SSAValue>,
+        pool_id: PoolID,
     },
     Nothing,
-    Tensor(Vec<SSAValue>),
+    Tensor(Vec<SSAValue>, PoolID),
 }
 
 impl FailureCopy for SSAValue {
     fn fcopy(&self) -> SSAValue {
         match self {
-            SSAValue::Tensor(v) => SSAValue::Tensor(v.iter().map(|x| x.fcopy()).collect()),
+            SSAValue::Tensor(v, pid) => {
+                SSAValue::Tensor(v.iter().map(|x| x.fcopy()).collect(), *pid)
+            }
             SSAValue::Nothing => SSAValue::Nothing,
-            SSAValue::VariableReference(r) => SSAValue::VariableReference(r.clone()),
-            SSAValue::Integer { value, width } => SSAValue::Integer {
+            SSAValue::VariableReference(r, pid) => SSAValue::VariableReference(r.clone(), *pid),
+            SSAValue::Integer {
+                value,
+                width,
+                pool_id,
+            } => SSAValue::Integer {
                 value: *value,
                 width: *width,
+                pool_id: *pool_id,
             },
-            SSAValue::Float { value, width } => SSAValue::Float {
+            SSAValue::Float {
+                value,
+                width,
+                pool_id,
+            } => SSAValue::Float {
                 value: *value,
                 width: *width,
+                pool_id: *pool_id,
             },
-            SSAValue::Operation { lhs, op, rhs: _ } => SSAValue::Operation {
+            SSAValue::Operation {
+                lhs,
+                op,
+                rhs: _,
+                pool_id,
+            } => SSAValue::Operation {
                 lhs: Box::new(lhs.fcopy()),
                 op: op.clone(),
                 rhs: Box::new(lhs.fcopy()),
+                pool_id: *pool_id,
             },
-            SSAValue::FunctionCall { name, parameters } => SSAValue::FunctionCall {
+            SSAValue::FunctionCall {
+                name,
+                parameters,
+                pool_id,
+            } => SSAValue::FunctionCall {
                 name: name.clone(),
                 parameters: parameters.iter().map(|x| x.fcopy()).collect(),
+                pool_id: *pool_id,
             },
-            SSAValue::Bool(b) => SSAValue::Bool(*b),
+            SSAValue::Bool(b, pid) => SSAValue::Bool(*b, *pid),
             SSAValue::Phi(v) => SSAValue::Phi(v.clone()),
             SSAValue::ConditionalBlock {
                 if_block,
                 else_block,
+                pool_id,
             } => SSAValue::ConditionalBlock {
                 if_block: if_block.fcopy(),
                 else_block: else_block.fcopy(),
+                pool_id: *pool_id,
             },
-            SSAValue::Cast { value, to } => SSAValue::Cast {
+            SSAValue::Cast { value, to, pool_id } => SSAValue::Cast {
                 value: Box::new(value.fcopy()),
                 to: to.fcopy(),
+                pool_id: *pool_id,
             },
         }
     }

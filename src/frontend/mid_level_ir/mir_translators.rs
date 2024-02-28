@@ -1,4 +1,5 @@
 use crate::frontend::{
+    error::PoolID,
     high_level_ir::ast_types::{Expression, FailureCopy, IntegerWidth, Statement},
     mid_level_ir::mir_ast_types::SSAConditionalBlock,
 };
@@ -14,18 +15,19 @@ pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
 pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpression {
     match exp {
-        Expression::Tensor(v) => {
+        Expression::Tensor(v, pid) => {
             fn aux(
                 mut vec_expr: Vec<Expression>,
                 mut vals: Vec<SSAValue>,
+                pid: usize,
                 k: ContinuationFunction,
             ) -> SSAExpression {
                 if vec_expr.len() >= 1 {
                     expression_l1_to_l2(
                         vec_expr.remove(0),
-                        Box::new(|x| {
+                        Box::new(move |x| {
                             vals.push(x);
-                            aux(vec_expr, vals, k)
+                            aux(vec_expr, vals, pid, k)
                         }),
                     )
                 } else {
@@ -33,32 +35,38 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                     SSAExpression::VariableDecl {
                         name: tmp.clone(),
                         vtype: None,
-                        e1: SSAValue::Tensor(vals),
-                        e2: Box::new(k(SSAValue::VariableReference(tmp))),
+                        e1: SSAValue::Tensor(vals, pid),
+                        e2: Box::new(k(SSAValue::VariableReference(tmp, pid))),
+                        pool_id: pid,
                     }
                 }
             }
 
-            aux(v, vec![], k)
+            aux(v, vec![], pid, k)
         }
-        Expression::InfixOperation(_e) => todo!(),
-        Expression::Float(f) => k(SSAValue::Float {
+        Expression::InfixOperation(_e, _) => todo!(),
+        Expression::Float(f, pid) => k(SSAValue::Float {
             value: f.value,
             width: f.width,
+            pool_id: pid,
         }),
-        Expression::Bool(f) => k(SSAValue::Bool(f)),
-        Expression::Integer(i) => k(SSAValue::Integer {
+        Expression::Bool(f, pid) => k(SSAValue::Bool(f, pid)),
+        Expression::Integer(i, pid) => k(SSAValue::Integer {
             value: i.value,
             width: i.width,
+            pool_id: pid,
         }),
-        Expression::CharArray(_) => todo!(),
-        Expression::Identifier(x) => k(SSAValue::VariableReference(x.0)),
-        Expression::Block(b) => SSAExpression::Block(Box::new(parse_expression_block(b, k))),
-        Expression::FunctionCall(f) => {
+        Expression::CharArray(_, _) => todo!(),
+        Expression::Identifier(x, pid) => k(SSAValue::VariableReference(x.0, pid)),
+        Expression::Block(b, pid) => {
+            SSAExpression::Block(Box::new(parse_expression_block(b, k)), pid)
+        }
+        Expression::FunctionCall(f, pid) => {
             fn aux(
                 args: Vec<Expression>,
                 vals: Vec<SSAValue>,
                 function_name: String,
+                pool_id: PoolID,
                 k: ContinuationFunction,
             ) -> SSAExpression {
                 match args.as_slice() {
@@ -68,11 +76,13 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                         SSAExpression::VariableDecl {
                             name: tmp_name.clone(),
                             vtype: None,
+                            pool_id,
                             e1: SSAValue::FunctionCall {
                                 name: function_name,
+                                pool_id,
                                 parameters: vals.iter().map(|x| x.fcopy()).collect(),
                             },
-                            e2: Box::new(k(SSAValue::VariableReference(tmp_name))),
+                            e2: Box::new(k(SSAValue::VariableReference(tmp_name, pool_id))),
                         }
                     }
                     [head, rest @ ..] => {
@@ -81,9 +91,9 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 
                         expression_l1_to_l2(
                             head.fcopy(),
-                            Box::new(|x| {
+                            Box::new(move |x| {
                                 val_copy.push(x);
-                                aux(rest_copy, val_copy, function_name, k)
+                                aux(rest_copy, val_copy, function_name, pool_id, k)
                             }),
                         )
                     }
@@ -94,12 +104,14 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                 f.args.into_iter().map(|(_, exp)| exp).collect(),
                 vec![],
                 f.identifier.0,
+                pid,
                 k,
             )
         }
         Expression::ConditionalExpressionControlFlowControl {
             if_blocks,
             else_block,
+            pool_id,
         } => {
             let gen = k;
             let block = if_blocks.first().unwrap().fcopy();
@@ -122,30 +134,33 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
                             block: SSALabeledBlock {
                                 label: inner_if_label.clone(),
                                 block: Box::new(expression_l1_to_l2(
-                                    Expression::Block(block.block),
-                                    Box::new(move |res| SSAExpression::Yield { val: res }),
+                                    Expression::Block(block.block, pool_id),
+                                    Box::new(move |res| SSAExpression::Yield { val: res, pool_id }),
                                 )),
                             },
                         },
                         else_block: SSALabeledBlock {
                             label: inner_else_label.clone(),
                             block: Box::new(expression_l1_to_l2(
-                                Expression::Block(*else_block),
-                                Box::new(move |res| SSAExpression::Yield { val: res }),
+                                Expression::Block(*else_block, pool_id),
+                                Box::new(move |res| SSAExpression::Yield { val: res, pool_id }),
                             )),
                         },
+                        pool_id,
                     },
-                    e2: Box::new(gen(SSAValue::VariableReference(cond_tmp_name))),
+                    e2: Box::new(gen(SSAValue::VariableReference(cond_tmp_name, pool_id))),
+                    pool_id,
                 }),
             )
         }
         // Expression::Cast(c) => k(SSAValue::Cast { value: Box::new(expression_l1_to_l2(c.expr, k)), to: c.to_type }),
-        Expression::Cast(c) => expression_l1_to_l2(
+        Expression::Cast(c, p) => expression_l1_to_l2(
             *c.expr,
-            Box::new(|value| {
+            Box::new(move |value| {
                 k(SSAValue::Cast {
                     value: Box::new(value),
                     to: c.to_type,
+                    pool_id: p,
                 })
             }),
         ),
@@ -154,22 +169,23 @@ pub fn expression_l1_to_l2(exp: Expression, k: ContinuationFunction) -> SSAExpre
 
 pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSAExpression {
     match statement {
-        Statement::ConstDecl(_) => todo!("bota"),
-        Statement::VariableDecl(v) => {
+        Statement::ConstDecl(_, _) => todo!("bota"),
+        Statement::VariableDecl(v, p) => {
             let gen = _k;
 
             expression_l1_to_l2(
                 v.expression,
-                Box::new(|val| SSAExpression::VariableDecl {
+                Box::new(move |val| SSAExpression::VariableDecl {
                     name: v.identifier.0,
                     vtype: v.subtype,
                     e1: val.fcopy(),
                     e2: Box::new(gen(val)),
+                    pool_id: p,
                 }),
             )
         }
-        Statement::Expression(exp) => expression_l1_to_l2(exp, _k),
-        Statement::FunctionDefinition(f) => {
+        Statement::Expression(exp, p) => expression_l1_to_l2(exp, _k),
+        Statement::FunctionDefinition(f, p) => {
             let gen = _k;
             SSAExpression::FuncDecl {
                 name: f.identifier.0,
@@ -177,45 +193,43 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 ret_type: Some(f.return_type),
                 block: Box::new(parse_expression_block(
                     f.block,
-                    Box::new(|v| SSAExpression::Return { val: v }),
+                    Box::new(move |v| SSAExpression::Return { val: v, pool_id: p }),
                 )),
                 e2: Box::new(gen(SSAValue::Nothing)),
+                pool_id: p,
             }
         }
-        Statement::ProcedureDefinition(_f) => {
-            //     SSAExpression::FuncDecl {
-            //     name: f.identifier.0,
-            //     args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
-            //     block: parse_block(f.block, Box::new(|_| SSAExpression::Noop)),
-            // };
-            todo!()
-        }
-        Statement::Block(_blk) => todo!(),
-        Statement::FunctionDecleration(f) => {
+        Statement::ProcedureDefinition(_f, _) => todo!(),
+        Statement::Block(_blk, _) => todo!(),
+        Statement::FunctionDecleration(f, pid) => {
             let gen = _k;
             SSAExpression::FuncForwardDecl {
                 name: f.identifier.0,
                 args: f.args.into_iter().map(|e| (e.0 .0, e.1)).collect(),
                 ret_type: Some(f.return_type),
                 e2: Box::new(gen(SSAValue::Nothing)),
+                pool_id: pid,
             }
         }
-        Statement::ProcedureDecleration(_) => todo!(),
-        Statement::ForLoop(f) => {
+        Statement::ProcedureDecleration(_, _) => todo!(),
+        Statement::ForLoop(f, pid) => {
             let gen = _k;
             SSAExpression::ForLoop {
                 iv: f.variable.0,
                 from: SSAValue::Integer {
                     value: f.from as i128,
                     width: IntegerWidth::IndexType,
+                    pool_id: pid,
                 },
                 to: SSAValue::Integer {
                     value: f.to as i128,
                     width: IntegerWidth::IndexType,
+                    pool_id: pid,
                 },
                 parallel: f.parallel,
                 block: Box::new(parse_statement_block(f.block)),
                 e2: Box::new(gen(SSAValue::Nothing)),
+                pool_id: pid,
             }
         }
     }

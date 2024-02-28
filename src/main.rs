@@ -3,6 +3,7 @@ pub mod frontend;
 pub mod testing;
 
 use crate::core::typedefs::create_types_for_core;
+use crate::frontend::error::{ErrorPool, SCADError};
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
@@ -18,7 +19,7 @@ use crate::frontend::type_system::tir_types::{MonoType, PolyType, TIRType};
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 
 use crate::frontend::high_level_ir::hir_parser::Rule;
-use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
+use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, Location};
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 
@@ -28,29 +29,37 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-    fn add(a: 10000xi64, b: 10000xi64, result: 10000xi64) i64 {
-	
-        let mut m: 2xi32 = @{1_i32, 2_i32};
-        let mut idx: i64 = 1_i64;
-        let mut j: i32 = @index.i32(container: m, index: (idx -> ii));
+    fn add(a: 10000xi32, b: 10000xi32, result: 10000xi32) i32 {
+        parallel i: 0 -> 10000 {
+            let mut a_v: i32 = @index.i32(c: a, idx: i);
+            let mut b_v: i32 = @index.i32(c: b, idx: i);
+            let mut addv: i32 = @add(a: a_v, b: b_v);
+            @set.i32(a: result, idx: i, c: addv);
+        };
     
-        @print(v: j);
-    
-        10000_i64
+        10000_i32
     };
     
     
 
 
     "#;
-
-    let parsed_result = SCADParser::parse(Rule::program, test_prog).unwrap();
+    let mut counter: usize = 0;
+    let mut location_pool = ErrorPool::new();
+    let parsed_result = match SCADParser::parse(Rule::program, test_prog) {
+        Ok(p) => p,
+        Err(e) => {
+            let error = SCADError::from_parse_error(e);
+            println!("{error}");
+            todo!()
+        }
+    };
     let raw_statements: Vec<Statement> = parsed_result
         .flat_map(|pair| {
             if let Rule::EOI = pair.as_rule() {
                 None
             } else {
-                Some(parse(pair.into_inner()))
+                Some(parse(pair.into_inner(), &mut location_pool))
             }
         })
         .collect();

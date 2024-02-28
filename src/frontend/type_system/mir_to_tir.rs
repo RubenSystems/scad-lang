@@ -1,4 +1,5 @@
 use crate::frontend::{
+    error::PoolID,
     high_level_ir::ast_types::{FailureCopy, Type},
     mid_level_ir::mir_ast_types::{SSAExpression, SSAValue},
 };
@@ -11,31 +12,52 @@ use super::{
 
 pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
     match mir {
-        SSAValue::Bool(b) => (TIRExpression::Bool(b), ctx),
-        SSAValue::VariableReference(r) => (TIRExpression::VariableReference { name: r }, ctx),
-        SSAValue::Integer { value, width } => (TIRExpression::Integer(value, width), ctx),
-        SSAValue::Float { value, width } => (TIRExpression::Float(value, width), ctx),
+        SSAValue::Bool(b, p) => (TIRExpression::Bool(b, p), ctx),
+        SSAValue::VariableReference(r, p) => (
+            TIRExpression::VariableReference {
+                name: r,
+                pool_id: p,
+            },
+            ctx,
+        ),
+        SSAValue::Integer {
+            value,
+            width,
+            pool_id,
+        } => (TIRExpression::Integer(value, width, pool_id), ctx),
+        SSAValue::Float {
+            value,
+            width,
+            pool_id,
+        } => (TIRExpression::Float(value, width, pool_id), ctx),
         SSAValue::Operation {
             lhs: _,
             op: _,
             rhs: _,
+            pool_id,
         } => todo!(),
-        SSAValue::FunctionCall { name, parameters } => {
+        SSAValue::FunctionCall {
+            name,
+            parameters,
+            pool_id,
+        } => {
             if parameters.len() == 1 {
                 let (xp, ctx) = transform_mir_value_to_tir(parameters[0].fcopy(), ctx);
 
                 (
                     TIRExpression::FunctionCall {
-                        e1: Box::new(TIRExpression::VariableReference { name }),
+                        e1: Box::new(TIRExpression::VariableReference { name, pool_id }),
                         e2: Box::new(xp),
+                        pool_id,
                     },
                     ctx,
                 )
             } else if (parameters.len()) == 0 {
                 (
                     TIRExpression::FunctionCall {
-                        e1: Box::new(TIRExpression::VariableReference { name }),
+                        e1: Box::new(TIRExpression::VariableReference { name, pool_id }),
                         e2: Box::new(TIRExpression::Void),
+                        pool_id,
                     },
                     ctx,
                 )
@@ -47,6 +69,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
                             .iter()
                             .map(|x| x.fcopy())
                             .collect(),
+                        pool_id,
                     },
                     ctx,
                 );
@@ -58,6 +81,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
                     TIRExpression::FunctionCall {
                         e1: Box::new(xp),
                         e2: Box::new(xp2),
+                        pool_id,
                     },
                     ctx2,
                 )
@@ -75,17 +99,18 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
 
             (TIRExpression::Phi(phis.collect()), ctx)
         }
-        SSAValue::Tensor(v) => {
+        SSAValue::Tensor(v, p) => {
             let vals = v
                 .into_iter()
                 .map(|x| transform_mir_value_to_tir(x, ctx.clone()).0)
                 .collect();
 
-            (TIRExpression::Tensor(vals), ctx)
+            (TIRExpression::Tensor(vals, p), ctx)
         }
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
+            pool_id,
         } => {
             let (condition, ctx) = transform_mir_value_to_tir(*if_block.condition, ctx);
             let (tir_if_block, ctx) = transform_mir_to_tir(*if_block.block.block, ctx);
@@ -96,17 +121,19 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
                     condition: Box::new(condition),
                     if_block: (if_block.block.label, Box::new(tir_if_block)),
                     else_block: (else_block.label, Box::new(tir_else_block)),
+                    pool_id,
                 },
                 ctx,
             )
         }
-        SSAValue::Cast { value, to } => {
+        SSAValue::Cast { value, to, pool_id } => {
             let (tpe, ctx) = transform_mir_value_to_tir(*value, ctx);
 
             (
                 TIRExpression::Cast {
                     from: Box::new(tpe),
                     to_type: to.to_tir_type(),
+                    pool_id,
                 },
                 ctx,
             )
@@ -130,26 +157,29 @@ pub fn transform_mir_function_decl_to_tir(
     block: Box<SSAExpression>,
     ret_type_hint: Option<TIRType>,
     ctx: Context,
+    pool_id: PoolID,
 ) -> (TIRExpression, Context) {
     if args.len() == 1 {
-        let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);
+        let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block, pool_id), ctx);
         (
             TIRExpression::FunctionDefinition {
                 arg_name: args[0].0.clone(),
                 arg_type_hint: Some(TIRType::MonoType(args[0].1.fcopy().to_tir_type())),
                 ret_type_hint,
                 e1: Box::new(xp),
+                pool_id,
             },
             ctx,
         )
     } else if args.is_empty() {
-        let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block), ctx);
+        let (xp, ctx) = transform_mir_to_tir(SSAExpression::Block(block, pool_id), ctx);
         (
             TIRExpression::FunctionDefinition {
                 arg_name: "a".into(),
                 arg_type_hint: None,
                 ret_type_hint,
                 e1: Box::new(xp),
+                pool_id,
             },
             ctx,
         )
@@ -162,6 +192,7 @@ pub fn transform_mir_function_decl_to_tir(
             block,
             ret_type_hint.clone(),
             ctx,
+            pool_id,
         );
 
         (
@@ -170,6 +201,7 @@ pub fn transform_mir_function_decl_to_tir(
                 arg_type_hint: Some(TIRType::MonoType(args[0].1.fcopy().to_tir_type())),
                 e1: Box::new(xp),
                 ret_type_hint,
+                pool_id,
             },
             ctx,
         )
@@ -235,6 +267,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             vtype,
             e1,
             e2,
+            pool_id,
         } => {
             let (xp, ctx) = transform_mir_value_to_tir(e1, ctx);
             let (xp2, ctx) = transform_mir_to_tir(*e2, ctx);
@@ -245,6 +278,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                     type_hint: vtype,
                     e1: Box::new(xp),
                     e2: Box::new(xp2),
+                    pool_id,
                 },
                 ctx,
             )
@@ -255,9 +289,11 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             ret_type,
             block,
             e2,
+            pool_id,
         } => {
             let tpe = TIRType::MonoType(ret_type.clone().unwrap().to_tir_type());
-            let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, Some(tpe), ctx);
+            let (e1xp, ctx) =
+                transform_mir_function_decl_to_tir(args, block, Some(tpe), ctx, pool_id);
             let (e2xp, ctx) = transform_mir_to_tir(*e2, ctx);
 
             (
@@ -266,18 +302,20 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                     type_hint: ret_type,
                     e1: Box::new(e1xp),
                     e2: Box::new(e2xp),
+                    pool_id,
                 },
                 ctx,
             )
         }
         SSAExpression::Noop => (TIRExpression::Void, ctx),
-        SSAExpression::Return { val } => transform_mir_value_to_tir(val, ctx),
-        SSAExpression::Block(eb) => transform_mir_to_tir(*eb, ctx),
+        SSAExpression::Return { val, pool_id } => transform_mir_value_to_tir(val, ctx),
+        SSAExpression::Block(eb, _) => transform_mir_to_tir(*eb, ctx),
         SSAExpression::FuncForwardDecl {
             name,
             args,
             ret_type,
             e2,
+            pool_id,
         } => {
             // let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, ctx);
             // let (e2xp, ctx) = transform_mir_to_tir(*e2, ctx);
@@ -292,7 +330,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
 
             (e2tir, e2ctx)
         }
-        SSAExpression::Yield { val } => transform_mir_value_to_tir(val, ctx),
+        SSAExpression::Yield { val, pool_id } => transform_mir_value_to_tir(val, ctx),
         SSAExpression::ForLoop {
             iv: _,
             from: _,
@@ -300,6 +338,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             block: _,
             parallel: _,
             e2,
+            pool_id,
         } => {
             // don't convert for loop as it does not have a type
             transform_mir_to_tir(*e2, ctx)
