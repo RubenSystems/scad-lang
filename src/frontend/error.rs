@@ -3,9 +3,9 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use pest::{error::Error, iterators::Pairs};
+use pest::error::Error;
 
-use super::{high_level_ir::hir_parser::Rule, mid_level_ir::ffi::Location};
+use super::high_level_ir::hir_parser::Rule;
 
 pub type PoolID = usize;
 pub struct ErrorPool {

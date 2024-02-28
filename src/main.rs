@@ -9,17 +9,16 @@ use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
 use crate::frontend::mid_level_ir::parsers::parse_program;
-use crate::frontend::type_system::context::Context;
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
-use crate::frontend::type_system::tir_types::{MonoType, PolyType, TIRType};
+
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 
 use crate::frontend::high_level_ir::hir_parser::Rule;
-use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, Location};
+use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 
@@ -44,7 +43,7 @@ fn main() -> std::io::Result<()> {
 
 
     "#;
-    let mut counter: usize = 0;
+    let _counter: usize = 0;
     let mut location_pool = ErrorPool::new();
     let parsed_result = match SCADParser::parse(Rule::program, test_prog) {
         Ok(p) => p,

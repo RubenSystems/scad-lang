@@ -266,7 +266,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             vtype: _,
             e1,
             e2,
-            pool_id,
+            pool_id: _,
         } => FFIHIRExpr {
             tag: FFIHIRTag::VariableDecl,
             value: ExpressionUnion {
@@ -283,7 +283,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             ret_type: _,
             block,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             let a: Vec<FFIString> = args
                 .into_iter()
@@ -313,7 +313,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             args: _,
             ret_type: _,
             e2,
-            pool_id,
+            pool_id: _,
         } => FFIHIRExpr {
             tag: FFIHIRTag::ForwardFunctionDecl,
             value: ExpressionUnion {
@@ -327,7 +327,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             tag: FFIHIRTag::Noop,
             value: ExpressionUnion { noop: 0 },
         },
-        SSAExpression::Return { val, pool_id } => FFIHIRExpr {
+        SSAExpression::Return { val, pool_id: _ } => FFIHIRExpr {
             tag: FFIHIRTag::Return,
             value: ExpressionUnion {
                 ret: FFIHIRReturn {
@@ -336,7 +336,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             },
         },
         SSAExpression::Block(b, _) => ffi_ssa_expr(std::mem::ManuallyDrop::new(*b)),
-        SSAExpression::Yield { val, pool_id } => FFIHIRExpr {
+        SSAExpression::Yield { val, pool_id: _ } => FFIHIRExpr {
             tag: FFIHIRTag::Yield,
             value: ExpressionUnion {
                 yld: FFIHIRYield {
@@ -351,7 +351,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             block,
             parallel,
             e2,
-            pool_id,
+            pool_id: _,
         } => FFIHIRExpr {
             tag: FFIHIRTag::ForLoop,
             value: ExpressionUnion {
@@ -459,7 +459,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
         SSAValue::Integer {
             value,
             width,
-            pool_id,
+            pool_id: _,
         } => FFIHIRValue {
             tag: FFIHirValueTag::Integer,
             value: ValueUnion {
@@ -476,7 +476,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
         SSAValue::Float {
             value,
             width,
-            pool_id,
+            pool_id: _,
         } => FFIHIRValue {
             tag: FFIHirValueTag::Float,
             value: ValueUnion {
@@ -493,12 +493,12 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name,
             parameters,
-            pool_id,
+            pool_id: _,
         } => {
             let param_transform: Vec<FFIHIRValue> = parameters
                 .into_iter()
@@ -540,7 +540,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
-            pool_id,
+            pool_id: _,
         } => FFIHIRValue {
             tag: FFIHirValueTag::Conditional,
             value: ValueUnion {
@@ -559,7 +559,11 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
                 },
             },
         },
-        SSAValue::Cast { value, to, pool_id } => FFIHIRValue {
+        SSAValue::Cast {
+            value,
+            to,
+            pool_id: _,
+        } => FFIHIRValue {
             tag: FFIHirValueTag::Cast,
             value: ValueUnion {
                 cast: FFIHIRCast {

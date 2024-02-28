@@ -50,7 +50,7 @@ pub fn rename_variable_reassignment_value(
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name,
@@ -265,7 +265,7 @@ pub fn rename_variables_value(
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name,

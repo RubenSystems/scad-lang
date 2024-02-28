@@ -60,7 +60,7 @@ pub fn w_algo(
             },
             context,
         )),
-        TIRExpression::Float(_, width, p) => Ok((
+        TIRExpression::Float(_, width, _p) => Ok((
             Substitution::new(),
             MonoType::Application {
                 c: format!("f{width}"),
@@ -69,7 +69,7 @@ pub fn w_algo(
             },
             context,
         )),
-        TIRExpression::VariableReference { name, pool_id } => {
+        TIRExpression::VariableReference { name, pool_id: _ } => {
             let Some(tpe) = context.get_type_for_name(name) else {
                 unreachable!("Undefined variable reference {name} - epic fail")
             };
@@ -86,7 +86,7 @@ pub fn w_algo(
             type_hint,
             e1,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             let Ok((s1, t1, mut context)) = w_algo(
                 context,
@@ -152,7 +152,7 @@ pub fn w_algo(
 
             Ok((s2.merge(&s1), t2, sub_context))
         }
-        TIRExpression::FunctionCall { e1, e2, pool_id } => {
+        TIRExpression::FunctionCall { e1, e2, pool_id: _ } => {
             let mut retry_count = 0;
             loop {
                 let (s1, t1, context) = w_algo(
@@ -214,7 +214,7 @@ pub fn w_algo(
             e1,
             ret_type_hint,
             arg_type_hint,
-            pool_id,
+            pool_id: _,
         } => {
             let new_type = generate_type_name();
             let tir_new_type = match arg_type_hint {
@@ -267,7 +267,7 @@ pub fn w_algo(
             condition,
             if_block,
             else_block,
-            pool_id,
+            pool_id: _,
         } => {
             // 1 type conditon ensure bool
 
@@ -337,7 +337,7 @@ pub fn w_algo(
             Ok((if_sub.merge(&else_sub), if_mt, ctx))
         }
         TIRExpression::Phi(_) => todo!(),
-        TIRExpression::Tensor(v, p) => {
+        TIRExpression::Tensor(v, _p) => {
             let types: Vec<TIRType> = v
                 .iter()
                 .map(|val| {
@@ -372,7 +372,7 @@ pub fn w_algo(
         TIRExpression::Cast {
             from: _,
             to_type,
-            pool_id,
+            pool_id: _,
         } => Ok((Substitution::new(), to_type.clone(), context)),
     }
 }

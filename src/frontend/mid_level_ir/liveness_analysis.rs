@@ -9,36 +9,36 @@ fn get_alive_vars(val: &SSAValue) -> Vec<String> {
         SSAValue::ConditionalBlock {
             if_block: _,
             else_block: _,
-            pool_id,
+            pool_id: _,
         } => vec![],
         SSAValue::Integer {
             value: _,
             width: _,
-            pool_id,
+            pool_id: _,
         } => vec![],
         SSAValue::Float {
             value: _,
             width: _,
-            pool_id,
+            pool_id: _,
         } => vec![],
         SSAValue::Bool(_, _) => vec![],
         SSAValue::Operation {
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name: _,
             parameters: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::Nothing => vec![],
         SSAValue::Tensor(_, _) => vec![],
         SSAValue::Cast {
             value,
             to: _,
-            pool_id,
+            pool_id: _,
         } => get_alive_vars(value),
     }
 }

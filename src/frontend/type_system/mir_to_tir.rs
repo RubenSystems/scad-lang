@@ -34,7 +34,7 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name,
@@ -308,14 +308,14 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             )
         }
         SSAExpression::Noop => (TIRExpression::Void, ctx),
-        SSAExpression::Return { val, pool_id } => transform_mir_value_to_tir(val, ctx),
+        SSAExpression::Return { val, pool_id: _ } => transform_mir_value_to_tir(val, ctx),
         SSAExpression::Block(eb, _) => transform_mir_to_tir(*eb, ctx),
         SSAExpression::FuncForwardDecl {
             name,
             args,
             ret_type,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             // let (e1xp, ctx) = transform_mir_function_decl_to_tir(args, block, ctx);
             // let (e2xp, ctx) = transform_mir_to_tir(*e2, ctx);
@@ -330,7 +330,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
 
             (e2tir, e2ctx)
         }
-        SSAExpression::Yield { val, pool_id } => transform_mir_value_to_tir(val, ctx),
+        SSAExpression::Yield { val, pool_id: _ } => transform_mir_value_to_tir(val, ctx),
         SSAExpression::ForLoop {
             iv: _,
             from: _,
@@ -338,7 +338,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             block: _,
             parallel: _,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             // don't convert for loop as it does not have a type
             transform_mir_to_tir(*e2, ctx)

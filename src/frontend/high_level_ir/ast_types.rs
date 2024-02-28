@@ -381,7 +381,7 @@ impl FailureCopy for Statement {
                     *pid,
                 )
             }
-            Self::ProcedureDefinition(p, pid) => todo!(),
+            Self::ProcedureDefinition(_p, _pid) => todo!(),
             Statement::Block(b, pid) => Statement::Block(
                 Block {
                     statements: b.statements.iter().map(|s| s.fcopy()).collect(),

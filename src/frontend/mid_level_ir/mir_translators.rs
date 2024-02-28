@@ -184,7 +184,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 }),
             )
         }
-        Statement::Expression(exp, p) => expression_l1_to_l2(exp, _k),
+        Statement::Expression(exp, _p) => expression_l1_to_l2(exp, _k),
         Statement::FunctionDefinition(f, p) => {
             let gen = _k;
             SSAExpression::FuncDecl {

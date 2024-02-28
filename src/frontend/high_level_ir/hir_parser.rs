@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use lazy_static::lazy_static;
 use pest::{
     iterators::Pairs,
@@ -8,9 +6,8 @@ use pest::{
 use pest_derive::Parser;
 
 use crate::frontend::{
-    error::{ErrorPool, PoolID},
+    error::ErrorPool,
     high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName},
-    mid_level_ir::ffi::Location,
 };
 
 use super::ast_types::{
@@ -57,7 +54,7 @@ lazy_static! {
 
 }
 
-fn parse_type(tpe: pest::iterators::Pair<'_, Rule>, loc_pool: &mut ErrorPool) -> Type {
+fn parse_type(tpe: pest::iterators::Pair<'_, Rule>, _loc_pool: &mut ErrorPool) -> Type {
     match tpe.as_rule() {
         Rule::r#type => {
             let subtype = tpe
@@ -114,11 +111,11 @@ fn parse_function_call_arg(
     loc_pool: &mut ErrorPool,
 ) -> (Identifier, Expression) {
     // let location =
-    let pid = loc_pool.insert(&arg);
+    let _pid = loc_pool.insert(&arg);
     let mut id = arg.into_inner();
     let identifier = Identifier(id.next().unwrap().as_str().into());
     let exp = parse(id.next().unwrap().into_inner(), loc_pool);
-    if let Statement::Expression(e, pid) = exp {
+    if let Statement::Expression(e, _pid) = exp {
         (identifier, e)
     } else {
         unreachable!("NOT AN EXPRESSION WAAAAA")
@@ -527,7 +524,7 @@ pub fn parse(rules: Pairs<Rule>, loc_pool: &mut ErrorPool) -> Statement {
                 unreachable!();
             };
 
-            let func_call = FunctionCall {
+            let _func_call = FunctionCall {
                 identifier: FunctionName("scad.inbuilts.add".into()),
                 args: vec![(Identifier("a".into()), lhs), (Identifier("a".into()), rhs)],
             };
