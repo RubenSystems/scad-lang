@@ -223,6 +223,7 @@ cast = { non_infix_expressions ~ "->" ~ type }
 non_infix_expressions = _{ 
 	function_call 
 	| "(" ~ expression ~ ")" 
+	| if_expression_control_flow
 	| tensor
 	| expression_block 
 	| literal

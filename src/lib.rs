@@ -58,7 +58,6 @@ pub extern "C" fn compile(
 
     let parsed_result = SCADParser::parse(Rule::program, program.as_str()).unwrap();
 
-    let mut counter: usize = 0;
     let mut location_pool = ErrorPool::new();
 
     let raw_statements: Vec<Statement> = parsed_result
@@ -66,7 +65,7 @@ pub extern "C" fn compile(
             if let Rule::EOI = pair.as_rule() {
                 None
             } else {
-                Some(parse(pair.into_inner(), &mut location_pool))
+                Some(parse(pair.into_inner(), &mut location_pool).unwrap())
             }
         })
         .collect();
@@ -84,6 +83,7 @@ pub extern "C" fn compile(
         WAlgoInfo {
             retry_count: 0,
             req_type: None,
+            pool: &location_pool
         },
         &tir,
     )

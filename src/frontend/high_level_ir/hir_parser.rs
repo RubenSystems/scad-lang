@@ -6,7 +6,7 @@ use pest::{
 use pest_derive::Parser;
 
 use crate::frontend::{
-    error::ErrorPool,
+    error::{ErrorPool, ErrorType, SCADError},
     high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName},
 };
 
@@ -54,7 +54,10 @@ lazy_static! {
 
 }
 
-fn parse_type(tpe: pest::iterators::Pair<'_, Rule>, _loc_pool: &mut ErrorPool) -> Type {
+fn parse_type(
+    tpe: pest::iterators::Pair<'_, Rule>,
+    _loc_pool: &mut ErrorPool,
+) -> Result<Type, SCADError> {
     match tpe.as_rule() {
         Rule::r#type => {
             let subtype = tpe
@@ -75,12 +78,12 @@ fn parse_type(tpe: pest::iterators::Pair<'_, Rule>, _loc_pool: &mut ErrorPool) -
                 })
                 .collect();
 
-            Type {
+            Ok(Type {
                 dimensions,
                 subtype: TypeName(subtype),
-            }
+            })
         }
-        _ => unreachable!("PANICCCCCCCC invalid type"),
+        _ => Err(SCADError::from_pair(ErrorType::InvalidType, &tpe)),
     }
 }
 
@@ -88,18 +91,18 @@ fn parse_function_def_arg(
     arg: pest::iterators::Pair<'_, Rule>,
 
     loc_pool: &mut ErrorPool,
-) -> (Identifier, Type) {
+) -> Result<(Identifier, Type), SCADError> {
     let mut id = arg.into_inner();
     let identifier = Identifier(id.next().unwrap().as_str().into());
-    let tpe = parse_type(id.next().unwrap(), loc_pool);
-    (identifier, tpe)
+    let tpe = parse_type(id.next().unwrap(), loc_pool)?;
+    Ok((identifier, tpe))
 }
 
 fn parse_function_def_args(
     tpe: pest::iterators::Pair<'_, Rule>,
 
     loc_pool: &mut ErrorPool,
-) -> Vec<(Identifier, Type)> {
+) -> Result<Vec<(Identifier, Type)>, SCADError> {
     tpe.into_inner()
         .map(|x| parse_function_def_arg(x, loc_pool))
         .collect()
@@ -107,18 +110,17 @@ fn parse_function_def_args(
 
 fn parse_function_call_arg(
     arg: pest::iterators::Pair<'_, Rule>,
-
     loc_pool: &mut ErrorPool,
-) -> (Identifier, Expression) {
+) -> Result<(Identifier, Expression), SCADError> {
     // let location =
     let _pid = loc_pool.insert(&arg);
-    let mut id = arg.into_inner();
+    let mut id = arg.clone().into_inner();
     let identifier = Identifier(id.next().unwrap().as_str().into());
     let exp = parse(id.next().unwrap().into_inner(), loc_pool);
-    if let Statement::Expression(e, _pid) = exp {
-        (identifier, e)
+    if let Statement::Expression(e, _pid) = exp? {
+        Ok((identifier, e))
     } else {
-        unreachable!("NOT AN EXPRESSION WAAAAA")
+        Err(SCADError::from_pair(ErrorType::InvalidType, &arg))
     }
 }
 
@@ -127,14 +129,14 @@ fn parse_for_loop(
     parallel: bool,
 
     loc_pool: &mut ErrorPool,
-) -> Statement {
+) -> Result<Statement, SCADError> {
     let pid = loc_pool.insert(&lp);
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
     let from = it.next().unwrap().as_str().parse::<usize>().unwrap();
     let to = it.next().unwrap().as_str().parse::<usize>().unwrap();
-    let block = parse_statement_block(it.next().unwrap(), loc_pool);
-    Statement::ForLoop(
+    let block = parse_statement_block(it.next().unwrap(), loc_pool)?;
+    Ok(Statement::ForLoop(
         ForLoop {
             variable: identifier,
             from,
@@ -143,105 +145,96 @@ fn parse_for_loop(
             parallel,
         },
         pid,
-    )
+    ))
 }
 
 fn parse_function_call_args(
     tpe: pest::iterators::Pair<'_, Rule>,
 
     loc_pool: &mut ErrorPool,
-) -> Vec<(Identifier, Expression)> {
+) -> Result<Vec<(Identifier, Expression)>, SCADError> {
     tpe.into_inner()
         .map(|x| parse_function_call_arg(x, loc_pool))
         .collect()
 }
 
-fn parse_block(blk: pest::iterators::Pair<'_, Rule>, loc_pool: &mut ErrorPool) -> Block {
-    let statements = blk
-        .into_inner()
-        .map(|x| parse(x.into_inner(), loc_pool))
-        .collect();
+fn parse_block(
+    blk: pest::iterators::Pair<'_, Rule>,
+    loc_pool: &mut ErrorPool,
+) -> Result<Block, SCADError> {
+    let mut statements = vec![];
+    for x in blk.into_inner() {
+        statements.push(parse(x.into_inner(), loc_pool)?)
+    }
 
-    Block { statements }
+    Ok(Block { statements })
 }
 
 fn parse_statement_block(
     blk: pest::iterators::Pair<'_, Rule>,
 
     loc_pool: &mut ErrorPool,
-) -> StatementBlock {
-    let statements = blk
-        .into_inner()
-        .map(|x| parse(x.into_inner(), loc_pool))
-        .collect();
+) -> Result<StatementBlock, SCADError> {
+    let mut statements = vec![];
+    for x in blk.into_inner() {
+        statements.push(parse(x.into_inner(), loc_pool)?)
+    }
 
-    StatementBlock { statements }
+    Ok(StatementBlock { statements })
 }
 
 fn parse_expression_block(
     blk: pest::iterators::Pair<'_, Rule>,
 
     loc_pool: &mut ErrorPool,
-) -> ExpressionBlock {
-    let mut statements: Vec<Statement> = blk
-        .into_inner()
-        .map(|x| parse(x.into_inner(), loc_pool))
-        .collect();
+) -> Result<ExpressionBlock, SCADError> {
+    let mut statements = vec![];
+    for x in blk.into_inner() {
+        statements.push(parse(x.into_inner(), loc_pool)?)
+    }
     let expression = Box::new(match statements.pop() {
         Some(e) => {
             let Statement::Expression(e, _) = e else {
+                // no need to error handle because parser will catch
                 unreachable!("Last statement does not eval to expression")
             };
             e
         }
+        // no need to error handle as parser will catch
         None => unreachable!("Can't have expression block with no expression at the end!"),
     });
 
-    ExpressionBlock {
+    Ok(ExpressionBlock {
         statements,
         expression,
-    }
+    })
 }
-
-// fn parse_conditional_block(blk: pest::iterators::Pair<'_, Rule>) -> ConditionalStatementBlock {
-//     let mut unparsed_it = blk.into_inner();
-//     let a = unparsed_it.next().unwrap().into_inner();
-//     let b = unparsed_it.next().unwrap();
-//     let parsed_exp = parse(a);
-//     let block = parse_block(b);
-
-//     let Statement::Expression(e) = parsed_exp else {
-//         unreachable!("Not expressions")
-//     };
-
-//     ConditionalStatementBlock {
-//         condition: e,
-//         block,
-//     }
-// }
 
 fn parse_expression_conditional_block(
     blk: pest::iterators::Pair<'_, Rule>,
 
     loc_pool: &mut ErrorPool,
-) -> ConditionalExpressionBlock {
+) -> Result<ConditionalExpressionBlock, SCADError> {
     let mut unparsed_it = blk.into_inner();
     let a = unparsed_it.next().unwrap().into_inner();
     let b = unparsed_it.next().unwrap();
     let parsed_exp = parse(a, loc_pool);
-    let block = parse_expression_block(b, loc_pool);
+    let block = parse_expression_block(b, loc_pool)?;
 
-    let Statement::Expression(e, _) = parsed_exp else {
+    let Statement::Expression(e, _) = parsed_exp? else {
         unreachable!("Not expressions")
     };
 
-    ConditionalExpressionBlock {
+    Ok(ConditionalExpressionBlock {
         condition: e,
         block,
-    }
+    })
 }
 
-pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut ErrorPool) -> Statement {
+pub fn parse_pair(
+    primary: pest::iterators::Pair<'_, Rule>,
+    loc_pool: &mut ErrorPool,
+) -> Result<Statement, SCADError> {
     match primary.as_rule() {
         Rule::integer_literal => {
             let pid = loc_pool.insert(&primary);
@@ -252,32 +245,38 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
                 Some(a) => IntegerWidth::Variable(a.as_str().parse::<u32>().unwrap()),
                 None => IntegerWidth::IndexType,
             };
-            Statement::Expression(Expression::Integer(Integer { value, width }, pid), pid)
+            Ok(Statement::Expression(
+                Expression::Integer(Integer { value, width }, pid),
+                pid,
+            ))
         }
         Rule::float_literal => {
             let pid = loc_pool.insert(&primary);
             let mut p = primary.into_inner();
             let value = p.next().unwrap().as_str().parse::<f64>().unwrap();
             let width = p.next().unwrap().as_str().parse::<u32>().unwrap();
-            Statement::Expression(Expression::Float(Float { value, width }, pid), pid)
+            Ok(Statement::Expression(
+                Expression::Float(Float { value, width }, pid),
+                pid,
+            ))
         }
         Rule::cast => {
             let pid = loc_pool.insert(&primary);
             let mut p: Pairs<'_, Rule> = primary.into_inner();
-            let Statement::Expression(e, _) = parse_pair(p.next().unwrap(), loc_pool) else {
-                unreachable!("bad")
+            let Statement::Expression(e, _) = parse_pair(p.next().unwrap(), loc_pool)? else {
+                unreachable!("bad cast")
             };
             let tpe = parse_type(p.next().unwrap(), loc_pool);
-            Statement::Expression(
+            Ok(Statement::Expression(
                 Expression::Cast(
                     Cast {
                         expr: Box::new(e),
-                        to_type: tpe,
+                        to_type: tpe?,
                     },
                     pid,
                 ),
                 pid,
-            )
+            ))
         }
         Rule::const_decl => {
             let pid = loc_pool.insert(&primary);
@@ -287,38 +286,32 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             let parsed_stype = parse_type(stype_unparsed, loc_pool);
 
             let Statement::Expression(expression, _) =
-                parse(p.next().unwrap().into_inner(), loc_pool)
+                parse(p.next().unwrap().into_inner(), loc_pool)?
             else {
-                unreachable!("NOT AN EXPRESSION!");
+                unreachable!("uncaught error from parser")
             };
-            Statement::ConstDecl(
+            Ok(Statement::ConstDecl(
                 ConstDecl {
                     identifier,
-                    subtype: parsed_stype,
+                    subtype: parsed_stype?,
                     expression,
                 },
                 pid,
-            )
+            ))
         }
         Rule::for_loop => parse_for_loop(primary, false, loc_pool),
         Rule::parallel_loop => parse_for_loop(primary, true, loc_pool),
         Rule::tensor => {
             let loc = loc_pool.insert(&primary);
-            Statement::Expression(
-                Expression::Tensor(
-                    primary
-                        .into_inner()
-                        .map(|x| {
-                            let Statement::Expression(e, _) = parse_pair(x, loc_pool) else {
-                                unreachable!("You can't do that bro");
-                            };
-                            e
-                        })
-                        .collect(),
-                    loc,
-                ),
-                loc,
-            )
+
+            let mut values = vec![];
+            for x in primary.into_inner() {
+                let Statement::Expression(e, _) = parse_pair(x, loc_pool)? else {
+                    unreachable!("uncaught error from parser")
+                };
+                values.push(e)
+            }
+            Ok(Statement::Expression(Expression::Tensor(values, loc), loc))
         }
         Rule::var_decl => {
             let loc = loc_pool.insert(&primary);
@@ -328,19 +321,19 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             let parsed_stype = parse_type(stype_unparsed, loc_pool);
 
             let Statement::Expression(expression, _) =
-                parse(p.next().unwrap().into_inner(), loc_pool)
+                parse(p.next().unwrap().into_inner(), loc_pool)?
             else {
-                unreachable!("NOT AN EXPRESSION!");
+                unreachable!("uncaught error from parser")
             };
 
-            Statement::VariableDecl(
+            Ok(Statement::VariableDecl(
                 VariableDecl {
                     identifier,
-                    subtype: Some(parsed_stype),
+                    subtype: Some(parsed_stype?),
                     expression,
                 },
                 loc,
-            )
+            ))
         }
 
         Rule::var_reassignment => {
@@ -348,27 +341,27 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             let mut p = primary.into_inner();
             let identifier = VariableName(p.next().unwrap().as_str().trim().into());
             let Statement::Expression(expression, _) =
-                parse(p.next().unwrap().into_inner(), loc_pool)
+                parse(p.next().unwrap().into_inner(), loc_pool)?
             else {
-                unreachable!("NOT AN EXPRESSION!");
+                unreachable!("uncaught error from parser")
             };
-            Statement::VariableDecl(
+            Ok(Statement::VariableDecl(
                 VariableDecl {
                     identifier,
                     subtype: None,
                     expression,
                 },
                 loc,
-            )
+            ))
         }
         Rule::infix_operation => parse(primary.into_inner(), loc_pool),
         Rule::binary_infix_operation => parse(primary.into_inner(), loc_pool),
         Rule::identifier => {
             let loc = loc_pool.insert(&primary);
-            Statement::Expression(
+            Ok(Statement::Expression(
                 Expression::Identifier(Identifier(primary.as_str().trim().into()), loc),
                 loc,
-            )
+            ))
         }
         Rule::function_call => {
             let loc = loc_pool.insert(&primary);
@@ -376,13 +369,13 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             let identifier = FunctionName(it.next().unwrap().as_str().into());
 
             let args = match it.next() {
-                Some(x) => parse_function_call_args(x, loc_pool),
+                Some(x) => parse_function_call_args(x, loc_pool)?,
                 _ => vec![],
             };
-            Statement::Expression(
+            Ok(Statement::Expression(
                 Expression::FunctionCall(FunctionCall { identifier, args }, loc),
                 loc,
-            )
+            ))
         }
         Rule::function_definition => {
             // on
@@ -392,7 +385,7 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             let mut nxt = it.next().unwrap();
             let args = match nxt.as_rule() {
                 Rule::function_def_params => {
-                    let res = Some(parse_function_def_args(nxt, loc_pool));
+                    let res = Some(parse_function_def_args(nxt, loc_pool)?);
                     nxt = it.next().unwrap();
                     res
                 }
@@ -400,42 +393,19 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             }
             .unwrap_or(vec![]);
 
-            let return_type = parse_type(nxt, loc_pool);
+            let return_type = parse_type(nxt, loc_pool)?;
             nxt = it.next().unwrap();
 
             let def = FunctionDefinition {
                 identifier: FunctionName(name),
                 args,
                 return_type,
-                block: parse_expression_block(nxt, loc_pool),
+                block: parse_expression_block(nxt, loc_pool)?,
             };
 
-            Statement::FunctionDefinition(def, loc)
+            Ok(Statement::FunctionDefinition(def, loc))
         }
-        Rule::procedure_definition => {
-            // on
-            let loc = loc_pool.insert(&primary);
-            let mut it: Pairs<'_, Rule> = primary.into_inner();
-            let name: String = it.next().unwrap().as_str().into();
-            let mut nxt = it.next().unwrap();
-            let args = match nxt.as_rule() {
-                Rule::function_def_params => {
-                    let res = Some(parse_function_def_args(nxt, loc_pool));
-                    nxt = it.next().unwrap();
-                    res
-                }
-                _ => None,
-            }
-            .unwrap_or(vec![]);
-
-            let def = ProcedureDefinition {
-                identifier: FunctionName(name),
-                args,
-                block: parse_block(nxt, loc_pool),
-            };
-
-            Statement::ProcedureDefinition(def, loc)
-        }
+        Rule::procedure_definition => todo!(),
         Rule::forward_function_decleration => {
             let loc = loc_pool.insert(&primary);
             let mut it: Pairs<'_, Rule> = primary.into_inner();
@@ -443,7 +413,7 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             let mut nxt = it.next().unwrap();
             let args = match nxt.as_rule() {
                 Rule::function_def_params => {
-                    let res = Some(parse_function_def_args(nxt, loc_pool));
+                    let res = Some(parse_function_def_args(nxt, loc_pool)?);
                     nxt = it.next().unwrap();
                     res
                 }
@@ -451,7 +421,7 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             }
             .unwrap_or(vec![]);
 
-            let return_type = parse_type(nxt, loc_pool);
+            let return_type = parse_type(nxt, loc_pool)?;
 
             let def = FunctionDecleration {
                 identifier: FunctionName(name),
@@ -459,7 +429,7 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
                 return_type,
             };
 
-            Statement::FunctionDecleration(def, loc)
+            Ok(Statement::FunctionDecleration(def, loc))
         }
         Rule::if_expression_block => {
             todo!()
@@ -475,26 +445,26 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
             for m in it {
                 match m.as_rule() {
                     Rule::if_expression_block | Rule::else_if_expression_block => {
-                        if_blocks.push(parse_expression_conditional_block(m, loc_pool))
+                        if_blocks.push(parse_expression_conditional_block(m, loc_pool)?)
                     }
                     Rule::else_expression_block => {
-                        else_block = Some(parse_expression_block(m, loc_pool));
+                        else_block = Some(parse_expression_block(m, loc_pool)?);
                     }
                     x => todo!("rule {x:?}"),
                 };
             }
-            Statement::Expression(
+            Ok(Statement::Expression(
                 Expression::ConditionalExpressionControlFlowControl {
                     if_blocks,
                     else_block: Box::new(else_block.unwrap()),
                     pool_id: pid,
                 },
                 pid,
-            )
+            ))
         }
         Rule::boolean_t => {
             let pid = loc_pool.insert(&primary);
-            Statement::Expression(
+            Ok(Statement::Expression(
                 Expression::Bool(
                     if primary.as_str() == "true" {
                         true
@@ -506,21 +476,21 @@ pub fn parse_pair(primary: pest::iterators::Pair<'_, Rule>, loc_pool: &mut Error
                     pid,
                 ),
                 pid,
-            )
+            ))
         }
-        rule => {
-            eprintln!("{}", primary);
-            unreachable!("Expr::parse expected atom, found {:?}", rule);
+        _ => {
+            Err(SCADError::from_pair(ErrorType::InvalidInput, &primary))
         }
     }
 }
 
-pub fn parse(rules: Pairs<Rule>, loc_pool: &mut ErrorPool) -> Statement {
-    PARSER
+pub fn parse(rules: Pairs<Rule>, loc_pool: &mut ErrorPool) -> Result<Statement, SCADError> {
+    let x = PARSER
         .parser
         .map_primary(|p| parse_pair(p, loc_pool))
         .map_infix(|lhs, _, rhs| {
-            let (Statement::Expression(lhs, _), Statement::Expression(rhs, _)) = (lhs, rhs) else {
+            let (Statement::Expression(lhs, _), Statement::Expression(rhs, _)) = (lhs?, rhs?)
+            else {
                 unreachable!();
             };
 
@@ -532,5 +502,9 @@ pub fn parse(rules: Pairs<Rule>, loc_pool: &mut ErrorPool) -> Statement {
             // Statement::Expression(Expression::FunctionCall(func_call))
             todo!()
         })
-        .parse(rules)
+        .parse(rules)?;
+
+    Ok(x)
 }
+
+

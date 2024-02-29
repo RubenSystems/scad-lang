@@ -28,14 +28,30 @@ impl ErrorPool {
         self.counter += 1;
         ccounter
     }
+
+	pub fn get(&self, pid: PoolID) -> &ErrorLocation {
+		self.pool.get(&pid).unwrap()
+	}
 }
 
 #[derive(Debug)]
 pub enum ErrorType {
     ParsingError,
+	InvalidType,
+	InvalidInput,
+	UndefinedVariableReference,
+	UnsupportedVariableReassignment,
+	UnableToTypeFunctionArguement,
+	CannotCheckReturnType,
+	CannotTypeExpression,
+	CannotTypeCheckConditionalCondition,
+	ConditionalDoesNotHaveBooleanCondition,
+	MultipleBranchTypesInConditional,
+	MultipleTypesInVector
+
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ErrorLocation {
     user: String,
     line: usize,
@@ -69,7 +85,18 @@ impl Display for SCADError {
         // Define the formatting you want here
 
         let _ = match self.error_type {
-            ErrorType::ParsingError => write!(f, "\n| SCAD Parsing error"),
+            ErrorType::ParsingError => write!(f, "\n| Cannot parse input"),
+            ErrorType::InvalidType => write!(f, "\n| Invalid input type"),
+            ErrorType::InvalidInput => write!(f, "\n| Invalid input "),
+            ErrorType::UndefinedVariableReference => write!(f, "\n| Undefined variable reference "),
+            ErrorType::UnsupportedVariableReassignment => write!(f, "\n| You have attempted to redefine a varaible that already exists "),
+            ErrorType::UnableToTypeFunctionArguement => write!(f, "\n| Cannot type check function arguement"),
+            ErrorType::CannotCheckReturnType => write!(f, "\n| Cannot type check return type of function"),
+            ErrorType::CannotTypeExpression => write!(f, "\n| Cannot type check this expression"),
+            ErrorType::CannotTypeCheckConditionalCondition => write!(f, "\n| Cannot type check the condition of this branch"),
+            ErrorType::ConditionalDoesNotHaveBooleanCondition => write!(f, "\n| Condition is not of a boolean type"),
+            ErrorType::MultipleBranchTypesInConditional => write!(f, "\n| Branches have divergent types"),
+            ErrorType::MultipleTypesInVector => write!(f, "\n| Multiple types in this vector"),
         };
         _ = write!(
             f,
@@ -83,6 +110,7 @@ impl Display for SCADError {
 }
 
 impl SCADError {
+
     pub fn from_parse_error(parse_eror: Error<Rule>) -> Self {
         let (line, column) = match parse_eror.line_col {
             pest::error::LineColLocation::Pos(p) => p,
@@ -92,6 +120,24 @@ impl SCADError {
         Self {
             location_info: ErrorLocation::new(parse_eror.line(), line, column),
             error_type: ErrorType::ParsingError,
+        }
+    }
+
+	pub fn from_pair(error_type: ErrorType, pair: &pest::iterators::Pair<'_, Rule>) -> Self {
+        let location_info = ErrorLocation::from_pair(pair);
+
+        Self {
+            location_info,
+            error_type,
+        }
+    }
+
+	pub fn from_pid(error_type: ErrorType, pid: PoolID, pool: &ErrorPool) -> Self {
+        let location_info = pool.get(pid).clone();
+
+        Self {
+            location_info,
+            error_type,
         }
     }
 }

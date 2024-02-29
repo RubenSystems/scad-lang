@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::frontend::high_level_ir::ast_types::IntegerWidth;
+use crate::frontend::{error::{ErrorPool, ErrorType, SCADError}, high_level_ir::ast_types::IntegerWidth};
 
 use super::{
     context::Context,
@@ -19,16 +19,17 @@ pub enum WAlgoError {
     UnificationError(UnificationError),
 }
 
-pub struct WAlgoInfo {
+pub struct WAlgoInfo<'a> {
     pub retry_count: usize,
     pub req_type: Option<TIRType>,
+    pub pool : &'a ErrorPool
 }
 
 pub fn w_algo(
     context: Context,
     info: WAlgoInfo,
     exp: &TIRExpression,
-) -> Result<(Substitution, MonoType, Context), WAlgoError> {
+) -> Result<(Substitution, MonoType, Context), SCADError> {
     match exp {
         TIRExpression::Integer(_, width, _) => Ok((
             Substitution::new(),
@@ -69,14 +70,14 @@ pub fn w_algo(
             },
             context,
         )),
-        TIRExpression::VariableReference { name, pool_id: _ } => {
+        TIRExpression::VariableReference { name, pool_id } => {
             let Some(tpe) = context.get_type_for_name(name) else {
-                unreachable!("Undefined variable reference {name} - epic fail")
+                return Err(SCADError::from_pid(ErrorType::UndefinedVariableReference, *pool_id, info.pool))
             };
 
             let tpe = match Some(tpe[info.retry_count].clone()) {
                 Some(a) => a,
-                None => unreachable!("Undefined variable reference {name} - epic fail"),
+                None => return Err(SCADError::from_pid(ErrorType::UndefinedVariableReference, *pool_id, info.pool)),
             };
 
             Ok((Substitution::new(), instantiate(tpe.clone()), context))
@@ -86,21 +87,20 @@ pub fn w_algo(
             type_hint,
             e1,
             e2,
-            pool_id: _,
+            pool_id,
         } => {
-            let Ok((s1, t1, mut context)) = w_algo(
+            let (s1, t1, mut context) = w_algo(
                 context,
                 WAlgoInfo {
                     retry_count: info.retry_count,
+                    pool: info.pool,
                     req_type: type_hint
                         .as_ref()
                         .map(|x| Some(TIRType::MonoType(x.to_tir_type())))
                         .unwrap_or(info.req_type.clone()),
                 },
                 e1,
-            ) else {
-                unreachable!("{name}");
-            };
+            )?;
 
             if let Some(x) = context.get_type_for_name(name) {
                 // TODO: make it so polymorphic types are allowed
@@ -109,16 +109,14 @@ pub fn w_algo(
                         // context.remove_type_for_name(name);
                     },
                     TIRType::MonoType(m) => {
-                        let unification = unify(m, &t1);
+                        let unification = unify(m, &t1).map_err(|_| SCADError::from_pid(ErrorType::CannotTypeExpression, *pool_id, info.pool))?;
 
-                        let Ok(sub) = unification else {
-                            unreachable!("butthead you tried to trick me but i am smarter then you");
-                        };
-                        let substituted_val = sub.substitute(&TIRType::MonoType(t1.clone()));
+
+                        let substituted_val = unification.substitute(&TIRType::MonoType(t1.clone()));
                         context.add_type_for_name(name.clone(), substituted_val);
 
                     }
-                    _  => unreachable!("whoopsies: Attempting to reassign {name} to type: \n\n{t1:#?}\n\n when it already exists as \n\n{x:#?}")
+                    _  => return Err(SCADError::from_pid(ErrorType::UnsupportedVariableReassignment, *pool_id, info.pool))
                 }
             }
 
@@ -144,6 +142,7 @@ pub fn w_algo(
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type,
+                    pool: info.pool
                 },
                 e2,
             ) else {
@@ -160,6 +159,7 @@ pub fn w_algo(
                     WAlgoInfo {
                         retry_count,
                         req_type: info.req_type.clone(),
+                        pool: info.pool
                     },
                     e1,
                 )?;
@@ -168,6 +168,7 @@ pub fn w_algo(
                     WAlgoInfo {
                         retry_count: info.retry_count,
                         req_type: info.req_type.clone(),
+                        pool: info.pool
                     },
                     e2,
                 ) else {
@@ -193,17 +194,6 @@ pub fn w_algo(
                         ))
                     }
                     Err(e) => {
-                        println!("{:?}", &s2.substitute_mono(&t1));
-                        println!(
-                            "{:?}",
-                            &MonoType::Application {
-                                c: "->".into(),
-                                dimensions: None,
-                                types: vec![t2.clone(), MonoType::Variable(b.clone())],
-                            }
-                        );
-
-                        println!("{e:?}");
                         retry_count += 1
                     }
                 };
@@ -214,13 +204,13 @@ pub fn w_algo(
             e1,
             ret_type_hint,
             arg_type_hint,
-            pool_id: _,
+            pool_id,
         } => {
             let new_type = generate_type_name();
             let tir_new_type = match arg_type_hint {
                 Some(s) => {
                     let TIRType::MonoType(a) = s.clone() else {
-                        unreachable!()
+                        return Err(SCADError::from_pid(ErrorType::UnableToTypeFunctionArguement, *pool_id, info.pool))
                     };
                     a
                 }
@@ -229,16 +219,15 @@ pub fn w_algo(
 
             let mut new_context = context.clone();
             new_context.add_type_for_name(name.into(), TIRType::MonoType(tir_new_type.clone()));
-            let Ok((sub, tpe, new_context)) = w_algo(
+            let (sub, tpe, new_context) = w_algo(
                 new_context,
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type,
+                    pool: info.pool
                 },
                 e1,
-            ) else {
-                todo!()
-            };
+            )?;
 
             let x = sub.substitute_mono(&MonoType::Application {
                 c: "->".into(),
@@ -248,7 +237,7 @@ pub fn w_algo(
 
             if let Some(hnt) = ret_type_hint {
                 let TIRType::MonoType(_a) = hnt else {
-                    unreachable!("CAN't RETURN MONOTYPE");
+                    return Err(SCADError::from_pid(ErrorType::CannotCheckReturnType, *pool_id, info.pool))
                 };
 
                 // let rettype = get_rettype_of_application(x.clone());
@@ -267,7 +256,7 @@ pub fn w_algo(
             condition,
             if_block,
             else_block,
-            pool_id: _,
+            pool_id,
         } => {
             // 1 type conditon ensure bool
 
@@ -276,6 +265,7 @@ pub fn w_algo(
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type.clone(),
+                    pool: info.pool
                 },
                 condition,
             ) else {
@@ -285,7 +275,7 @@ pub fn w_algo(
             // check to see if all condiitons are a bool
             match cond_mt {
                 MonoType::Variable(_) => {
-                    unreachable!("cannot type if conditional value so can't check if its a bool")
+                    return Err(SCADError::from_pid(ErrorType::CannotTypeCheckConditionalCondition, *pool_id, info.pool))
                 }
                 MonoType::Application {
                     c,
@@ -296,7 +286,7 @@ pub fn w_algo(
                     c: _,
                     dimensions: _,
                     types: _,
-                } => unreachable!("condtype must be bool"),
+                } => return Err(SCADError::from_pid(ErrorType::ConditionalDoesNotHaveBooleanCondition, *pool_id, info.pool)),
             };
 
             let Ok((if_sub, if_mt, if_ctx)) = w_algo(
@@ -304,6 +294,7 @@ pub fn w_algo(
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type.clone(),
+                    pool: info.pool
                 },
                 &if_block.1,
             ) else {
@@ -313,6 +304,7 @@ pub fn w_algo(
                 if_ctx,
                 WAlgoInfo {
                     retry_count: info.retry_count,
+                    pool: info.pool,
                     req_type: info.req_type.clone(),
                 },
                 &else_block.1,
@@ -321,7 +313,7 @@ pub fn w_algo(
             };
 
             if if_mt != else_mt {
-                unreachable!("If and else branches must have the same type!");
+                return Err(SCADError::from_pid(ErrorType::MultipleBranchTypesInConditional, *pool_id, info.pool))
             }
 
             // let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(
@@ -337,7 +329,7 @@ pub fn w_algo(
             Ok((if_sub.merge(&else_sub), if_mt, ctx))
         }
         TIRExpression::Phi(_) => todo!(),
-        TIRExpression::Tensor(v, _p) => {
+        TIRExpression::Tensor(v, p) => {
             let types: Vec<TIRType> = v
                 .iter()
                 .map(|val| {
@@ -346,6 +338,7 @@ pub fn w_algo(
                         WAlgoInfo {
                             retry_count: info.retry_count,
                             req_type: info.req_type.clone(),
+                            pool: info.pool
                         },
                         &val,
                     )
@@ -355,7 +348,7 @@ pub fn w_algo(
                 .map(TIRType::MonoType)
                 .collect();
             if !types.iter().all(|x| *x == types[0]) {
-                unreachable!("{:#?} you issue: a vector can't have more then one type; scad is not python lollolololol", types);
+                return Err(SCADError::from_pid(ErrorType::MultipleTypesInVector, *p, info.pool))
             }
 
             let ret = cvt_scalar_to_vector(
@@ -381,7 +374,7 @@ fn get_rettype_of_application(app: MonoType) -> MonoType {
     println!("{app:#?}");
 
     match app {
-        MonoType::Variable(_) => unreachable!("FAILED TO GET APPTYPE"),
+        MonoType::Variable(_) => unreachable!(),
         MonoType::Application {
             c,
             dimensions,

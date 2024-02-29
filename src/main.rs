@@ -35,6 +35,12 @@ fn main() -> std::io::Result<()> {
             let mut addv: i32 = @add(a: a_v, b: b_v);
             @set.i32(a: result, idx: i, c: addv);
         };
+
+        if true {
+            0_i64
+        } else {
+            0_i32
+        };
     
         10000_i32
     };
@@ -48,8 +54,9 @@ fn main() -> std::io::Result<()> {
     let parsed_result = match SCADParser::parse(Rule::program, test_prog) {
         Ok(p) => p,
         Err(e) => {
+            println!("{e:#?}");
             let error = SCADError::from_parse_error(e);
-            println!("{error}");
+            println!("{error} ");
             todo!()
         }
     };
@@ -58,7 +65,7 @@ fn main() -> std::io::Result<()> {
             if let Rule::EOI = pair.as_rule() {
                 None
             } else {
-                Some(parse(pair.into_inner(), &mut location_pool))
+                Some(parse(pair.into_inner(), &mut location_pool).unwrap())
             }
         })
         .collect();
@@ -77,17 +84,22 @@ fn main() -> std::io::Result<()> {
     // println!("{:#?}", consumable_context);
     let consumable_context = create_types_for_core();
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
-    println!("\n\n{:#?}\n\n", code);
 
-    let (_, _, context) = w_algo(
+    let (_, _, context) = match w_algo(
         ctx,
         WAlgoInfo {
             retry_count: 0,
             req_type: None,
+            pool: &location_pool
         },
         &tir,
-    )
-    .unwrap();
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            print!("{e}");
+            unreachable!()
+        },
+    };
 
     println!("\n\n{:#?}\n\n", context);
     let code = unalive_vars(code, vec![]);
