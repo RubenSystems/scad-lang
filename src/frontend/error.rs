@@ -29,26 +29,26 @@ impl ErrorPool {
         ccounter
     }
 
-	pub fn get(&self, pid: PoolID) -> &ErrorLocation {
-		self.pool.get(&pid).unwrap()
-	}
+    pub fn get(&self, pid: PoolID) -> &ErrorLocation {
+        self.pool.get(&pid).unwrap()
+    }
 }
 
 #[derive(Debug)]
 pub enum ErrorType {
     ParsingError,
-	InvalidType,
-	InvalidInput,
-	UndefinedVariableReference,
-	UnsupportedVariableReassignment,
-	UnableToTypeFunctionArguement,
-	CannotCheckReturnType,
-	CannotTypeExpression,
-	CannotTypeCheckConditionalCondition,
-	ConditionalDoesNotHaveBooleanCondition,
-	MultipleBranchTypesInConditional,
-	MultipleTypesInVector
-
+    InvalidType,
+    InvalidInput,
+    UndefinedVariableReference,
+    UnsupportedVariableReassignment,
+    UnableToTypeFunctionArguement,
+    CannotCheckReturnType,
+    CannotTypeExpression,
+    CannotTypeCheckConditionalCondition,
+    ConditionalDoesNotHaveBooleanCondition,
+    MultipleBranchTypesInConditional,
+    MultipleTypesInVector,
+    CouldNotFindFunction(String),
 }
 
 #[derive(Debug, Clone)]
@@ -84,19 +84,36 @@ impl Display for SCADError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         // Define the formatting you want here
 
-        let _ = match self.error_type {
+        let _ = match &self.error_type {
             ErrorType::ParsingError => write!(f, "\n| Cannot parse input"),
             ErrorType::InvalidType => write!(f, "\n| Invalid input type"),
             ErrorType::InvalidInput => write!(f, "\n| Invalid input "),
             ErrorType::UndefinedVariableReference => write!(f, "\n| Undefined variable reference "),
-            ErrorType::UnsupportedVariableReassignment => write!(f, "\n| You have attempted to redefine a varaible that already exists "),
-            ErrorType::UnableToTypeFunctionArguement => write!(f, "\n| Cannot type check function arguement"),
-            ErrorType::CannotCheckReturnType => write!(f, "\n| Cannot type check return type of function"),
+            ErrorType::UnsupportedVariableReassignment => write!(
+                f,
+                "\n| You have attempted to redefine a varaible that already exists "
+            ),
+            ErrorType::UnableToTypeFunctionArguement => {
+                write!(f, "\n| Cannot type check function arguement")
+            }
+            ErrorType::CannotCheckReturnType => {
+                write!(f, "\n| Cannot type check return type of function")
+            }
             ErrorType::CannotTypeExpression => write!(f, "\n| Cannot type check this expression"),
-            ErrorType::CannotTypeCheckConditionalCondition => write!(f, "\n| Cannot type check the condition of this branch"),
-            ErrorType::ConditionalDoesNotHaveBooleanCondition => write!(f, "\n| Condition is not of a boolean type"),
-            ErrorType::MultipleBranchTypesInConditional => write!(f, "\n| Branches have divergent types"),
+            ErrorType::CannotTypeCheckConditionalCondition => {
+                write!(f, "\n| Cannot type check the condition of this branch")
+            }
+            ErrorType::ConditionalDoesNotHaveBooleanCondition => {
+                write!(f, "\n| Condition is not of a boolean type")
+            }
+            ErrorType::MultipleBranchTypesInConditional => {
+                write!(f, "\n| Branches have divergent types")
+            }
             ErrorType::MultipleTypesInVector => write!(f, "\n| Multiple types in this vector"),
+            ErrorType::CouldNotFindFunction(fname) => write!(
+                f,
+                "\n| Could not find function {fname} with correct arguements"
+            ),
         };
         _ = write!(
             f,
@@ -110,7 +127,6 @@ impl Display for SCADError {
 }
 
 impl SCADError {
-
     pub fn from_parse_error(parse_eror: Error<Rule>) -> Self {
         let (line, column) = match parse_eror.line_col {
             pest::error::LineColLocation::Pos(p) => p,
@@ -123,7 +139,7 @@ impl SCADError {
         }
     }
 
-	pub fn from_pair(error_type: ErrorType, pair: &pest::iterators::Pair<'_, Rule>) -> Self {
+    pub fn from_pair(error_type: ErrorType, pair: &pest::iterators::Pair<'_, Rule>) -> Self {
         let location_info = ErrorLocation::from_pair(pair);
 
         Self {
@@ -132,7 +148,7 @@ impl SCADError {
         }
     }
 
-	pub fn from_pid(error_type: ErrorType, pid: PoolID, pool: &ErrorPool) -> Self {
+    pub fn from_pid(error_type: ErrorType, pid: PoolID, pool: &ErrorPool) -> Self {
         let location_info = pool.get(pid).clone();
 
         Self {

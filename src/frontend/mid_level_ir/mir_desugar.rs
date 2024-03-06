@@ -202,6 +202,17 @@ pub fn rename_variable_reassignment(
                 pool_id,
             }
         }
+        SSAExpression::WhileLoop {
+            cond,
+            block,
+            e2,
+            pool_id,
+        } => SSAExpression::WhileLoop {
+            cond: rename_variable_reassignment_value(cond, tracker),
+            block: Box::new(rename_variable_reassignment(*block, tracker)),
+            e2: Box::new(rename_variable_reassignment(*e2, tracker)),
+            pool_id: pool_id,
+        },
     }
 }
 
@@ -432,6 +443,22 @@ pub fn rename_variables(
                 to,
                 block,
                 parallel,
+                e2,
+                pool_id,
+            }
+        }
+        SSAExpression::WhileLoop {
+            cond,
+            block,
+            e2,
+            pool_id,
+        } => {
+            let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
+            scoped_name.push("in_while".into());
+            let block = Box::new(rename_variables(*block, scoped_name.clone(), used_vars));
+            SSAExpression::WhileLoop {
+                cond: rename_variables_value(cond, scoped_name, used_vars),
+                block,
                 e2,
                 pool_id,
             }

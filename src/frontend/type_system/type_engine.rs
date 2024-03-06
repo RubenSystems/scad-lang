@@ -4,7 +4,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::frontend::{error::{ErrorPool, ErrorType, SCADError}, high_level_ir::ast_types::IntegerWidth};
+use crate::frontend::{
+    error::{ErrorPool, ErrorType, SCADError},
+    high_level_ir::ast_types::IntegerWidth,
+};
 
 use super::{
     context::Context,
@@ -22,7 +25,7 @@ pub enum WAlgoError {
 pub struct WAlgoInfo<'a> {
     pub retry_count: usize,
     pub req_type: Option<TIRType>,
-    pub pool : &'a ErrorPool
+    pub pool: &'a ErrorPool,
 }
 
 pub fn w_algo(
@@ -72,12 +75,22 @@ pub fn w_algo(
         )),
         TIRExpression::VariableReference { name, pool_id } => {
             let Some(tpe) = context.get_type_for_name(name) else {
-                return Err(SCADError::from_pid(ErrorType::UndefinedVariableReference, *pool_id, info.pool))
+                return Err(SCADError::from_pid(
+                    ErrorType::UndefinedVariableReference,
+                    *pool_id,
+                    info.pool,
+                ));
             };
 
             let tpe = match Some(tpe[info.retry_count].clone()) {
                 Some(a) => a,
-                None => return Err(SCADError::from_pid(ErrorType::UndefinedVariableReference, *pool_id, info.pool)),
+                None => {
+                    return Err(SCADError::from_pid(
+                        ErrorType::UndefinedVariableReference,
+                        *pool_id,
+                        info.pool,
+                    ))
+                }
             };
 
             Ok((Substitution::new(), instantiate(tpe.clone()), context))
@@ -107,16 +120,27 @@ pub fn w_algo(
                 match x.first().unwrap() {
                     TIRType::ForwardDecleration(_) => {
                         // context.remove_type_for_name(name);
-                    },
-                    TIRType::MonoType(m) => {
-                        let unification = unify(m, &t1).map_err(|_| SCADError::from_pid(ErrorType::CannotTypeExpression, *pool_id, info.pool))?;
-
-
-                        let substituted_val = unification.substitute(&TIRType::MonoType(t1.clone()));
-                        context.add_type_for_name(name.clone(), substituted_val);
-
                     }
-                    _  => return Err(SCADError::from_pid(ErrorType::UnsupportedVariableReassignment, *pool_id, info.pool))
+                    TIRType::MonoType(m) => {
+                        let unification = unify(m, &t1).map_err(|_| {
+                            SCADError::from_pid(
+                                ErrorType::CannotTypeExpression,
+                                *pool_id,
+                                info.pool,
+                            )
+                        })?;
+
+                        let substituted_val =
+                            unification.substitute(&TIRType::MonoType(t1.clone()));
+                        context.add_type_for_name(name.clone(), substituted_val);
+                    }
+                    _ => {
+                        return Err(SCADError::from_pid(
+                            ErrorType::UnsupportedVariableReassignment,
+                            *pool_id,
+                            info.pool,
+                        ))
+                    }
                 }
             }
 
@@ -142,7 +166,7 @@ pub fn w_algo(
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type,
-                    pool: info.pool
+                    pool: info.pool,
                 },
                 e2,
             ) else {
@@ -159,7 +183,7 @@ pub fn w_algo(
                     WAlgoInfo {
                         retry_count,
                         req_type: info.req_type.clone(),
-                        pool: info.pool
+                        pool: info.pool,
                     },
                     e1,
                 )?;
@@ -168,7 +192,7 @@ pub fn w_algo(
                     WAlgoInfo {
                         retry_count: info.retry_count,
                         req_type: info.req_type.clone(),
-                        pool: info.pool
+                        pool: info.pool,
                     },
                     e2,
                 ) else {
@@ -193,9 +217,7 @@ pub fn w_algo(
                             context,
                         ))
                     }
-                    Err(e) => {
-                        retry_count += 1
-                    }
+                    Err(e) => retry_count += 1,
                 };
             }
         }
@@ -210,7 +232,11 @@ pub fn w_algo(
             let tir_new_type = match arg_type_hint {
                 Some(s) => {
                     let TIRType::MonoType(a) = s.clone() else {
-                        return Err(SCADError::from_pid(ErrorType::UnableToTypeFunctionArguement, *pool_id, info.pool))
+                        return Err(SCADError::from_pid(
+                            ErrorType::UnableToTypeFunctionArguement,
+                            *pool_id,
+                            info.pool,
+                        ));
                     };
                     a
                 }
@@ -224,7 +250,7 @@ pub fn w_algo(
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type,
-                    pool: info.pool
+                    pool: info.pool,
                 },
                 e1,
             )?;
@@ -237,7 +263,11 @@ pub fn w_algo(
 
             if let Some(hnt) = ret_type_hint {
                 let TIRType::MonoType(_a) = hnt else {
-                    return Err(SCADError::from_pid(ErrorType::CannotCheckReturnType, *pool_id, info.pool))
+                    return Err(SCADError::from_pid(
+                        ErrorType::CannotCheckReturnType,
+                        *pool_id,
+                        info.pool,
+                    ));
                 };
 
                 // let rettype = get_rettype_of_application(x.clone());
@@ -265,7 +295,7 @@ pub fn w_algo(
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type.clone(),
-                    pool: info.pool
+                    pool: info.pool,
                 },
                 condition,
             ) else {
@@ -275,31 +305,39 @@ pub fn w_algo(
             // check to see if all condiitons are a bool
             match cond_mt {
                 MonoType::Variable(_) => {
-                    return Err(SCADError::from_pid(ErrorType::CannotTypeCheckConditionalCondition, *pool_id, info.pool))
+                    return Err(SCADError::from_pid(
+                        ErrorType::CannotTypeCheckConditionalCondition,
+                        *pool_id,
+                        info.pool,
+                    ))
                 }
                 MonoType::Application {
                     c,
                     dimensions: _,
                     types: _,
-                } if c == "bool" => {}
+                } if c == "i1" => {}
                 MonoType::Application {
                     c: _,
                     dimensions: _,
                     types: _,
-                } => return Err(SCADError::from_pid(ErrorType::ConditionalDoesNotHaveBooleanCondition, *pool_id, info.pool)),
+                } => {
+                    return Err(SCADError::from_pid(
+                        ErrorType::ConditionalDoesNotHaveBooleanCondition,
+                        *pool_id,
+                        info.pool,
+                    ))
+                }
             };
 
-            let Ok((if_sub, if_mt, if_ctx)) = w_algo(
+            let (if_sub, if_mt, if_ctx) = w_algo(
                 ctx.clone(),
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type.clone(),
-                    pool: info.pool
+                    pool: info.pool,
                 },
                 &if_block.1,
-            ) else {
-                todo!()
-            };
+            )?;
             let Ok((else_sub, else_mt, ctx)) = w_algo(
                 if_ctx,
                 WAlgoInfo {
@@ -313,7 +351,11 @@ pub fn w_algo(
             };
 
             if if_mt != else_mt {
-                return Err(SCADError::from_pid(ErrorType::MultipleBranchTypesInConditional, *pool_id, info.pool))
+                return Err(SCADError::from_pid(
+                    ErrorType::MultipleBranchTypesInConditional,
+                    *pool_id,
+                    info.pool,
+                ));
             }
 
             // let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(
@@ -338,7 +380,7 @@ pub fn w_algo(
                         WAlgoInfo {
                             retry_count: info.retry_count,
                             req_type: info.req_type.clone(),
-                            pool: info.pool
+                            pool: info.pool,
                         },
                         &val,
                     )
@@ -348,7 +390,11 @@ pub fn w_algo(
                 .map(TIRType::MonoType)
                 .collect();
             if !types.iter().all(|x| *x == types[0]) {
-                return Err(SCADError::from_pid(ErrorType::MultipleTypesInVector, *p, info.pool))
+                return Err(SCADError::from_pid(
+                    ErrorType::MultipleTypesInVector,
+                    *p,
+                    info.pool,
+                ));
             }
 
             let ret = cvt_scalar_to_vector(
@@ -367,6 +413,71 @@ pub fn w_algo(
             to_type,
             pool_id: _,
         } => Ok((Substitution::new(), to_type.clone(), context)),
+        TIRExpression::WhileLoop {
+            condition,
+            block,
+            e2,
+            pool_id,
+        } => {
+            let Ok((_, cond_mt, ctx)) = w_algo(
+                context.clone(),
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
+                condition,
+            ) else {
+                todo!()
+            };
+
+            match cond_mt {
+                MonoType::Variable(_) => {
+                    return Err(SCADError::from_pid(
+                        ErrorType::CannotTypeCheckConditionalCondition,
+                        *pool_id,
+                        info.pool,
+                    ))
+                }
+                MonoType::Application {
+                    c,
+                    dimensions: _,
+                    types: _,
+                } if c == "i1" => {}
+                MonoType::Application {
+                    c: _,
+                    dimensions: _,
+                    types: _,
+                } => {
+                    return Err(SCADError::from_pid(
+                        ErrorType::ConditionalDoesNotHaveBooleanCondition,
+                        *pool_id,
+                        info.pool,
+                    ))
+                }
+            };
+            let (_blk_sub, _blk_mt, _blk_ctx) = w_algo(
+                ctx.clone(),
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
+                &block,
+            )?;
+
+            let (s2, t2, contex) = w_algo(
+                context,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
+                e2,
+            )?;
+
+            Ok((s2, t2, contex))
+        }
     }
 }
 

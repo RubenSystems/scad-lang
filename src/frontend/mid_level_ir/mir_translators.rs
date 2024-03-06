@@ -232,5 +232,18 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 pool_id: pid,
             }
         }
+        Statement::WhileLoop(w, pid) => {
+            let gen = _k;
+            expression_l1_to_l2(
+                w.condition,
+                Box::new(move |cond| SSAExpression::WhileLoop {
+                    cond,
+                    block: Box::new(parse_statement_block(w.block)),
+                    e2: Box::new(gen(SSAValue::Nothing)),
+                    pool_id: pid,
+                }),
+            )
+            // SSAExpression::WhileLoop { cond: exp, block: (), e2: (), pool_id: () }
+        }
     }
 }

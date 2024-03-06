@@ -28,25 +28,19 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-    fn add(a: 10000xi32, b: 10000xi32, result: 10000xi32) i32 {
-        parallel i: 0 -> 10000 {
-            let mut a_v: i32 = @index.i32(c: a, idx: i);
-            let mut b_v: i32 = @index.i32(c: b, idx: i);
-            let mut addv: i32 = @add(a: a_v, b: b_v);
-            @set.i32(a: result, idx: i, c: addv);
-        };
 
-        if true {
-            0_i64
-        } else {
+        fn main() i32 {
+
+            let mut value: 1xi32 = @{0_i32};
+            while @lte(a: @index.i32(c: value, idx: 0_ii), b: 100_i32) {
+                let mut new_val: i32 = @add(a: @index.i32(c: value, idx: 0_ii), b: 1_i32);
+                @set.i32(c: value, i: 0_ii, v: new_val);
+                @print(v: @index.i32(c: value, idx: 0_ii));
+            };
+
+
             0_i32
         };
-    
-        10000_i32
-    };
-    
-    
-
 
     "#;
     let _counter: usize = 0;
@@ -90,7 +84,7 @@ fn main() -> std::io::Result<()> {
         WAlgoInfo {
             retry_count: 0,
             req_type: None,
-            pool: &location_pool
+            pool: &location_pool,
         },
         &tir,
     ) {
@@ -98,13 +92,13 @@ fn main() -> std::io::Result<()> {
         Err(e) => {
             print!("{e}");
             unreachable!()
-        },
+        }
     };
 
-    println!("\n\n{:#?}\n\n", context);
+    // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
-    _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
-    // println!("{tpe:?}");
+    println!("{code:#?}");
+    let _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
 
     Ok(())
 }

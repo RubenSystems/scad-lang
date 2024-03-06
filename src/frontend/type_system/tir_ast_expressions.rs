@@ -47,6 +47,12 @@ pub enum TIRExpression {
         else_block: (String, Box<TIRExpression>),
         pool_id: PoolID,
     },
+    WhileLoop {
+        condition: Box<TIRExpression>,
+        block: Box<TIRExpression>,
+        e2: Box<TIRExpression>,
+        pool_id: PoolID,
+    },
     Cast {
         from: Box<TIRExpression>,
         to_type: MonoType,

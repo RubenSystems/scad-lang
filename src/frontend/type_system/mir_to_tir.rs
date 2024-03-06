@@ -343,5 +343,24 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             // don't convert for loop as it does not have a type
             transform_mir_to_tir(*e2, ctx)
         }
+        SSAExpression::WhileLoop {
+            cond,
+            block,
+            e2,
+            pool_id,
+        } => {
+            let (cont, ctx) = transform_mir_to_tir(*e2, ctx);
+            let (cond, ctx) = transform_mir_value_to_tir(cond, ctx);
+            let (block, ctx) = transform_mir_to_tir(*block, ctx);
+            (
+                TIRExpression::WhileLoop {
+                    condition: Box::new(cond),
+                    block: Box::new(block),
+                    pool_id,
+                    e2: Box::new(cont),
+                },
+                ctx,
+            )
+        }
     }
 }

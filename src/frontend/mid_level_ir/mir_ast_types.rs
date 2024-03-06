@@ -77,7 +77,12 @@ pub enum SSAExpression {
         e2: Box<SSAExpression>,
         pool_id: PoolID,
     },
-
+    WhileLoop {
+        cond: SSAValue,
+        block: Box<SSAExpression>,
+        e2: Box<SSAExpression>,
+        pool_id: PoolID,
+    },
     Block(Box<SSAExpression>, PoolID),
 }
 
@@ -149,6 +154,17 @@ impl FailureCopy for SSAExpression {
                 to: to.fcopy(),
                 block: Box::new(block.fcopy()),
                 parallel: *parallel,
+                e2: Box::new(e2.fcopy()),
+                pool_id: *pool_id,
+            },
+            SSAExpression::WhileLoop {
+                cond,
+                block,
+                e2,
+                pool_id,
+            } => SSAExpression::WhileLoop {
+                cond: cond.fcopy(),
+                block: Box::new(block.fcopy()),
                 e2: Box::new(e2.fcopy()),
                 pool_id: *pool_id,
             },

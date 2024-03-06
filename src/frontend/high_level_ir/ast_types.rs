@@ -219,6 +219,21 @@ impl FailureCopy for ForLoop {
 }
 
 #[derive(Debug)]
+pub struct WhileLoop {
+    pub condition: Expression, // Condition for the block (boolean expression)
+    pub block: StatementBlock, // Block of statements to be executed if the condition is met
+}
+
+impl FailureCopy for WhileLoop {
+    fn fcopy(&self) -> Self {
+        Self {
+            condition: self.condition.fcopy(),
+            block: self.block.fcopy(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct ConditionalStatementBlock {
     pub condition: Expression, // Condition for the block (boolean expression)
     pub block: Block,          // Block of statements to be executed if the condition is met
@@ -338,7 +353,7 @@ pub enum Statement {
     FunctionDefinition(FunctionDefinition, PoolID),
     ProcedureDefinition(ProcedureDefinition, PoolID),
     ForLoop(ForLoop, PoolID),
-
+    WhileLoop(WhileLoop, PoolID),
     FunctionDecleration(FunctionDecleration, PoolID),
     ProcedureDecleration(ProcedureDecleration, PoolID),
     Block(Block, PoolID),
@@ -406,6 +421,7 @@ impl FailureCopy for Statement {
             }
             Statement::ProcedureDecleration(_, _) => todo!(),
             Statement::ForLoop(f, pid) => Statement::ForLoop(f.fcopy(), *pid),
+            Statement::WhileLoop(w, pid) => Statement::WhileLoop(w.fcopy(), *pid),
         }
     }
 }

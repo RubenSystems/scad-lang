@@ -13,7 +13,7 @@ use crate::frontend::{
 use super::ast_types::{
     Cast, ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, ForLoop,
     FunctionCall, FunctionDecleration, Identifier, Integer, IntegerWidth, ProcedureDefinition,
-    Statement, StatementBlock, Type, TypeName, VariableDecl, VariableName,
+    Statement, StatementBlock, Type, TypeName, VariableDecl, VariableName, WhileLoop,
 };
 
 // use super::ast_types::{Numeric, Expression};
@@ -462,6 +462,22 @@ pub fn parse_pair(
                 pid,
             ))
         }
+        Rule::while_loop => {
+            let pid = loc_pool.insert(&primary);
+            let mut it = primary.into_inner();
+            let Statement::Expression(cond, _) = parse(it.next().unwrap().into_inner(), loc_pool)?
+            else {
+                unreachable!("this should never happen")
+            };
+
+            Ok(Statement::WhileLoop(
+                WhileLoop {
+                    condition: cond,
+                    block: parse_statement_block(it.next().unwrap(), loc_pool)?,
+                },
+                pid,
+            ))
+        }
         Rule::boolean_t => {
             let pid = loc_pool.insert(&primary);
             Ok(Statement::Expression(
@@ -478,9 +494,7 @@ pub fn parse_pair(
                 pid,
             ))
         }
-        _ => {
-            Err(SCADError::from_pair(ErrorType::InvalidInput, &primary))
-        }
+        _ => Err(SCADError::from_pair(ErrorType::InvalidInput, &primary)),
     }
 }
 
@@ -506,5 +520,3 @@ pub fn parse(rules: Pairs<Rule>, loc_pool: &mut ErrorPool) -> Result<Statement, 
 
     Ok(x)
 }
-
-

@@ -3,6 +3,7 @@ pub mod frontend;
 pub mod testing;
 
 use crate::core::typedefs::create_types_for_core;
+use crate::frontend::error::SCADError;
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, Location, TypeQueryEngine};
@@ -15,7 +16,7 @@ use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::error::ErrorPool;
-use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
+use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIString, FFIType};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -24,6 +25,18 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
+
+#[repr(C)]
+pub union ProgramOut {
+    pub program: std::mem::ManuallyDrop<FFIHIRExpr>,
+    pub error: u32,
+}
+
+#[repr(C)]
+pub struct OutData {
+    pub compiled: bool,
+    pub program: ProgramOut,
+}
 
 #[no_mangle]
 pub extern "C" fn query(
@@ -42,7 +55,7 @@ pub extern "C" fn query(
 pub extern "C" fn compile(
     filename: *const c_char,
     context_query_engine: *mut *mut c_void,
-) -> std::mem::ManuallyDrop<FFIHIRExpr> {
+) -> OutData {
     let c_str = unsafe { CStr::from_ptr(filename) };
 
     // Convert CStr to a string slice
@@ -56,7 +69,17 @@ pub extern "C" fn compile(
     let mut program = String::new();
     file.read_to_string(&mut program).unwrap();
 
-    let parsed_result = SCADParser::parse(Rule::program, program.as_str()).unwrap();
+    let parsed_result = match SCADParser::parse(Rule::program, &program) {
+        Ok(p) => p,
+        Err(e) => {
+            let error = SCADError::from_parse_error(e);
+            println!("{error} ");
+            return OutData {
+                compiled: false,
+                program: ProgramOut { error: 0 },
+            };
+        }
+    };
 
     let mut location_pool = ErrorPool::new();
 
@@ -78,16 +101,24 @@ pub extern "C" fn compile(
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
 
-    let (_, _, context) = w_algo(
+    let (_, _, context) = match w_algo(
         ctx,
         WAlgoInfo {
             retry_count: 0,
             req_type: None,
-            pool: &location_pool
+            pool: &location_pool,
         },
         &tir,
-    )
-    .unwrap();
+    ) {
+        Ok(e) => e,
+        Err(e) => {
+            print!("{e}");
+            return OutData {
+                compiled: false,
+                program: ProgramOut { error: 0 },
+            };
+        }
+    };
 
     let code = unalive_vars(code, vec![]);
     let query_engine = TypeQueryEngine::new(context);
@@ -96,5 +127,10 @@ pub extern "C" fn compile(
     unsafe { *context_query_engine = qep as *mut c_void };
 
     let code_res = std::mem::ManuallyDrop::new(code);
-    std::mem::ManuallyDrop::new(ffi_ssa_expr(code_res))
+    OutData {
+        compiled: true,
+        program: ProgramOut {
+            program: std::mem::ManuallyDrop::new(ffi_ssa_expr(code_res)),
+        },
+    }
 }

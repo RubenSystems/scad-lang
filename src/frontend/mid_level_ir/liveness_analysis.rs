@@ -166,5 +166,20 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
                 pool_id,
             }
         }
+        SSAExpression::WhileLoop {
+            cond,
+            block,
+            e2,
+            pool_id,
+        } => {
+            let new_cont = unalive_vars(*e2, alive_vars.clone());
+            let new_block = unalive_vars(*block, alive_vars);
+            SSAExpression::WhileLoop {
+                cond,
+                block: Box::new(new_block),
+                e2: Box::new(new_cont),
+                pool_id: pool_id,
+            }
+        }
     }
 }

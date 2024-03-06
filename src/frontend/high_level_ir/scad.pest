@@ -20,7 +20,8 @@ COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 // Terminals
 
 widths = {
-	"8"
+	"1"
+	| "8"
 	| "16"
 	| "32"
 	| "64"
@@ -62,6 +63,11 @@ tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 for_loop = {
 	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ statement_block 
 }
+
+while_loop = {
+	"while" ~ expression ~ statement_block
+}
+
 parallel_loop = {
 	"parallel" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ statement_block 
 }
@@ -240,6 +246,7 @@ expression = {
 
 statement = { 
 	for_loop 
+	| while_loop
 	| parallel_loop
 	| var_decl
 	| expression 
