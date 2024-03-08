@@ -152,6 +152,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             parallel,
             e2,
             pool_id,
+            step,
         } => {
             let new_block = unalive_vars(*block, vec![iv.clone()]);
             let new_cont = unalive_vars(*e2, alive_vars);
@@ -164,6 +165,7 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
                 parallel,
                 e2: Box::new(new_cont),
                 pool_id,
+                step,
             }
         }
         SSAExpression::WhileLoop {
@@ -171,14 +173,17 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             block,
             e2,
             pool_id,
+            cond_expr,
         } => {
             let new_cont = unalive_vars(*e2, alive_vars.clone());
+            let new_cond = unalive_vars(*cond_expr, alive_vars.clone());
             let new_block = unalive_vars(*block, alive_vars);
             SSAExpression::WhileLoop {
                 cond,
+                cond_expr: Box::new(new_cond),
                 block: Box::new(new_block),
                 e2: Box::new(new_cont),
-                pool_id: pool_id,
+                pool_id,
             }
         }
     }

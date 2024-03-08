@@ -230,20 +230,34 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                 block: Box::new(parse_statement_block(f.block)),
                 e2: Box::new(gen(SSAValue::Nothing)),
                 pool_id: pid,
+                step: SSAValue::Integer {
+                    value: f.step as i128,
+                    width: IntegerWidth::IndexType,
+                    pool_id: pid,
+                },
             }
         }
         Statement::WhileLoop(w, pid) => {
             let gen = _k;
-            expression_l1_to_l2(
+            let tmp_var = generate_label_name();
+            let cond = SSAValue::VariableReference(tmp_var.clone(), pid);
+            let cond_expr = expression_l1_to_l2(
                 w.condition,
-                Box::new(move |cond| SSAExpression::WhileLoop {
-                    cond,
-                    block: Box::new(parse_statement_block(w.block)),
-                    e2: Box::new(gen(SSAValue::Nothing)),
+                Box::new(move |cond| SSAExpression::VariableDecl {
+                    name: tmp_var,
+                    vtype: None,
+                    e1: cond,
+                    e2: Box::new(SSAExpression::Noop),
                     pool_id: pid,
                 }),
-            )
-            // SSAExpression::WhileLoop { cond: exp, block: (), e2: (), pool_id: () }
+            );
+            SSAExpression::WhileLoop {
+                cond,
+                block: Box::new(parse_statement_block(w.block)),
+                e2: Box::new(gen(SSAValue::Nothing)),
+                pool_id: pid,
+                cond_expr: Box::new(cond_expr),
+            }
         }
     }
 }

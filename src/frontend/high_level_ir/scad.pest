@@ -61,7 +61,7 @@ tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 
 
 for_loop = {
-	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ statement_block 
+	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ ("step" ~ integer)? ~ statement_block 
 }
 
 while_loop = {
@@ -73,8 +73,8 @@ parallel_loop = {
 }
 
 // Variable declerations
-const_decl = { "let" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
-var_decl = { "let mut" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
+// const_decl = { "let" ~ identifier ~ ":" ~ type ~ "=" ~ expression }
+var_decl = { "let" ~ identifier ~ (":" ~ type)? ~ "=" ~ expression }
 
 // variable reassignement 
 var_reassignment = {identifier ~ "=" ~ expression}

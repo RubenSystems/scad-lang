@@ -29,19 +29,19 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
 
-        fn main() i32 {
+    fn main() i32 {
 
-            let mut value: 1xi32 = @{0_i32};
-            while @lte(a: @index.i32(c: value, idx: 0_ii), b: 100_i32) {
-                let mut new_val: i32 = @add(a: @index.i32(c: value, idx: 0_ii), b: 1_i32);
-                @set.i32(c: value, i: 0_ii, v: new_val);
-                @print(v: @index.i32(c: value, idx: 0_ii));
-            };
-
-
-            0_i32
+        let value = @{0_i32};
+        while @lte(a: @index.i32(c: value, idx: 0_ii), b: 100_i32) {
+            let new_val: i32 = @add(a: @index.i32(c: value, idx: 0_ii), b: 1_i32);
+            @set.i32(c: value, i: 0_ii, v: new_val);
+            @print(v: @index.i32(c: value, idx: 0_ii));
         };
-
+    
+    
+        0_i32
+    };
+    
     "#;
     let _counter: usize = 0;
     let mut location_pool = ErrorPool::new();
@@ -78,6 +78,7 @@ fn main() -> std::io::Result<()> {
     // println!("{:#?}", consumable_context);
     let consumable_context = create_types_for_core();
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
+    println!("{code:#?}");
 
     let (_, _, context) = match w_algo(
         ctx,
@@ -97,7 +98,6 @@ fn main() -> std::io::Result<()> {
 
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
-    println!("{code:#?}");
     let _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
 
     Ok(())

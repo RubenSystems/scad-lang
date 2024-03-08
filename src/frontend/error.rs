@@ -39,7 +39,7 @@ pub enum ErrorType {
     ParsingError,
     InvalidType,
     InvalidInput,
-    UndefinedVariableReference,
+    UndefinedVariableReference(String),
     UnsupportedVariableReassignment,
     UnableToTypeFunctionArguement,
     CannotCheckReturnType,
@@ -88,7 +88,9 @@ impl Display for SCADError {
             ErrorType::ParsingError => write!(f, "\n| Cannot parse input"),
             ErrorType::InvalidType => write!(f, "\n| Invalid input type"),
             ErrorType::InvalidInput => write!(f, "\n| Invalid input "),
-            ErrorType::UndefinedVariableReference => write!(f, "\n| Undefined variable reference "),
+            ErrorType::UndefinedVariableReference(name) => {
+                write!(f, "\n| Undefined variable reference: {name}")
+            }
             ErrorType::UnsupportedVariableReassignment => write!(
                 f,
                 "\n| You have attempted to redefine a varaible that already exists "

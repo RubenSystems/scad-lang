@@ -15,7 +15,7 @@ pub fn rename_variable_reassignment_value(
         SSAValue::VariableReference(v, pid) => SSAValue::VariableReference(
             match tracker.get(&v) {
                 Some(x) => format!("{v}.{x}"),
-                None => v,
+                None => format!("{v}.0"),
             },
             pid,
         ),
@@ -186,6 +186,7 @@ pub fn rename_variable_reassignment(
             parallel,
             e2,
             pool_id,
+            step,
         } => {
             let counter = *tracker.get(&iv).unwrap_or(&-1) + 1;
             tracker.insert(iv.clone(), counter);
@@ -200,6 +201,7 @@ pub fn rename_variable_reassignment(
                 parallel,
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),
                 pool_id,
+                step,
             }
         }
         SSAExpression::WhileLoop {
@@ -207,11 +209,13 @@ pub fn rename_variable_reassignment(
             block,
             e2,
             pool_id,
+            cond_expr,
         } => SSAExpression::WhileLoop {
             cond: rename_variable_reassignment_value(cond, tracker),
             block: Box::new(rename_variable_reassignment(*block, tracker)),
             e2: Box::new(rename_variable_reassignment(*e2, tracker)),
-            pool_id: pool_id,
+            cond_expr: Box::new(rename_variable_reassignment(*cond_expr, tracker)),
+            pool_id,
         },
     }
 }
@@ -431,6 +435,7 @@ pub fn rename_variables(
             parallel,
             e2,
             pool_id,
+            step,
         } => {
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
             scoped_name.push("in_for".into());
@@ -445,6 +450,7 @@ pub fn rename_variables(
                 parallel,
                 e2,
                 pool_id,
+                step,
             }
         }
         SSAExpression::WhileLoop {
@@ -452,8 +458,10 @@ pub fn rename_variables(
             block,
             e2,
             pool_id,
+            cond_expr,
         } => {
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
+            let cond_expr = Box::new(rename_variables(*cond_expr, scoped_name.clone(), used_vars));
             scoped_name.push("in_while".into());
             let block = Box::new(rename_variables(*block, scoped_name.clone(), used_vars));
             SSAExpression::WhileLoop {
@@ -461,6 +469,7 @@ pub fn rename_variables(
                 block,
                 e2,
                 pool_id,
+                cond_expr,
             }
         }
     }

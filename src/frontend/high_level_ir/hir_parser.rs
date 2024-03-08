@@ -130,12 +130,20 @@ fn parse_for_loop(
 
     loc_pool: &mut ErrorPool,
 ) -> Result<Statement, SCADError> {
+    println!("{lp:#?}");
     let pid = loc_pool.insert(&lp);
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
     let from = it.next().unwrap().as_str().parse::<usize>().unwrap();
     let to = it.next().unwrap().as_str().parse::<usize>().unwrap();
-    let block = parse_statement_block(it.next().unwrap(), loc_pool)?;
+    let nxt = it.next().unwrap();
+    let (step, block) = match nxt.as_rule() {
+        Rule::statement_block => (1_usize, parse_statement_block(nxt, loc_pool)?),
+        _ => (
+            nxt.as_str().parse::<usize>().unwrap(),
+            parse_statement_block(it.next().unwrap(), loc_pool)?,
+        ),
+    };
     Ok(Statement::ForLoop(
         ForLoop {
             variable: identifier,
@@ -143,6 +151,7 @@ fn parse_for_loop(
             to,
             block,
             parallel,
+            step,
         },
         pid,
     ))
@@ -278,27 +287,6 @@ pub fn parse_pair(
                 pid,
             ))
         }
-        Rule::const_decl => {
-            let pid = loc_pool.insert(&primary);
-            let mut p = primary.into_inner();
-            let identifier = VariableName(p.next().unwrap().as_str().into());
-            let stype_unparsed = p.next().unwrap();
-            let parsed_stype = parse_type(stype_unparsed, loc_pool);
-
-            let Statement::Expression(expression, _) =
-                parse(p.next().unwrap().into_inner(), loc_pool)?
-            else {
-                unreachable!("uncaught error from parser")
-            };
-            Ok(Statement::ConstDecl(
-                ConstDecl {
-                    identifier,
-                    subtype: parsed_stype?,
-                    expression,
-                },
-                pid,
-            ))
-        }
         Rule::for_loop => parse_for_loop(primary, false, loc_pool),
         Rule::parallel_loop => parse_for_loop(primary, true, loc_pool),
         Rule::tensor => {
@@ -314,14 +302,29 @@ pub fn parse_pair(
             Ok(Statement::Expression(Expression::Tensor(values, loc), loc))
         }
         Rule::var_decl => {
+            println!("{primary:#?}");
             let loc = loc_pool.insert(&primary);
             let mut p = primary.into_inner();
             let identifier = VariableName(p.next().unwrap().as_str().into());
             let stype_unparsed = p.next().unwrap();
-            let parsed_stype = parse_type(stype_unparsed, loc_pool);
+            let mut parsed_stype = None;
+            let mut used = false;
+            match stype_unparsed.as_rule() {
+                Rule::r#type => {
+                    parsed_stype = Some(parse_type(stype_unparsed.clone(), loc_pool)?);
+                    used = true
+                }
+                _ => {}
+            };
 
-            let Statement::Expression(expression, _) =
-                parse(p.next().unwrap().into_inner(), loc_pool)?
+            let Statement::Expression(expression, _) = parse(
+                if !used {
+                    stype_unparsed.into_inner()
+                } else {
+                    p.next().unwrap().into_inner()
+                },
+                loc_pool,
+            )?
             else {
                 unreachable!("uncaught error from parser")
             };
@@ -329,7 +332,7 @@ pub fn parse_pair(
             Ok(Statement::VariableDecl(
                 VariableDecl {
                     identifier,
-                    subtype: Some(parsed_stype?),
+                    subtype: parsed_stype,
                     expression,
                 },
                 loc,

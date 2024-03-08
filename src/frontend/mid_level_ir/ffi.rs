@@ -205,6 +205,7 @@ pub struct FFIHIRForLoop {
     iv: FFIString,
     start: FFIHIRValue,
     end: FFIHIRValue,
+    step: FFIHIRValue,
     block: *const FFIHIRExpr,
     parallel: bool,
     e2: *const FFIHIRExpr,
@@ -265,6 +266,7 @@ pub struct FFIExpressionBlock {
 #[derive(Clone, Copy)]
 pub struct FFIHIRWhile {
     condition: FFIHIRValue,
+    cond_expr: *const FFIHIRExpr,
     block: *const FFIHIRExpr,
     e2: *const FFIHIRExpr,
 }
@@ -362,6 +364,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             parallel,
             e2,
             pool_id: _,
+            step,
         } => FFIHIRExpr {
             tag: FFIHIRTag::ForLoop,
             value: ExpressionUnion {
@@ -374,6 +377,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
                     )))),
                     parallel,
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+                    step: ffi_ssa_val(std::mem::ManuallyDrop::new(step)),
                 },
             },
         },
@@ -382,6 +386,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             block,
             e2,
             pool_id: _,
+            cond_expr,
         } => FFIHIRExpr {
             tag: FFIHIRTag::WhileLoop,
             value: ExpressionUnion {
@@ -391,6 +396,9 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
                         *block,
                     )))),
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+                    cond_expr: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
+                        *cond_expr,
+                    )))),
                 },
             },
         },

@@ -49,6 +49,7 @@ pub enum TIRExpression {
     },
     WhileLoop {
         condition: Box<TIRExpression>,
+        cond_expr: Box<TIRExpression>,
         block: Box<TIRExpression>,
         e2: Box<TIRExpression>,
         pool_id: PoolID,

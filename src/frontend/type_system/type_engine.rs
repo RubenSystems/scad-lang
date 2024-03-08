@@ -76,7 +76,7 @@ pub fn w_algo(
         TIRExpression::VariableReference { name, pool_id } => {
             let Some(tpe) = context.get_type_for_name(name) else {
                 return Err(SCADError::from_pid(
-                    ErrorType::UndefinedVariableReference,
+                    ErrorType::UndefinedVariableReference(name.clone()),
                     *pool_id,
                     info.pool,
                 ));
@@ -86,7 +86,7 @@ pub fn w_algo(
                 Some(a) => a,
                 None => {
                     return Err(SCADError::from_pid(
-                        ErrorType::UndefinedVariableReference,
+                        ErrorType::UndefinedVariableReference(name.clone()),
                         *pool_id,
                         info.pool,
                     ))
@@ -161,7 +161,7 @@ pub fn w_algo(
                 );
             }
 
-            let Ok((s2, t2, sub_context)) = w_algo(
+            let (s2, t2, sub_context) = w_algo(
                 sub_context,
                 WAlgoInfo {
                     retry_count: info.retry_count,
@@ -169,9 +169,7 @@ pub fn w_algo(
                     pool: info.pool,
                 },
                 e2,
-            ) else {
-                todo!()
-            };
+            )?;
 
             Ok((s2.merge(&s1), t2, sub_context))
         }
@@ -187,7 +185,7 @@ pub fn w_algo(
                     },
                     e1,
                 )?;
-                let Ok((s2, t2, context)) = w_algo(
+                let (s2, t2, context) = w_algo(
                     context.applying_substitution(&s1),
                     WAlgoInfo {
                         retry_count: info.retry_count,
@@ -195,9 +193,7 @@ pub fn w_algo(
                         pool: info.pool,
                     },
                     e2,
-                ) else {
-                    todo!()
-                };
+                )?;
 
                 let b = generate_type_name();
                 let s3 = unify(
@@ -418,18 +414,27 @@ pub fn w_algo(
             block,
             e2,
             pool_id,
+            cond_expr,
         } => {
-            let Ok((_, cond_mt, ctx)) = w_algo(
+            let (_, cond_expr_mt, cond_ctx) = w_algo(
                 context.clone(),
                 WAlgoInfo {
                     retry_count: info.retry_count,
                     req_type: info.req_type.clone(),
                     pool: info.pool,
                 },
+                &cond_expr,
+            )?;
+
+            let (_, cond_mt, ctx) = w_algo(
+                cond_ctx,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
                 condition,
-            ) else {
-                todo!()
-            };
+            )?;
 
             match cond_mt {
                 MonoType::Variable(_) => {

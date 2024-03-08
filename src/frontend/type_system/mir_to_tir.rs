@@ -339,6 +339,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             parallel: _,
             e2,
             pool_id: _,
+            step,
         } => {
             // don't convert for loop as it does not have a type
             transform_mir_to_tir(*e2, ctx)
@@ -348,7 +349,9 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             block,
             e2,
             pool_id,
+            cond_expr,
         } => {
+            let (cond_expr, ctx) = transform_mir_to_tir(*cond_expr, ctx);
             let (cont, ctx) = transform_mir_to_tir(*e2, ctx);
             let (cond, ctx) = transform_mir_value_to_tir(cond, ctx);
             let (block, ctx) = transform_mir_to_tir(*block, ctx);
@@ -358,6 +361,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
                     block: Box::new(block),
                     pool_id,
                     e2: Box::new(cont),
+                    cond_expr: Box::new(cond_expr),
                 },
                 ctx,
             )
