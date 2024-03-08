@@ -48,6 +48,7 @@ pub enum ErrorType {
     ConditionalDoesNotHaveBooleanCondition,
     MultipleBranchTypesInConditional,
     MultipleTypesInVector,
+    InvalidUnroll,
     CouldNotFindFunction(String),
 }
 
@@ -115,6 +116,10 @@ impl Display for SCADError {
             ErrorType::CouldNotFindFunction(fname) => write!(
                 f,
                 "\n| Could not find function {fname} with correct arguements"
+            ),
+            ErrorType::InvalidUnroll => write!(
+                f,
+                "\n| Could not unroll for loop with provided unroll factor"
             ),
         };
         _ = write!(

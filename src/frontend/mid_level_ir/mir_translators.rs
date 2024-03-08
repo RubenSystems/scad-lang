@@ -7,7 +7,8 @@ use crate::frontend::{
 use super::{
     mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
     parsers::{
-        generate_label_name, generate_register_name, parse_expression_block, parse_statement_block,
+        generate_label_name, generate_register_name, parse_expression_block, parse_for_block,
+        parse_statement_block,
     },
 };
 
@@ -215,6 +216,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         Statement::ForLoop(f, pid) => {
             let gen = _k;
             SSAExpression::ForLoop {
+                block: Box::new(parse_for_block(f.block.fcopy(), f.unroll, f.fcopy(), pid)),
                 iv: f.variable.0,
                 from: SSAValue::Integer {
                     value: f.from as i128,
@@ -222,16 +224,15 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                     pool_id: pid,
                 },
                 to: SSAValue::Integer {
-                    value: f.to as i128,
+                    value: (f.to / f.unroll) as i128,
                     width: IntegerWidth::IndexType,
                     pool_id: pid,
                 },
                 parallel: f.parallel,
-                block: Box::new(parse_statement_block(f.block)),
                 e2: Box::new(gen(SSAValue::Nothing)),
                 pool_id: pid,
                 step: SSAValue::Integer {
-                    value: f.step as i128,
+                    value: (f.step + f.unroll) as i128,
                     width: IntegerWidth::IndexType,
                     pool_id: pid,
                 },

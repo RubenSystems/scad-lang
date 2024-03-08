@@ -10,15 +10,17 @@
 ///
 //===----------------------------------------------------------------------===//
 use crate::frontend::high_level_ir::ast_types::{
-    Block, ExpressionBlock, Statement, StatementBlock,
+    Block, ExpressionBlock, ForLoop, Statement, StatementBlock,
 };
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
+use super::mir_ast_types::SSAValue;
 use super::{
     mir_ast_types::SSAExpression,
     mir_translators::{expression_l1_to_l2, statement_l1_to_l2, ContinuationFunction},
 };
+use crate::frontend::high_level_ir::ast_types::IntegerWidth;
 
 static mut CURRENT_TMP_INDEX: u128 = 0;
 
@@ -104,6 +106,59 @@ pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> 
 pub fn parse_statement_block(blk: StatementBlock) -> SSAExpression {
     match blk.statements.as_slice() {
         [head] => statement_l1_to_l2(head.fcopy(), Box::new(|_| SSAExpression::Noop)),
+        [head, rest @ ..] => {
+            let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
+            statement_l1_to_l2(
+                head.fcopy(),
+                Box::new(|_| {
+                    let new_blk = StatementBlock {
+                        statements: rest_clone,
+                    };
+                    parse_statement_block(new_blk)
+                }),
+            )
+        }
+        [] => SSAExpression::Noop,
+    }
+}
+
+pub fn parse_for_block(
+    blk: StatementBlock,
+    unroll_count: usize,
+    lp: ForLoop,
+    pid: usize,
+) -> SSAExpression {
+    match blk.statements.as_slice() {
+        [head] => {
+            // last statement, send it to be unrolled
+            statement_l1_to_l2(
+                head.fcopy(),
+                Box::new(move |_| {
+                    if unroll_count == 0 {
+                        SSAExpression::Noop
+                    } else {
+                        SSAExpression::VariableDecl {
+                            name: lp.variable.0.clone(),
+                            vtype: None,
+                            e1: SSAValue::FunctionCall {
+                                name: "@add".into(),
+                                parameters: vec![
+                                    SSAValue::Integer {
+                                        value: lp.step as i128,
+                                        width: IntegerWidth::IndexType,
+                                        pool_id: pid,
+                                    },
+                                    SSAValue::VariableReference(lp.variable.0.clone(), pid),
+                                ],
+                                pool_id: pid,
+                            },
+                            e2: Box::new(parse_for_block(blk, unroll_count - 1, lp, pid)),
+                            pool_id: pid,
+                        }
+                    }
+                }),
+            )
+        }
         [head, rest @ ..] => {
             let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
             statement_l1_to_l2(

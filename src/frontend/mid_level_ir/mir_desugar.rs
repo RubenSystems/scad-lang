@@ -118,13 +118,14 @@ pub fn rename_variable_reassignment(
             e2,
             pool_id,
         } => {
+            let e1 = rename_variable_reassignment_value(e1, tracker);
             let counter = *tracker.get(&name).unwrap_or(&-1) + 1;
             tracker.insert(name.clone(), counter);
 
             SSAExpression::VariableDecl {
                 name: format!("{name}.{counter}"),
                 vtype,
-                e1: rename_variable_reassignment_value(e1, tracker),
+                e1,
                 e2: Box::new(rename_variable_reassignment(*e2, tracker)),
                 pool_id,
             }

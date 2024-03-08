@@ -203,6 +203,7 @@ pub struct ForLoop {
     pub from: usize,
     pub to: usize,
     pub step: usize,
+    pub unroll: usize,
     pub block: StatementBlock, // Block of statements to be executed if the condition is met
     pub parallel: bool,
 }
@@ -216,6 +217,7 @@ impl FailureCopy for ForLoop {
             block: self.block.fcopy(),
             parallel: self.parallel,
             step: self.step,
+            unroll: self.unroll,
         }
     }
 }

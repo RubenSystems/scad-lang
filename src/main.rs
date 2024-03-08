@@ -31,16 +31,13 @@ fn main() -> std::io::Result<()> {
 
     fn main() i32 {
 
-        let value = @{0_i32};
-        while @lte(a: @index.i32(c: value, idx: 0_ii), b: 100_i32) {
-            let new_val: i32 = @add(a: @index.i32(c: value, idx: 0_ii), b: 1_i32);
-            @set.i32(c: value, i: 0_ii, v: new_val);
-            @print(v: @index.i32(c: value, idx: 0_ii));
+        for i: 0->100 unroll 2 {
+            @print(v: i -> i32);
         };
-    
     
         0_i32
     };
+    
     
     "#;
     let _counter: usize = 0;

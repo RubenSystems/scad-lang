@@ -130,20 +130,47 @@ fn parse_for_loop(
 
     loc_pool: &mut ErrorPool,
 ) -> Result<Statement, SCADError> {
-    println!("{lp:#?}");
+    let unroll_error = SCADError::from_pair(ErrorType::InvalidUnroll, &lp);
     let pid = loc_pool.insert(&lp);
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
     let from = it.next().unwrap().as_str().parse::<usize>().unwrap();
     let to = it.next().unwrap().as_str().parse::<usize>().unwrap();
-    let nxt = it.next().unwrap();
-    let (step, block) = match nxt.as_rule() {
-        Rule::statement_block => (1_usize, parse_statement_block(nxt, loc_pool)?),
-        _ => (
-            nxt.as_str().parse::<usize>().unwrap(),
-            parse_statement_block(it.next().unwrap(), loc_pool)?,
-        ),
-    };
+    let mut nxt = it.next().unwrap();
+    let mut step = None;
+    let mut unroll = None;
+
+    match nxt.as_rule() {
+        Rule::step => {
+            step = Some(nxt.into_inner().as_str().parse::<usize>().unwrap());
+            nxt = it.next().unwrap()
+        }
+        _ => {}
+    }
+
+    match nxt.as_rule() {
+        Rule::unroll => {
+            let factor = nxt.into_inner().as_str().parse::<usize>().unwrap();
+            if to % factor != 0 {
+                return Err(unroll_error);
+            }
+            unroll = Some(factor - 1);
+
+            nxt = it.next().unwrap()
+        }
+        _ => {}
+    }
+
+    let block = parse_statement_block(nxt, loc_pool)?;
+
+    // let (step, block) = match nxt.as_rule() {
+    //     Rule::statement_block => (1_usize, parse_statement_block(nxt, loc_pool)?),
+    //     _ => (
+    //         nxt.as_str().parse::<usize>().unwrap(),
+
+    //         parse_statement_block(it.next().unwrap(), loc_pool)?,
+    //     ),
+    // };
     Ok(Statement::ForLoop(
         ForLoop {
             variable: identifier,
@@ -151,7 +178,8 @@ fn parse_for_loop(
             to,
             block,
             parallel,
-            step,
+            step: step.unwrap_or(1),
+            unroll: unroll.unwrap_or(1),
         },
         pid,
     ))

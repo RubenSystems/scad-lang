@@ -60,8 +60,10 @@ literal = _{
 tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 
 
+step = {"step" ~ integer}
+unroll = {"unroll" ~ integer}
 for_loop = {
-	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ ("step" ~ integer)? ~ statement_block 
+	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ step? ~ unroll? ~ statement_block 
 }
 
 while_loop = {
