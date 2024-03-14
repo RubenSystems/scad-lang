@@ -150,11 +150,13 @@ fn parse_for_loop(
 
     match nxt.as_rule() {
         Rule::unroll => {
-            let factor = nxt.into_inner().as_str().parse::<usize>().unwrap();
-            if to % factor != 0 {
-                return Err(unroll_error);
-            }
-            unroll = Some(factor - 1);
+            let factor = nxt
+                .into_inner()
+                .as_str()
+                .parse::<usize>()
+                .map_err(|_| unroll_error)?;
+
+            unroll = Some(factor);
 
             nxt = it.next().unwrap()
         }
@@ -330,10 +332,9 @@ pub fn parse_pair(
             Ok(Statement::Expression(Expression::Tensor(values, loc), loc))
         }
         Rule::var_decl => {
-            println!("{primary:#?}");
             let loc = loc_pool.insert(&primary);
             let mut p = primary.into_inner();
-            let identifier = VariableName(p.next().unwrap().as_str().into());
+            let identifier = VariableName(p.next().unwrap().as_str().trim().into());
             let stype_unparsed = p.next().unwrap();
             let mut parsed_stype = None;
             let mut used = false;

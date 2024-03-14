@@ -41,27 +41,20 @@ dot_identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_" | ".")*) }
 function_call_identifier = { dot_identifier | "@" ~ dot_identifier }
 boolean_t = { "true" | "false" }
 
-
-
-
-// type
-// type = _{ array_type | simple_type }
-// array_type = { "[" ~ type ~ ";" ~ integer ~ "]" }
 type = { (integer ~ "x")* ~ simple_type  }
 simple_type = _{ identifier }
-
-
-
 
 literal = _{
 	integer_literal
 	| float_literal
 }
-tensor = { "@{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 
+tensor = { "{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 
 step = {"step" ~ integer}
+
 unroll = {"unroll" ~ integer}
+
 for_loop = {
 	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ step? ~ unroll? ~ statement_block 
 }

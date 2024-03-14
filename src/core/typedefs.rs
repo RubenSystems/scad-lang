@@ -153,6 +153,35 @@ pub fn create_types_for_core() -> Context {
         );
     });
 
+    consumable_context.add_type_for_name(
+        format!("@empty"),
+        TIRType::PolyType(PolyType::TypeQuantifier {
+            alpha: "@empty.type".into(),
+            sigma: Box::new(PolyType::TypeQuantifier {
+                alpha: "@empty.result".into(),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable("@empty.type".into()),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Application {
+                                    c: "ii".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                                MonoType::Variable("@empty.result".into()),
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        }),
+    );
+
     vec![8, 16, 32, 64].into_iter().for_each(|x| {
         consumable_context.add_type_for_name(
             format!("@set.i{x}"),

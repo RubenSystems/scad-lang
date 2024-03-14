@@ -224,7 +224,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                     pool_id: pid,
                 },
                 to: SSAValue::Integer {
-                    value: (f.to / f.unroll) as i128,
+                    value: f.to as i128,
                     width: IntegerWidth::IndexType,
                     pool_id: pid,
                 },
