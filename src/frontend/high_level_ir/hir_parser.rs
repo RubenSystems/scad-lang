@@ -181,7 +181,7 @@ fn parse_for_loop(
             block,
             parallel,
             step: step.unwrap_or(1),
-            unroll: unroll.unwrap_or(1),
+            unroll: unroll.unwrap_or(0),
         },
         pid,
     ))
