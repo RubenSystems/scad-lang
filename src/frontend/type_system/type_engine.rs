@@ -213,7 +213,7 @@ pub fn w_algo(
                             context,
                         ))
                     }
-                    Err(e) => retry_count += 1,
+                    Err(_e) => retry_count += 1,
                 };
             }
         }
@@ -416,7 +416,7 @@ pub fn w_algo(
             pool_id,
             cond_expr,
         } => {
-            let (_, cond_expr_mt, cond_ctx) = w_algo(
+            let (_, _cond_expr_mt, cond_ctx) = w_algo(
                 context.clone(),
                 WAlgoInfo {
                     retry_count: info.retry_count,
@@ -499,7 +499,7 @@ pub fn w_algo(
                 from,
             )?;
 
-            let (_, to_mt, ctx) = w_algo(
+            let (_, to_mt, _ctx) = w_algo(
                 ctx,
                 WAlgoInfo {
                     retry_count: info.retry_count,

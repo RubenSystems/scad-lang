@@ -6,7 +6,7 @@ use crate::core::typedefs::create_types_for_core;
 use crate::frontend::error::SCADError;
 use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, Location, TypeQueryEngine};
+use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, TypeQueryEngine};
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
@@ -16,7 +16,7 @@ use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
 use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::error::ErrorPool;
-use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIString, FFIType};
+use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;

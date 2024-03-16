@@ -339,7 +339,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             parallel: _,
             e2,
             pool_id,
-            step,
+            step: _,
         } => {
             // don't convert for loop as it does not have a type
             (

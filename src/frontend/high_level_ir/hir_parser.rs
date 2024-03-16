@@ -11,8 +11,8 @@ use crate::frontend::{
 };
 
 use super::ast_types::{
-    Cast, ConditionalExpressionBlock, ConstDecl, Expression, ExpressionBlock, Float, ForLoop,
-    FunctionCall, FunctionDecleration, Identifier, Integer, IntegerWidth, ProcedureDefinition,
+    Cast, ConditionalExpressionBlock, Expression, ExpressionBlock, Float, ForLoop,
+    FunctionCall, FunctionDecleration, Identifier, Integer, IntegerWidth,
     Statement, StatementBlock, Type, TypeName, VariableDecl, VariableName, WhileLoop,
 };
 
@@ -130,7 +130,7 @@ fn parse_for_loop(
 
     loc_pool: &mut ErrorPool,
 ) -> Result<Statement, SCADError> {
-    let unroll_error = SCADError::from_pair(ErrorType::InvalidUnroll, &lp);
+    let _unroll_error = SCADError::from_pair(ErrorType::InvalidUnroll, &lp);
     let pid = loc_pool.insert(&lp);
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());

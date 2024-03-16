@@ -90,7 +90,7 @@ fn main() -> std::io::Result<()> {
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
     println!("{code:#?}");
 
-    let (_, _, context) = match w_algo(
+    let (_, _, _context) = match w_algo(
         ctx,
         WAlgoInfo {
             retry_count: 0,
