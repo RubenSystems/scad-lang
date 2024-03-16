@@ -134,27 +134,25 @@ fn parse_for_loop(
     let pid = loc_pool.insert(&lp);
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
-    let from = it.next().unwrap().as_str().parse::<usize>().unwrap();
-    let to = it.next().unwrap().as_str().parse::<usize>().unwrap();
+    let from = parse_pair(it.next().unwrap(), loc_pool)?;
+    let to = parse_pair(it.next().unwrap(), loc_pool)?;
     let mut nxt = it.next().unwrap();
     let mut step = None;
     let mut unroll = None;
 
     match nxt.as_rule() {
         Rule::step => {
-            step = Some(nxt.into_inner().as_str().parse::<usize>().unwrap());
+            let factor = nxt.into_inner().as_str().parse::<usize>().unwrap();
+
+            step = Some(factor);
+
             nxt = it.next().unwrap()
         }
         _ => {}
     }
-
     match nxt.as_rule() {
         Rule::unroll => {
-            let factor = nxt
-                .into_inner()
-                .as_str()
-                .parse::<usize>()
-                .map_err(|_| unroll_error)?;
+            let factor = nxt.into_inner().as_str().parse::<usize>().unwrap();
 
             unroll = Some(factor);
 
@@ -164,6 +162,10 @@ fn parse_for_loop(
     }
 
     let block = parse_statement_block(nxt, loc_pool)?;
+
+    let (Statement::Expression(f, _), Statement::Expression(t, _)) = (from, to) else {
+        unreachable!()
+    };
 
     // let (step, block) = match nxt.as_rule() {
     //     Rule::statement_block => (1_usize, parse_statement_block(nxt, loc_pool)?),
@@ -176,8 +178,8 @@ fn parse_for_loop(
     Ok(Statement::ForLoop(
         ForLoop {
             variable: identifier,
-            from,
-            to,
+            from: Box::new(f),
+            to: Box::new(t),
             block,
             parallel,
             step: step.unwrap_or(1),

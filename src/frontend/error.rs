@@ -49,6 +49,7 @@ pub enum ErrorType {
     MultipleBranchTypesInConditional,
     MultipleTypesInVector,
     InvalidUnroll,
+    ForLoopInductionVariablesMustBeIndexType,
     CouldNotFindFunction(String),
 }
 
@@ -120,6 +121,10 @@ impl Display for SCADError {
             ErrorType::InvalidUnroll => write!(
                 f,
                 "\n| Could not unroll for loop with provided unroll factor"
+            ),
+            ErrorType::ForLoopInductionVariablesMustBeIndexType => write!(
+                f,
+                "\n| For loop induction variables (from -> to) must be ii type. Try casting."
             ),
         };
         _ = write!(

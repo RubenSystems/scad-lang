@@ -215,28 +215,34 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         Statement::ProcedureDecleration(_, _) => todo!(),
         Statement::ForLoop(f, pid) => {
             let gen = _k;
-            SSAExpression::ForLoop {
-                block: Box::new(parse_for_block(f.block.fcopy(), f.unroll, f.fcopy(), pid)),
-                iv: f.variable.0,
-                from: SSAValue::Integer {
-                    value: f.from as i128,
-                    width: IntegerWidth::IndexType,
-                    pool_id: pid,
-                },
-                to: SSAValue::Integer {
-                    value: f.to as i128,
-                    width: IntegerWidth::IndexType,
-                    pool_id: pid,
-                },
-                parallel: f.parallel,
-                e2: Box::new(gen(SSAValue::Nothing)),
-                pool_id: pid,
-                step: SSAValue::Integer {
-                    value: (f.step + f.unroll) as i128,
-                    width: IntegerWidth::IndexType,
-                    pool_id: pid,
-                },
-            }
+
+            expression_l1_to_l2(
+                f.from.fcopy(),
+                Box::new(move |from_var| {
+                    expression_l1_to_l2(
+                        f.to.fcopy(),
+                        Box::new(move |to_var| SSAExpression::ForLoop {
+                            block: Box::new(parse_for_block(
+                                f.block.fcopy(),
+                                f.unroll,
+                                f.fcopy(),
+                                pid,
+                            )),
+                            iv: f.variable.0,
+                            from: from_var,
+                            to: to_var,
+                            parallel: f.parallel,
+                            e2: Box::new(gen(SSAValue::Nothing)),
+                            pool_id: pid,
+                            step: SSAValue::Integer {
+                                value: (f.step + f.unroll) as i128,
+                                width: IntegerWidth::IndexType,
+                                pool_id: pid,
+                            },
+                        }),
+                    )
+                }),
+            )
         }
         Statement::WhileLoop(w, pid) => {
             let gen = _k;

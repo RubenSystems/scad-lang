@@ -483,6 +483,66 @@ pub fn w_algo(
 
             Ok((s2, t2, contex))
         }
+        TIRExpression::ForLoop {
+            from,
+            to,
+            e2,
+            pool_id,
+        } => {
+            let (_, from_mt, ctx) = w_algo(
+                context.clone(),
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
+                from,
+            )?;
+
+            let (_, to_mt, ctx) = w_algo(
+                ctx,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
+                to,
+            )?;
+
+            match (from_mt, to_mt) {
+                (
+                    MonoType::Application {
+                        c,
+                        dimensions: _,
+                        types: _,
+                    },
+                    MonoType::Application {
+                        c: c1,
+                        dimensions: _,
+                        types: _,
+                    },
+                ) if c == "ii" && c1 == "ii" => {}
+                _ => {
+                    return Err(SCADError::from_pid(
+                        ErrorType::ForLoopInductionVariablesMustBeIndexType,
+                        *pool_id,
+                        info.pool,
+                    ))
+                }
+            };
+
+            let (s1, rest_mt, ctx) = w_algo(
+                context,
+                WAlgoInfo {
+                    retry_count: info.retry_count,
+                    req_type: info.req_type.clone(),
+                    pool: info.pool,
+                },
+                e2,
+            )?;
+
+            Ok((s1, rest_mt, ctx))
+        }
     }
 }
 

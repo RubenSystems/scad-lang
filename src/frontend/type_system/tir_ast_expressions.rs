@@ -54,6 +54,12 @@ pub enum TIRExpression {
         e2: Box<TIRExpression>,
         pool_id: PoolID,
     },
+    ForLoop {
+        from: Box<TIRExpression>,
+        to: Box<TIRExpression>,
+        e2: Box<TIRExpression>,
+        pool_id: PoolID,
+    },
     Cast {
         from: Box<TIRExpression>,
         to_type: MonoType,

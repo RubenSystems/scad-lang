@@ -200,8 +200,8 @@ impl FailureCopy for ConditionalExpressionBlock {
 #[derive(Debug)]
 pub struct ForLoop {
     pub variable: Identifier, // Condition for the block (boolean expression)
-    pub from: usize,
-    pub to: usize,
+    pub from: Box<Expression>,
+    pub to: Box<Expression>,
     pub step: usize,
     pub unroll: usize,
     pub block: StatementBlock, // Block of statements to be executed if the condition is met
@@ -212,8 +212,8 @@ impl FailureCopy for ForLoop {
     fn fcopy(&self) -> Self {
         Self {
             variable: Identifier(self.variable.0.clone()),
-            from: self.from,
-            to: self.to,
+            from: Box::new(self.from.fcopy()),
+            to: Box::new(self.to.fcopy()),
             block: self.block.fcopy(),
             parallel: self.parallel,
             step: self.step,

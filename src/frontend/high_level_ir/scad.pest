@@ -56,7 +56,7 @@ step = {"step" ~ integer}
 unroll = {"unroll" ~ integer}
 
 for_loop = {
-	"for" ~ identifier ~ ":" ~ integer ~ "->" ~ integer ~ step? ~ unroll? ~ statement_block 
+	"for" ~ identifier ~ ":" ~ expression ~ "->" ~ expression ~ step? ~ unroll? ~ statement_block 
 }
 
 while_loop = {

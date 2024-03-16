@@ -333,16 +333,23 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
         SSAExpression::Yield { val, pool_id: _ } => transform_mir_value_to_tir(val, ctx),
         SSAExpression::ForLoop {
             iv: _,
-            from: _,
-            to: _,
+            from,
+            to,
             block: _,
             parallel: _,
             e2,
-            pool_id: _,
+            pool_id,
             step,
         } => {
             // don't convert for loop as it does not have a type
-            transform_mir_to_tir(*e2, ctx)
+            (TIRExpression::ForLoop {
+                from: Box::new(transform_mir_value_to_tir(from, ctx.clone()).0),
+                to:  Box::new(transform_mir_value_to_tir(to, ctx.clone()).0),
+                e2: Box::new(transform_mir_to_tir(*e2, ctx.clone()).0),
+                pool_id,
+            }, ctx)
+
+            
         }
         SSAExpression::WhileLoop {
             cond,

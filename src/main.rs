@@ -30,10 +30,10 @@ fn main() -> std::io::Result<()> {
     let test_prog = r#"
 
     fn main() i32 {
-        let x: 3xi32 = @empty(value: 0_i32, size: 3_ii);
-
-        let y = @index.i32(container: x, index: 0_ii);
-        @print(a: y);
+        
+        for i: 0_i32 -> 100_ii {
+            @print(val: i -> i32);
+        };
     
         0_i32
     };
