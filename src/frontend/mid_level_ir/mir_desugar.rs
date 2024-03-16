@@ -189,6 +189,8 @@ pub fn rename_variable_reassignment(
             pool_id,
             step,
         } => {
+            let from = rename_variable_reassignment_value(from, tracker);
+            let to = rename_variable_reassignment_value(to, tracker);
             let counter = *tracker.get(&iv).unwrap_or(&-1) + 1;
             tracker.insert(iv.clone(), counter);
             let new_block = rename_variable_reassignment(*block, tracker);
@@ -438,6 +440,8 @@ pub fn rename_variables(
             pool_id,
             step,
         } => {
+            let from = rename_variables_value(from, scoped_name.clone(), used_vars);
+            let to = rename_variables_value(to, scoped_name.clone(), used_vars);
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
             scoped_name.push("in_for".into());
             let new_iv = scoped_rename(&iv, &scoped_name);
