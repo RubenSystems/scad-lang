@@ -2,6 +2,13 @@ use super::mir_ast_types::{SSAExpression, SSAValue};
 
 use crate::frontend::mid_level_ir::parsers::generate_register_name;
 
+fn requires_tracking(val: &SSAValue) -> bool {
+    match val {
+        SSAValue::Tensor(_, _) => true,
+        _ => false
+    }
+}
+
 fn get_alive_vars(val: &SSAValue) -> Vec<String> {
     match val {
         SSAValue::VariableReference(n, _) => vec![n.clone()],
@@ -72,7 +79,10 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             e2,
             pool_id,
         } => {
-            alive_vars.push(name.clone());
+            if requires_tracking(&e1) {
+                alive_vars.push(name.clone());
+            }
+            
 
             let new_cont = unalive_vars(*e2, alive_vars);
             SSAExpression::VariableDecl {

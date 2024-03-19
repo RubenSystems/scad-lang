@@ -74,7 +74,6 @@ fn main() -> std::io::Result<()> {
         0_i32
     };
     
-    
     "#;
     let _counter: usize = 0;
     let mut location_pool = ErrorPool::new();

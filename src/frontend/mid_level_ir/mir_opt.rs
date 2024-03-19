@@ -48,6 +48,22 @@ fn foldable(val: &SSAValue) -> bool {
     }
 }
 
+fn is_pure(val: &SSAValue) -> bool {
+	match val {
+		SSAValue::VariableReference(_, _) => true,
+		SSAValue::Phi(_) => todo!(),
+		SSAValue::ConditionalBlock { if_block, else_block, pool_id } => false,
+		SSAValue::Cast { value, to, pool_id } => true,
+		SSAValue::Integer { value, width, pool_id } => true,
+		SSAValue::Float { value, width, pool_id } => true,
+		SSAValue::Bool(_, _) => true,
+		SSAValue::Operation { lhs, op, rhs, pool_id } => todo!(),
+		SSAValue::FunctionCall { name, parameters, pool_id } => false,
+		SSAValue::Nothing => true,
+		SSAValue::Tensor(_, _) => true,
+	}
+}
+
 fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
     match val {
         SSAValue::VariableReference(v, _) => {
@@ -115,10 +131,12 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
             hs
         }
         SSAValue::Cast {
-            value: _,
+            value,
             to: _,
-            pool_id,
-        } => todo!(),
+            pool_id:_,
+        } => {
+			get_referenced_value(value)
+		},
     }
 }
 
@@ -201,7 +219,7 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
             e2,
             pool_id,
         } => {
-            if !used.contains(&name) {
+            if !used.contains(&name) && is_pure(&e1) {
                 remove_unused_variables(*e2, used)
             } else {
                 SSAExpression::VariableDecl {
@@ -365,7 +383,8 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
                 pool_id,
             }
         }
-        _ => todo!(),
+		SSAValue::Cast { value, to, pool_id } => SSAValue::Cast { value, to, pool_id },
+		SSAValue::Operation { lhs, op, rhs, pool_id } => todo!(),
     }
 }
 
