@@ -14,36 +14,36 @@ fn foldable(val: &SSAValue) -> bool {
         SSAValue::Integer {
             value: _,
             width: _,
-            pool_id,
+            pool_id: _,
         } => true,
         SSAValue::Float {
             value: _,
             width: _,
-            pool_id,
+            pool_id: _,
         } => true,
         SSAValue::Bool(_, _) => true,
         SSAValue::Operation {
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name: _,
             parameters: _,
-            pool_id,
+            pool_id: _,
         } => false,
         SSAValue::Nothing => false,
         SSAValue::Tensor(_, _) => false,
         SSAValue::ConditionalBlock {
             if_block: _,
             else_block: _,
-            pool_id,
+            pool_id: _,
         } => false,
         SSAValue::Cast {
             value: _,
             to: _,
-            pool_id,
+            pool_id: _,
         } => true,
     }
 }
@@ -52,13 +52,13 @@ fn is_pure(val: &SSAValue) -> bool {
 	match val {
 		SSAValue::VariableReference(_, _) => true,
 		SSAValue::Phi(_) => todo!(),
-		SSAValue::ConditionalBlock { if_block, else_block, pool_id } => false,
-		SSAValue::Cast { value, to, pool_id } => true,
-		SSAValue::Integer { value, width, pool_id } => true,
-		SSAValue::Float { value, width, pool_id } => true,
+		SSAValue::ConditionalBlock { if_block: _, else_block: _, pool_id: _ } => false,
+		SSAValue::Cast { value: _, to: _, pool_id: _ } => true,
+		SSAValue::Integer { value: _, width: _, pool_id: _ } => true,
+		SSAValue::Float { value: _, width: _, pool_id: _ } => true,
 		SSAValue::Bool(_, _) => true,
-		SSAValue::Operation { lhs, op, rhs, pool_id } => todo!(),
-		SSAValue::FunctionCall { name, parameters, pool_id } => false,
+		SSAValue::Operation { lhs: _, op: _, rhs: _, pool_id: _ } => todo!(),
+		SSAValue::FunctionCall { name: _, parameters: _, pool_id: _ } => false,
 		SSAValue::Nothing => true,
 		SSAValue::Tensor(_, _) => true,
 	}
@@ -83,24 +83,24 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
         SSAValue::Integer {
             value: _,
             width: _,
-            pool_id,
+            pool_id: _,
         } => HashSet::new(),
         SSAValue::Float {
             value: _,
             width: _,
-            pool_id,
+            pool_id: _,
         } => HashSet::new(),
         SSAValue::Bool(_, _) => HashSet::new(),
         SSAValue::Operation {
             lhs: _,
             op: _,
             rhs: _,
-            pool_id,
+            pool_id: _,
         } => todo!(),
         SSAValue::FunctionCall {
             name: _,
             parameters,
-            pool_id,
+            pool_id: _,
         } => {
             let mut set: HashSet<String> = HashSet::new();
             for i in parameters {
@@ -122,7 +122,7 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
         SSAValue::ConditionalBlock {
             if_block,
             else_block,
-            pool_id,
+            pool_id: _,
         } => {
             let mut hs = get_referenced_value(&if_block.condition);
             hs.extend(get_referenced(&if_block.block.block));
@@ -147,7 +147,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             vtype: _,
             e1,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             let mut hs = get_referenced_value(e1);
             hs.extend(get_referenced(e2));
@@ -159,7 +159,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             ret_type: _,
             block,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             let mut hs = get_referenced(e2);
             hs.extend(get_referenced(block));
@@ -170,21 +170,21 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             args: _,
             ret_type: _,
             e2,
-            pool_id,
+            pool_id: _,
         } => get_referenced(e2),
         SSAExpression::Noop => HashSet::new(),
-        SSAExpression::Return { val, pool_id } => get_referenced_value(val),
+        SSAExpression::Return { val, pool_id: _ } => get_referenced_value(val),
         SSAExpression::Block(b, _) => get_referenced(b),
-        SSAExpression::Yield { val, pool_id } => get_referenced_value(val),
+        SSAExpression::Yield { val, pool_id: _ } => get_referenced_value(val),
         SSAExpression::ForLoop {
-            iv,
+            iv: _,
             from,
             to,
             block,
-            parallel,
+            parallel: _,
             e2,
-            step,
-            pool_id,
+            step: _,
+            pool_id: _,
         } => {
             let mut hs = get_referenced_value(from);
             hs.extend(get_referenced_value(to));
@@ -198,7 +198,7 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
             cond,
             block,
             e2,
-            pool_id,
+            pool_id: _,
         } => {
             let mut hs = get_referenced(cond_expr);
             hs.extend(get_referenced_value(cond));
@@ -384,7 +384,7 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
             }
         }
 		SSAValue::Cast { value, to, pool_id } => SSAValue::Cast { value, to, pool_id },
-		SSAValue::Operation { lhs, op, rhs, pool_id } => todo!(),
+		SSAValue::Operation { lhs: _, op: _, rhs: _, pool_id: _ } => todo!(),
     }
 }
 
