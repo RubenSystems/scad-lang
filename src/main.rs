@@ -8,6 +8,9 @@ use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
+use crate::frontend::mid_level_ir::mir_opt::{
+    get_referenced, mir_variable_fold, remove_unused_variables,
+};
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
@@ -29,24 +32,44 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
 
-    fn main() i32 {
-
-        let sto = {1_i32, 1_i32}; 
-        let end_res = 19_i32; 
+    fn idx(row: ii, col: ii) ii {
+        @add(a: @mul(a: row, b: 2_ii), b: col)
+    };
     
-        for i: 0_ii -> (@sub(a: end_res, b: 2_i32) -> ii) {
-            let a = @index.i32(c: sto, idx: 0_ii);
-            let b = @index.i32(c: sto, idx: 1_ii);
+    fn get(container: 4xi32, row: ii, column: ii) i32 {
+        let gtidx = idx(r: row, c: column);
+        @index.i32(c: container, idx: gtidx)
+    };
     
-            let c = @add(a: a, b: b);
+    fn dot(a: 4xi32, b: 4xi32) 4xi32 {
+        let result = @empty(filler: 0_i32, size: 4_ii);
     
-            @set.i32(c: sto, idx: 0_ii, value: b);
-            @set.i32(c: sto, idx: 1_ii, value: c);
+        for i: 0_ii -> 2_ii {
+            for j: 0_ii -> 2_ii {
+                for k: 0_ii -> 2_ii {
+                    let res = @mul(a: get(container: a, r: i, c: k), b: get(container: a, r: k, c: j));
+                    let existing = @index.i32(container: result, idx: idx(r: i, c: j));
     
+                    @set.i32(container: result, index: idx(r: i, c: j), value: @add(a: res, b: existing));
+                };
+            };
         };
     
-        let end = @index.i32(c: sto, idx: 1_ii);
-        @print(v: end);
+    
+        result
+    };
+    
+    fn main() i32 {
+    
+        let a = {1_i32, 2_i32, 3_i32, 4_i32};
+        let b = {1_i32, 2_i32, 3_i32, 4_i32};
+    
+        let dot_val = dot(a: a, b: b);
+    
+        for i: 0_ii -> 4_ii {
+            @print(a: @index.i32(container: dot_val, index: i));
+        };
+    
     
         0_i32
     };
@@ -78,9 +101,9 @@ fn main() -> std::io::Result<()> {
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
     // Optimiser
-    // let code = mir_variable_fold(code, HashMap::new());
-    // let referenced_vars = get_referenced(&code.0);
-    // let code = remove_unused_variables(code.0, &referenced_vars);
+    let code = mir_variable_fold(code, HashMap::new());
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     // println!("{code:#?}");
@@ -88,7 +111,6 @@ fn main() -> std::io::Result<()> {
     // println!("{:#?}", consumable_context);
     let consumable_context = create_types_for_core();
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
-    println!("{code:#?}");
 
     let (_, _, _context) = match w_algo(
         ctx,
@@ -108,6 +130,7 @@ fn main() -> std::io::Result<()> {
 
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
+    println!("{code:#?}");
     let _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
 
     Ok(())

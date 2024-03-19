@@ -20,6 +20,7 @@ use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
+use frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold, remove_unused_variables};
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_void, CStr};
@@ -94,8 +95,14 @@ pub extern "C" fn compile(
         .collect();
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
 
-    let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
+    let code = rename_variables(unop_code, vec!["prog".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
+
+    // Optimiser
+    let code = mir_variable_fold(code, HashMap::new());
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
+    // endof optimiser
 
     let consumable_context = create_types_for_core();
 

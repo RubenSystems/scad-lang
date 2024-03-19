@@ -11,9 +11,9 @@ use crate::frontend::{
 };
 
 use super::ast_types::{
-    Cast, ConditionalExpressionBlock, Expression, ExpressionBlock, Float, ForLoop,
-    FunctionCall, FunctionDecleration, Identifier, Integer, IntegerWidth,
-    Statement, StatementBlock, Type, TypeName, VariableDecl, VariableName, WhileLoop,
+    Cast, ConditionalExpressionBlock, Expression, ExpressionBlock, Float, ForLoop, FunctionCall,
+    FunctionDecleration, Identifier, Integer, IntegerWidth, Statement, StatementBlock, Type,
+    TypeName, VariableDecl, VariableName, WhileLoop,
 };
 
 // use super::ast_types::{Numeric, Expression};
