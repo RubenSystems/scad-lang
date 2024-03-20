@@ -260,6 +260,7 @@ fn parse_expression_conditional_block(
     let a = unparsed_it.next().unwrap().into_inner();
     let b = unparsed_it.next().unwrap();
     let parsed_exp = parse(a, loc_pool);
+    println!("--{:#?}==", b);
     let block = parse_expression_block(b, loc_pool)?;
 
     let Statement::Expression(e, _) = parsed_exp? else {
@@ -478,11 +479,15 @@ pub fn parse_pair(
             let mut else_block = None;
             for m in it {
                 match m.as_rule() {
-                    Rule::if_expression_block | Rule::else_if_expression_block => {
+                    Rule::if_expression_block => {
                         if_blocks.push(parse_expression_conditional_block(m, loc_pool)?)
                     }
                     Rule::else_expression_block => {
-                        else_block = Some(parse_expression_block(m, loc_pool)?);
+                        println!("{:#?}", m);
+                        else_block = Some(parse_expression_block(
+                            m.into_inner().next().unwrap(),
+                            loc_pool,
+                        )?);
                     }
                     x => todo!("rule {x:?}"),
                 };

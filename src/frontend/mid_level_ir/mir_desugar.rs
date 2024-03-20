@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use super::mir_ast_types::{Phi, SSAConditionalBlock, SSAExpression, SSALabeledBlock, SSAValue};
+use super::{
+    mir_ast_types::{Phi, SSAConditionalBlock, SSAExpression, SSALabeledBlock, SSAValue},
+    parsers::generate_label_name,
+};
 
 fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {
     let sn = scoped_name.join(".");
@@ -443,7 +446,7 @@ pub fn rename_variables(
             let from = rename_variables_value(from, scoped_name.clone(), used_vars);
             let to = rename_variables_value(to, scoped_name.clone(), used_vars);
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
-            scoped_name.push("in_for".into());
+            scoped_name.push(generate_label_name());
             let new_iv = scoped_rename(&iv, &scoped_name);
             used_vars.insert(new_iv.clone());
             let block = Box::new(rename_variables(*block, scoped_name.clone(), used_vars));
@@ -467,7 +470,7 @@ pub fn rename_variables(
         } => {
             let e2 = Box::new(rename_variables(*e2, scoped_name.clone(), used_vars));
             let cond_expr = Box::new(rename_variables(*cond_expr, scoped_name.clone(), used_vars));
-            scoped_name.push("in_while".into());
+            scoped_name.push(generate_label_name());
             let block = Box::new(rename_variables(*block, scoped_name.clone(), used_vars));
             SSAExpression::WhileLoop {
                 cond: rename_variables_value(cond, scoped_name, used_vars),

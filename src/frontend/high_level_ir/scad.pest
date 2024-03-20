@@ -105,15 +105,11 @@ expression_block = { "{" ~ statements ~ expression ~ "}" }
 
 // if exp
 if_expression_control_flow = {
-	if_expression_block ~ else_if_expression_block* ~ else_expression_block
+	if_expression_block ~ else_expression_block
 }
 
 if_expression_block = {
 	"if" ~ expression ~ expression_block
-}
-
-else_if_expression_block = {
-	"else if" ~ expression ~ expression_block
 }
 
 else_expression_block = {

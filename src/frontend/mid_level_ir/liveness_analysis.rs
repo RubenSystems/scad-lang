@@ -5,7 +5,7 @@ use crate::frontend::mid_level_ir::parsers::generate_register_name;
 fn requires_tracking(val: &SSAValue) -> bool {
     match val {
         SSAValue::Tensor(_, _) => true,
-        _ => false
+        _ => false,
     }
 }
 
@@ -82,7 +82,6 @@ pub fn unalive_vars(blk: SSAExpression, mut alive_vars: Vec<String>) -> SSAExpre
             if requires_tracking(&e1) {
                 alive_vars.push(name.clone());
             }
-            
 
             let new_cont = unalive_vars(*e2, alive_vars);
             SSAExpression::VariableDecl {

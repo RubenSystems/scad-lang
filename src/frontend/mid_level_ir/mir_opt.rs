@@ -49,19 +49,44 @@ fn foldable(val: &SSAValue) -> bool {
 }
 
 fn is_pure(val: &SSAValue) -> bool {
-	match val {
-		SSAValue::VariableReference(_, _) => true,
-		SSAValue::Phi(_) => todo!(),
-		SSAValue::ConditionalBlock { if_block: _, else_block: _, pool_id: _ } => false,
-		SSAValue::Cast { value: _, to: _, pool_id: _ } => true,
-		SSAValue::Integer { value: _, width: _, pool_id: _ } => true,
-		SSAValue::Float { value: _, width: _, pool_id: _ } => true,
-		SSAValue::Bool(_, _) => true,
-		SSAValue::Operation { lhs: _, op: _, rhs: _, pool_id: _ } => todo!(),
-		SSAValue::FunctionCall { name: _, parameters: _, pool_id: _ } => false,
-		SSAValue::Nothing => true,
-		SSAValue::Tensor(_, _) => true,
-	}
+    match val {
+        SSAValue::VariableReference(_, _) => true,
+        SSAValue::Phi(_) => todo!(),
+        SSAValue::ConditionalBlock {
+            if_block: _,
+            else_block: _,
+            pool_id: _,
+        } => false,
+        SSAValue::Cast {
+            value: _,
+            to: _,
+            pool_id: _,
+        } => true,
+        SSAValue::Integer {
+            value: _,
+            width: _,
+            pool_id: _,
+        } => true,
+        SSAValue::Float {
+            value: _,
+            width: _,
+            pool_id: _,
+        } => true,
+        SSAValue::Bool(_, _) => true,
+        SSAValue::Operation {
+            lhs: _,
+            op: _,
+            rhs: _,
+            pool_id: _,
+        } => todo!(),
+        SSAValue::FunctionCall {
+            name: _,
+            parameters: _,
+            pool_id: _,
+        } => false,
+        SSAValue::Nothing => true,
+        SSAValue::Tensor(_, _) => true,
+    }
 }
 
 fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
@@ -133,10 +158,8 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
         SSAValue::Cast {
             value,
             to: _,
-            pool_id:_,
-        } => {
-			get_referenced_value(value)
-		},
+            pool_id: _,
+        } => get_referenced_value(value),
     }
 }
 
@@ -383,8 +406,13 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
                 pool_id,
             }
         }
-		SSAValue::Cast { value, to, pool_id } => SSAValue::Cast { value, to, pool_id },
-		SSAValue::Operation { lhs: _, op: _, rhs: _, pool_id: _ } => todo!(),
+        SSAValue::Cast { value, to, pool_id } => SSAValue::Cast { value, to, pool_id },
+        SSAValue::Operation {
+            lhs: _,
+            op: _,
+            rhs: _,
+            pool_id: _,
+        } => todo!(),
     }
 }
 
