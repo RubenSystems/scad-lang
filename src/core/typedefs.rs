@@ -225,6 +225,38 @@ pub fn create_types_for_core() -> Context {
         );
     });
 
+    ["read", "write"].into_iter().for_each(|x| {
+        consumable_context.add_type_for_name(
+            format!("@prefetch.{x}"),
+            TIRType::PolyType(PolyType::TypeQuantifier {
+                alpha: "@prefetch.type".into(),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable(format!("@prefetch.{x}.type")),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Application {
+                                    c: "ii".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                                MonoType::Application {
+                                    c: "ii".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        );
+    });
+
     consumable_context.add_type_for_name(
         format!("@vec.load"),
         TIRType::PolyType(PolyType::TypeQuantifier {

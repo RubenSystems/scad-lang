@@ -97,7 +97,7 @@ pub extern "C" fn compile(
 
     let code = rename_variables(unop_code, vec!["prog".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-
+    println!("{code:#?}");
     // Optimiser
     let code = mir_variable_fold(code, HashMap::new());
     let referenced_vars = get_referenced(&code.0);
