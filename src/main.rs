@@ -34,21 +34,80 @@ fn main() -> std::io::Result<()> {
 
 
     
-    fn main() i32 {
+    fn idx(row: ii, col: ii) ii {
+        @add(a: @mul(a: row, b: 1024_ii), b: col)
+    };
     
-        let x = 100_i32; 
-        let y = if @eq(a: x, b: 100_i32) {
-            let x = 100_i32;
-            x
-        } else {
-            let x = 100_i32;
-            x
+    fn idx_32(row: i32, col: i32) i32 {
+        @add(a: @mul(a: row , b: 1024_i32), b: col )
+    };
+    
+    fn get(container: 1048576xi32, row: ii, column: ii) i32 {
+        let gtidx = idx(r: row, c: column);
+        @index.i32(c: container, idx: gtidx)
+    };
+    
+    fn transpose(a: 1048576xi32) 1048576xi32 {
+        let new = @empty(fill: 0_i32, size: 1048576_ii);
+    
+        for i: 0_ii -> 1024_ii {
+            for j: 0_ii -> 1024_ii {
+                let tmp1 = get(c: a, r: i, c: j);
+                @set.i32(c: new, in: idx(r: j, c: i), v: tmp1);
+            };
         };
-        @print(value: y);
     
+        new
+    };
+    
+    fn sum(a: 4xi32) i32 {
+        let t = {0_i32};
+        for i: 0_ii -> 4_ii {
+            let cval = @index.i32(c: a, idx: i); 
+            let tval = @index.i32(c: t, idx: 0_ii);
+    
+            @set.i32(c: t, i: 0_ii, v: @add(a: cval, b: tval)) ;
+        };
+        
+        let x = @index.i32(c: t, idx: 0_ii);
+        x
+    };
+    
+    fn tile_mul_and_sum(a: 1048576xi32, b: 1048576xi32, a_off: ii, b_off: ii) i32 {
+        let t = {0_i32};
+        let acc = @empty(f: 0_i32, s: 4_ii);
+        for i: 0_ii -> 256_ii {
+            let a_get = @vec.load(v: a, off: a_off, size: 4_ii);
+            let b_get = @vec.load(v: b, off: b_off, size: 4_ii);
+    
+            let mul_res = @mul.v(a: a_get, b: b_get);
+            @vec.store(out: acc, val: mul_res, offset: 0_ii);
+            let s = sum(a: acc);
+    
+            let tval = @index.i32(c: t, idx: 0_ii);
+            @set.i32(c: t, i: 0_ii, v: @add(a: s, b: tval)) ;
+    
+    
+        };
+    
+        @index.i32(c: t, idx: 0_ii)
+    };
+    
+    fn dot(a: 1048576xi32, b: 1048576xi32, result: 1048576xi32) i32 {
+        let trn = transpose(mat: b);
+    
+        for i: 0_ii->1024_ii {
+            for j: 0_ii->1024_ii step 1 unroll 2 {
+    
+                let sv = tile_mul_and_sum(a: a, b: trn, a_off: i, b_off: j);
+    
+                @set.i32(container: result, index: idx(r: i, c: j), value: sv);
+            };		
+        };
     
         0_i32
     };
+    
     
     "#;
     let _counter: usize = 0;
@@ -105,7 +164,7 @@ fn main() -> std::io::Result<()> {
 
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
-    println!("{code:#?}");
+    // println!("{code:#?}");
     let _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
 
     Ok(())

@@ -215,6 +215,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
         Statement::ProcedureDecleration(_, _) => todo!(),
         Statement::ForLoop(f, pid) => {
             let gen = _k;
+            let new_step = (f.step * (f.unroll + 1)) as i128;
 
             expression_l1_to_l2(
                 f.from.fcopy(),
@@ -224,8 +225,10 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                         Box::new(move |to_var| SSAExpression::ForLoop {
                             block: Box::new(parse_for_block(
                                 f.block.fcopy(),
+                                f.block.fcopy(),
                                 f.unroll,
                                 f.fcopy(),
+                                f.step as i128, 
                                 pid,
                             )),
                             iv: f.variable.0,
@@ -235,7 +238,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                             e2: Box::new(gen(SSAValue::Nothing)),
                             pool_id: pid,
                             step: SSAValue::Integer {
-                                value: (f.step + f.unroll) as i128,
+                                value: new_step,
                                 width: IntegerWidth::IndexType,
                                 pool_id: pid,
                             },

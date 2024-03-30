@@ -123,54 +123,55 @@ pub fn parse_statement_block(blk: StatementBlock) -> SSAExpression {
 }
 
 pub fn parse_for_block(
+    og: StatementBlock,
     blk: StatementBlock,
     unroll_count: usize,
     lp: ForLoop,
+    step: i128,
     pid: usize,
 ) -> SSAExpression {
-    match blk.statements.as_slice() {
-        [head] => {
-            // last statement, send it to be unrolled
-            statement_l1_to_l2(
-                head.fcopy(),
-                Box::new(move |_| {
-                    if unroll_count == 0 {
-                        SSAExpression::Noop
-                    } else {
-                        SSAExpression::VariableDecl {
-                            name: lp.variable.0.clone(),
-                            vtype: None,
-                            e1: SSAValue::FunctionCall {
-                                name: "@add".into(),
-                                parameters: vec![
-                                    SSAValue::Integer {
-                                        value: lp.step as i128,
-                                        width: IntegerWidth::IndexType,
-                                        pool_id: pid,
-                                    },
-                                    SSAValue::VariableReference(lp.variable.0.clone(), pid),
-                                ],
-                                pool_id: pid,
-                            },
-                            e2: Box::new(parse_for_block(blk, unroll_count - 1, lp, pid)),
+
+    if blk.statements.len() == 1 {
+        // last statement, send it to be unrolled
+        statement_l1_to_l2(
+            blk.statements[0].fcopy(),
+            Box::new(move |_| {
+                if unroll_count == 0 {
+                    SSAExpression::Noop
+                } else {
+                    SSAExpression::VariableDecl {
+                        name: lp.variable.0.clone(),
+                        vtype: None,
+                        e1: SSAValue::FunctionCall {
+                            name: "@add".into(),
+                            parameters: vec![
+                                SSAValue::Integer {
+                                    value: step,
+                                    width: IntegerWidth::IndexType,
+                                    pool_id: pid,
+                                },
+                                SSAValue::VariableReference(lp.variable.0.clone(), pid),
+                            ],
                             pool_id: pid,
-                        }
+                        },
+                        e2: Box::new(parse_for_block(og.fcopy(), og, unroll_count - 1, lp, step, pid)),
+                        pool_id: pid,
                     }
-                }),
-            )
-        }
-        [head, rest @ ..] => {
-            let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
-            statement_l1_to_l2(
-                head.fcopy(),
-                Box::new(|_| {
-                    let new_blk = StatementBlock {
-                        statements: rest_clone,
-                    };
-                    parse_statement_block(new_blk)
-                }),
-            )
-        }
-        [] => SSAExpression::Noop,
+                }
+            }),
+        )
+    } else if blk.statements.len() > 1 {
+        let rest_clone = blk.statements[1..].iter().map(|x| x.fcopy()).collect();
+        statement_l1_to_l2(
+            blk.statements.first().unwrap().fcopy(),
+            Box::new(move |_| {
+                let new_blk = StatementBlock {
+                    statements: rest_clone,
+                };
+                parse_for_block(og, new_blk, unroll_count, lp, step, pid)
+            }),
+        )
+    } else {
+        SSAExpression::Noop
     }
 }
