@@ -52,6 +52,7 @@ pub enum ErrorType {
     ForLoopInductionVariablesMustBeIndexType,
     IncorrectFunctionReturnType,
     CouldNotFindFunction(String),
+    CannotFindFunctionWithMatchingArguementTypes
 }
 
 #[derive(Debug, Clone)]
@@ -130,6 +131,10 @@ impl Display for SCADError {
             ErrorType::IncorrectFunctionReturnType => write!(
                 f,
                 "\n| Function has incorrect return type"
+            ),
+            ErrorType::CannotFindFunctionWithMatchingArguementTypes => write!(
+                f,
+                "\n| Cannot find function that matches the provided return types. This is after several retries."
             ),
         };
         _ = write!(

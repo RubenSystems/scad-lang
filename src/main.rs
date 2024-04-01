@@ -34,8 +34,7 @@ fn main() -> std::io::Result<()> {
 
 
     fn a(je: i32) i32 {
-        let x: i32 = 100_ii; 
-        x
+        @add(a: 0_ii, b: je)
     };
     
     "#;

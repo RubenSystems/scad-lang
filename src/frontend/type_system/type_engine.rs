@@ -17,6 +17,8 @@ use super::{
     traits::{FreeVarsGettable, Instantiatable},
 };
 
+const MAX_HINDLEY_RETRYS: usize = 10000;
+
 #[derive(Debug)]
 pub enum WAlgoError {
     UnificationError(UnificationError),
@@ -174,7 +176,7 @@ pub fn w_algo(
 
             Ok((s2.merge(&s1), t2, sub_context))
         }
-        TIRExpression::FunctionCall { e1, e2, pool_id: _ } => {
+        TIRExpression::FunctionCall { e1, e2, pool_id } => {
             let mut retry_count = 0;
             loop {
                 let (s1, t1, context) = w_algo(
@@ -216,6 +218,9 @@ pub fn w_algo(
                     }
                     Err(_e) => retry_count += 1,
                 };
+                if retry_count > MAX_HINDLEY_RETRYS {
+                    return Err(SCADError::from_pid(ErrorType::CannotFindFunctionWithMatchingArguementTypes, *pool_id, info.pool))
+                }
             }
         }
         TIRExpression::FunctionDefinition {
