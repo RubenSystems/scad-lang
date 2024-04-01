@@ -33,67 +33,10 @@ fn main() -> std::io::Result<()> {
     let test_prog = r#"
 
 
-    fn idx(row: ii, col: ii) ii {
-        @add(a: @mul(a: row, b: 1024_ii), b: col)
-    };
-    
-    
-    fn get(container: 1048576xi32, row: ii, column: ii) i32 {
-        let gtidx = idx(r: row, c: column);
-        @index.i32(c: container, idx: gtidx)
-    };
-    
-    fn sum(a: 8xi32) i32 {
-        let t = {0_i32};
-        for i: 0_ii -> 8_ii unroll 7 {
-            let cval = @index.i32(c: a, idx: i); 
-            let tval = @index.i32(c: t, idx: 0_ii);
-    
-            @set.i32(c: t, i: 0_ii, v: @add(a: cval, b: tval)) ;
-        };
-        
-        let x = @index.i32(c: t, idx: 0_ii);
+    fn a(je: i32) i32 {
+        let x: i32 = 100_ii; 
         x
     };
-    
-    fn tile_mul_and_sum(a: 1048576xi32, b: 1024xi32, a_off: ii) i32 {
-        let t = {0_i32};
-        let acc = @empty(f: 0_i32, s: 8_ii);
-        for i: 0_ii -> 1024_ii step 8 unroll 7 {
-            let a_get = @vec.load(v: a, off: @add(a: a_off, b: i), size: 8_ii);
-            let b_get = @vec.load(v: b, off: 0_ii, size: 8_ii);
-    
-            let mul_res = @mul.v(a: a_get, b: b_get);
-            @vec.store(out: acc, val: mul_res, offset: 0_ii);
-            let s = sum(a: acc);
-    
-            let tval = @index.i32(c: t, idx: 0_ii);
-            @set.i32(c: t, i: 0_ii, v: @add(a: s, b: tval)) ;
-    
-    
-        };
-    
-        @index.i32(c: t, idx: 0_ii)
-    };
-    
-    fn dot(a: 1048576xi32, b: 1048576xi32, result: 1048576xi32) i32 {
-        let trn_buffer = @empty(f: 0_i32, s: 1024_ii);
-    
-        parallel j: 0_ii -> 1024_ii {
-            for k: 0_ii -> 1024_ii unroll 3 {
-                let b_lda = get(c: b, r: j, c: k);
-                @set.i32(b: trn_buffer, idx: k, val: b_lda);
-            };
-            for i: 0_ii -> 1024_ii unroll 3 {
-                let sv = tile_mul_and_sum(a: a, b: trn_buffer, a_off: i);
-    
-                @set.i32(container: result, index: idx(r: i, c: j), value: sv);
-            };		
-        };
-    
-        0_i32
-    };
-    
     
     "#;
     let _counter: usize = 0;

@@ -145,15 +145,14 @@ pub fn w_algo(
                     }
                 }
             }
-
             //VARIBLE TYPE CHECKING!!!
             // if let Some(t) = type_hint {
             //     let tir_t = t.to_tir_type();
-
+            //     println!("{tir_t:?}");
             //     if tir_t != t1 {
             //         unreachable!("skill issue: attempting to assign expression of type: \n\n{t1:#?} to variable of specified_type \n\n{tir_t:#?}")
             //     }
-            // }
+            // } 
 
             let mut sub_context = context.applying_substitution(&s1).clone();
             if !sub_context.has_type_for_name(name) {
@@ -260,7 +259,7 @@ pub fn w_algo(
             });
 
             if let Some(hnt) = ret_type_hint {
-                let TIRType::MonoType(_a) = hnt else {
+                let TIRType::MonoType(a) = hnt else {
                     return Err(SCADError::from_pid(
                         ErrorType::CannotCheckReturnType,
                         *pool_id,
@@ -268,14 +267,14 @@ pub fn w_algo(
                     ));
                 };
 
-                // let rettype = get_rettype_of_application(x.clone());
-                // if *a != rettype {
-                //     println!("x: {a:#?}");
-                //     println!("rettype: {rettype:#?}");
-
-                //     // println!("==\nretfail {:#?} \n\n{:#?}\n==", a,  get_rettype_of_application(x.clone()));
-                //     unreachable!("Skill issue: Function defines different type to decleration")
-                // }
+                let rettype = get_rettype_of_application(x.clone());
+                if rettype.is_some() && *a != rettype.unwrap() {
+                    return Err(SCADError::from_pid(
+                        ErrorType::IncorrectFunctionReturnType,
+                        *pool_id,
+                        info.pool,
+                    ));
+                }
             }
 
             Ok((sub, x, new_context))
@@ -548,22 +547,21 @@ pub fn w_algo(
     }
 }
 
-fn get_rettype_of_application(app: MonoType) -> MonoType {
-    println!("{app:#?}");
+fn get_rettype_of_application(app: MonoType) -> Option<MonoType> {
 
     match app {
-        MonoType::Variable(_) => unreachable!(),
+        MonoType::Variable(_) => None,
         MonoType::Application {
             c,
             dimensions,
             types,
         } => {
             if types.len() == 0 {
-                MonoType::Application {
+                Some(MonoType::Application {
                     c,
                     dimensions,
                     types,
-                }
+                })
             } else {
                 get_rettype_of_application(types.last().unwrap().clone())
             }

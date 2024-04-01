@@ -242,8 +242,8 @@ statement = {
 	| parallel_loop
 	| while_loop
 	| var_decl
-	| expression 
 	| var_reassignment
+	| expression 
 }
 
 statements = _{ (statement ~ (WHITESPACE? ~ ";" ~ WHITESPACE?))* }

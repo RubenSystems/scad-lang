@@ -66,7 +66,6 @@ impl Type {
     pub fn to_string(&self) -> String {
         let dimension_string: Vec<String> = self.dimensions.iter().map(|x| x.to_string()).collect();
         let fstring = format!("{}x{}", dimension_string.join("x"), self.subtype.0);
-        println!("{fstring}");
         fstring
     }
 

@@ -50,6 +50,7 @@ pub enum ErrorType {
     MultipleTypesInVector,
     InvalidUnroll,
     ForLoopInductionVariablesMustBeIndexType,
+    IncorrectFunctionReturnType,
     CouldNotFindFunction(String),
 }
 
@@ -125,6 +126,10 @@ impl Display for SCADError {
             ErrorType::ForLoopInductionVariablesMustBeIndexType => write!(
                 f,
                 "\n| For loop induction variables (from -> to) must be ii type. Try casting."
+            ),
+            ErrorType::IncorrectFunctionReturnType => write!(
+                f,
+                "\n| Function has incorrect return type"
             ),
         };
         _ = write!(
