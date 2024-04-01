@@ -82,7 +82,9 @@ pub fn w_algo(
                 ));
             };
 
-            let tpe = match Some(tpe[info.retry_count].clone()) {
+            
+
+            let tpe = match tpe.get(info.retry_count).clone() {
                 Some(a) => a,
                 None => {
                     return Err(SCADError::from_pid(
