@@ -4,21 +4,33 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{core::typedefs::create_types_for_core, frontend::{
-    error::{ErrorPool, ErrorType, SCADError},
-    high_level_ir::ast_types::{FailureCopy, IntegerWidth}, mid_level_ir::mir_ast_types::SSAExpression,
-}};
-
-use super::{
-    context::Context, mir_to_tir::transform_mir_to_tir, substitution::Substitution, tir_ast_expressions::TIRExpression, tir_types::{generate_type_name, MonoType, PolyType, TIRType}, traits::{FreeVarsGettable, Instantiatable}
+use crate::{
+    core::typedefs::create_types_for_core,
+    frontend::{
+        error::{ErrorPool, ErrorType, SCADError},
+        high_level_ir::ast_types::{FailureCopy, IntegerWidth},
+        mid_level_ir::mir_ast_types::SSAExpression,
+    },
 };
 
-pub fn extract_type_information(code: &SSAExpression, location_pool: ErrorPool) -> Result<Context, SCADError>{
+use super::{
+    context::Context,
+    mir_to_tir::transform_mir_to_tir,
+    substitution::Substitution,
+    tir_ast_expressions::TIRExpression,
+    tir_types::{generate_type_name, MonoType, PolyType, TIRType},
+    traits::{FreeVarsGettable, Instantiatable},
+};
+
+pub fn extract_type_information(
+    code: &SSAExpression,
+    location_pool: ErrorPool,
+) -> Result<Context, SCADError> {
     let consumable_context = create_types_for_core();
 
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
 
-    let (_, _, ctx ) = w_algo(
+    let (_, _, ctx) = w_algo(
         ctx,
         WAlgoInfo {
             retry_count: 0,

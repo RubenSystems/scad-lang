@@ -9,9 +9,12 @@ use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, r
 
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
-
 use frontend::error::ErrorPool;
-use frontend::mid_level_ir::ffi::{ffi_types::{FFIHIRExpr, FFIType}, type_query_engine::TypeQueryEngine, ffi_conversion::ffi_ssa_expr};
+use frontend::mid_level_ir::ffi::{
+    ffi_conversion::ffi_ssa_expr,
+    ffi_types::{FFIHIRExpr, FFIType},
+    type_query_engine::TypeQueryEngine,
+};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
@@ -22,7 +25,6 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
-
 
 #[repr(C)]
 pub union ProgramOut {
@@ -48,8 +50,6 @@ pub extern "C" fn query(
     let tir = std::mem::ManuallyDrop::new(qep.get_type_for(str_slice));
     tir
 }
-
-
 
 #[no_mangle]
 pub extern "C" fn compile(
@@ -94,11 +94,11 @@ pub extern "C" fn compile(
         .collect();
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
 
-    // perform desugaring 
+    // perform desugaring
     let code = rename_variables(unop_code, vec!["prog".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
 
-    // extract type information 
+    // extract type information
     let context = match extract_type_information(&code, location_pool) {
         Ok(e) => e,
         Err(e) => {
@@ -116,14 +116,13 @@ pub extern "C" fn compile(
     let code = remove_unused_variables(code.0, &referenced_vars);
     let code = unalive_vars(code, vec![]);
 
-
-    // generate query engine for type information 
+    // generate query engine for type information
     let query_engine = TypeQueryEngine::new(context);
     let qep = Box::into_raw(Box::new(query_engine));
 
     unsafe { *context_query_engine = qep as *mut c_void };
 
-    // Make it so code is not automatically dropped using std::mem::manually drop 
+    // Make it so code is not automatically dropped using std::mem::manually drop
     let code_res = std::mem::ManuallyDrop::new(code);
     OutData {
         compiled: true,

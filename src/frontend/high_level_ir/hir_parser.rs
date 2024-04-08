@@ -192,7 +192,7 @@ fn parse_for_loop(
             parallel,
             step: step.unwrap_or(1),
             unroll: unroll.unwrap_or(0),
-            vector_iv
+            vector_iv,
         },
         pid,
     ))

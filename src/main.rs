@@ -17,10 +17,9 @@ use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
 use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
-use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
-
 use crate::frontend::high_level_ir::hir_parser::Rule;
-use crate::frontend::mid_level_ir::ffi::ffi_ssa_expr;
+use crate::frontend::mid_level_ir::ffi::ffi_conversion::ffi_ssa_expr;
+use crate::frontend::type_system::type_engine::extract_type_information;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 
@@ -70,22 +69,12 @@ fn main() -> std::io::Result<()> {
     // println!("{code:#?}");
 
     // println!("{:#?}", consumable_context);
-    let consumable_context = create_types_for_core();
-    let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
 
-    let (_, _, context) = match w_algo(
-        ctx,
-        WAlgoInfo {
-            retry_count: 0,
-            req_type: None,
-            pool: &location_pool,
-        },
-        &tir,
-    ) {
-        Ok(v) => v,
+    let context = match extract_type_information(&code, location_pool) {
+        Ok(e) => e,
         Err(e) => {
-            print!("{e}");
-            unreachable!()
+            println!("{e}");
+            return Ok(());
         }
     };
 

@@ -135,7 +135,7 @@ pub fn for_block_induction_variable(
         parse_for_block(og, blk, unroll_count, 0, lp, step, pid, None)
     } else {
         parse_for_block_vector_iv(og, blk, unroll_count, 0, lp, step, pid, None)
-    } 
+    }
 }
 
 pub fn parse_for_block_vector_iv(
@@ -148,8 +148,6 @@ pub fn parse_for_block_vector_iv(
     pid: usize,
     iv_array_name: Option<String>,
 ) -> SSAExpression {
-
-
     if unroll_index % 8 == 0 {
         let ivname = generate_register_name();
         SSAExpression::VariableDecl {
@@ -167,13 +165,30 @@ pub fn parse_for_block_vector_iv(
                 ],
                 pool_id: pid,
             },
-            e2: Box::new(inner_parse_for_block_vector_iv(og, blk, unroll_count, unroll_index, lp, step, pid, Some(ivname))),
+            e2: Box::new(inner_parse_for_block_vector_iv(
+                og,
+                blk,
+                unroll_count,
+                unroll_index,
+                lp,
+                step,
+                pid,
+                Some(ivname),
+            )),
             pool_id: pid,
         }
     } else {
-        inner_parse_for_block_vector_iv(og, blk, unroll_count, unroll_index, lp, step, pid, iv_array_name)
+        inner_parse_for_block_vector_iv(
+            og,
+            blk,
+            unroll_count,
+            unroll_index,
+            lp,
+            step,
+            pid,
+            iv_array_name,
+        )
     }
-
 }
 
 pub fn inner_parse_for_block_vector_iv(
@@ -232,14 +247,22 @@ pub fn inner_parse_for_block_vector_iv(
                 let new_blk = StatementBlock {
                     statements: rest_clone,
                 };
-                parse_for_block_vector_iv(og, new_blk, unroll_count, unroll_index, lp, step, pid, iv_array_name)
+                parse_for_block_vector_iv(
+                    og,
+                    new_blk,
+                    unroll_count,
+                    unroll_index,
+                    lp,
+                    step,
+                    pid,
+                    iv_array_name,
+                )
             }),
         )
     } else {
         SSAExpression::Noop
     }
 }
-
 
 pub fn parse_for_block(
     og: StatementBlock,
@@ -297,7 +320,16 @@ pub fn parse_for_block(
                 let new_blk = StatementBlock {
                     statements: rest_clone,
                 };
-                parse_for_block(og, new_blk, unroll_count, unroll_index, lp, step, pid, iv_array_name)
+                parse_for_block(
+                    og,
+                    new_blk,
+                    unroll_count,
+                    unroll_index,
+                    lp,
+                    step,
+                    pid,
+                    iv_array_name,
+                )
             }),
         )
     } else {

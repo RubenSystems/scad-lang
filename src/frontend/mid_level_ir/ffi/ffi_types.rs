@@ -89,7 +89,7 @@ pub struct FFIString {
 }
 
 impl FFIString {
-    fn from_string(string: String) -> Self {
+    pub fn from_string(string: String) -> Self {
         Self {
             length: string.len(),
             data: std::ffi::CString::new(string).unwrap().into_raw(),
@@ -100,91 +100,91 @@ impl FFIString {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRVariableDecl {
-    name: FFIString,
-    e1: FFIHIRValue,
-    e2: *const FFIHIRExpr,
+    pub name: FFIString,
+    pub e1: FFIHIRValue,
+    pub e2: *const FFIHIRExpr,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRFunctionDecl {
-    name: FFIString,
-    block: *const FFIHIRExpr,
-    args: *const FFIString,
-    arg_len: usize,
-    e2: *const FFIHIRExpr,
+    pub name: FFIString,
+    pub block: *const FFIHIRExpr,
+    pub args: *const FFIString,
+    pub arg_len: usize,
+    pub e2: *const FFIHIRExpr,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRForLoop {
-    iv: FFIString,
-    start: FFIHIRValue,
-    end: FFIHIRValue,
-    step: FFIHIRValue,
-    block: *const FFIHIRExpr,
-    parallel: bool,
-    e2: *const FFIHIRExpr,
+    pub iv: FFIString,
+    pub start: FFIHIRValue,
+    pub end: FFIHIRValue,
+    pub step: FFIHIRValue,
+    pub block: *const FFIHIRExpr,
+    pub parallel: bool,
+    pub e2: *const FFIHIRExpr,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRReturn {
-    res: FFIHIRValue,
+    pub res: FFIHIRValue,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRYield {
-    res: FFIHIRValue,
+    pub res: FFIHIRValue,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRForwardFunctionDecl {
-    name: FFIString,
-    e2: *const FFIHIRExpr,
+    pub name: FFIString,
+    pub e2: *const FFIHIRExpr,
 }
 
 #[repr(C)]
 pub union ExpressionUnion {
-    variable_decl: FFIHIRVariableDecl,
-    function_decl: FFIHIRFunctionDecl,
-    forward_function_decl: FFIHIRForwardFunctionDecl,
-    noop: u8,
-    ret: FFIHIRReturn,
-    yld: FFIHIRYield,
-    floop: FFIHIRForLoop,
-    whl: FFIHIRWhile,
+    pub variable_decl: FFIHIRVariableDecl,
+    pub function_decl: FFIHIRFunctionDecl,
+    pub forward_function_decl: FFIHIRForwardFunctionDecl,
+    pub noop: u8,
+    pub ret: FFIHIRReturn,
+    pub yld: FFIHIRYield,
+    pub floop: FFIHIRForLoop,
+    pub whl: FFIHIRWhile,
 }
 
 #[repr(C)]
 pub struct FFIHIRExpr {
-    tag: FFIHIRTag,
-    value: ExpressionUnion,
+    pub tag: FFIHIRTag,
+    pub value: ExpressionUnion,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRConditional {
-    if_arm: FFIExpressionBlock,
-    else_arm: *const FFIHIRExpr,
+    pub if_arm: FFIExpressionBlock,
+    pub else_arm: *const FFIHIRExpr,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIExpressionBlock {
-    condition: *const FFIHIRValue,
-    block: *const FFIHIRExpr,
+    pub condition: *const FFIHIRValue,
+    pub block: *const FFIHIRExpr,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRWhile {
-    condition: FFIHIRValue,
-    cond_expr: *const FFIHIRExpr,
-    block: *const FFIHIRExpr,
-    e2: *const FFIHIRExpr,
+    pub condition: FFIHIRValue,
+    pub cond_expr: *const FFIHIRExpr,
+    pub block: *const FFIHIRExpr,
+    pub e2: *const FFIHIRExpr,
 }
 
 #[repr(C)]
@@ -225,21 +225,21 @@ pub struct FFIHIRFunctionCall {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRCast {
-    expr: *const FFIHIRValue,
-    to: FFIApplication,
+    pub expr: *const FFIHIRValue,
+    pub to: FFIApplication,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union ValueUnion {
-    tensor: FFIHIRTensor,
-    integer: FFIHIRInteger,
-    variable_reference: FFIHIRVariableReference,
-    function_call: FFIHIRFunctionCall,
-    boolean: u8,
-    conditional: FFIHIRConditional,
-    float: FFIHIRFloat,
-    cast: FFIHIRCast,
+    pub tensor: FFIHIRTensor,
+    pub integer: FFIHIRInteger,
+    pub variable_reference: FFIHIRVariableReference,
+    pub function_call: FFIHIRFunctionCall,
+    pub boolean: u8,
+    pub conditional: FFIHIRConditional,
+    pub float: FFIHIRFloat,
+    pub cast: FFIHIRCast,
 }
 
 #[repr(C)]
@@ -258,7 +258,6 @@ pub enum FFIHirValueTag {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FFIHIRValue {
-    tag: FFIHirValueTag,
-    value: ValueUnion,
+    pub tag: FFIHirValueTag,
+    pub value: ValueUnion,
 }
-

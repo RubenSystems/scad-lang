@@ -1,5 +1,87 @@
+use crate::frontend::{
+    high_level_ir::ast_types::IntegerWidth,
+    mid_level_ir::mir_ast_types::{SSAExpression, SSAValue},
+    type_system::{
+        tir_types::{MonoType, TIRType},
+        type_engine::instantiate,
+    },
+};
 
+use super::ffi_types::FFIHirValueTag;
+use super::ffi_types::{
+    convert_monotype_to_ffi, ExpressionUnion, FFIApplication, FFIExpressionBlock, FFIHIRCast,
+    FFIHIRConditional, FFIHIRExpr, FFIHIRFloat, FFIHIRForLoop, FFIHIRForwardFunctionDecl,
+    FFIHIRFunctionCall, FFIHIRFunctionDecl, FFIHIRInteger, FFIHIRReturn, FFIHIRTag, FFIHIRTensor,
+    FFIHIRValue, FFIHIRVariableDecl, FFIHIRVariableReference, FFIHIRWhile, FFIHIRYield, FFIString,
+    FFIType, ValueUnion,
+};
+use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
+fn flatten_applications(tpe: MonoType) -> FFIType {
+    let MonoType::Application {
+        c,
+        dimensions,
+        types,
+    } = tpe
+    else {
+        unreachable!("Unable to type value")
+    };
+    let mut flattened = Vec::new();
+    collapse_application(
+        MonoType::Application {
+            c: c.clone(),
+            dimensions: dimensions.clone(),
+            types: types.clone(),
+        },
+        &mut flattened,
+    );
+
+    let apps: Vec<FFIApplication> = flattened
+        .into_iter()
+        .map(|x| convert_monotype_to_ffi(x))
+        .collect();
+
+    let apps_len = apps.len();
+    let apps_ptr = apps.as_ptr();
+    std::mem::forget(apps);
+
+    FFIType {
+        size: apps_len,
+        applications: apps_ptr,
+    }
+}
+
+fn collapse_application(app: MonoType, collapsed_val: &mut Vec<MonoType>) -> bool {
+    let MonoType::Application {
+        c,
+        dimensions,
+        types,
+    } = app
+    else {
+        return false;
+    };
+
+    if c == "->" {
+        // its not a leaf
+        collapse_application(types.first().unwrap().clone(), collapsed_val)
+            && collapse_application(types.last().unwrap().clone(), collapsed_val)
+    } else {
+        collapsed_val.push(MonoType::Application {
+            c,
+            dimensions,
+            types,
+        });
+        true
+    }
+}
+
+pub fn convert_type_to_ffi(tpe: TIRType) -> FFIType {
+    match tpe.clone() {
+        TIRType::MonoType(mt) => flatten_applications(mt),
+        TIRType::PolyType(_) => flatten_applications(instantiate(tpe)),
+        TIRType::ForwardDecleration(_) => todo!(),
+    }
+}
 
 pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
     match val.fcopy() {
