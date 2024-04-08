@@ -8,7 +8,7 @@ use super::{
     mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
     parsers::{
         for_block_induction_variable, generate_label_name, generate_register_name,
-        parse_expression_block, parse_for_block, parse_statement_block,
+        parse_expression_block, parse_statement_block,
     },
 };
 

@@ -1,7 +1,7 @@
 pub mod core;
 pub mod frontend;
 
-use crate::core::typedefs::create_types_for_core;
+
 use crate::frontend::error::{ErrorPool, SCADError};
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
@@ -12,10 +12,10 @@ use crate::frontend::mid_level_ir::mir_opt::{
 };
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
-use crate::frontend::high_level_ir::ast_types::FailureCopy;
+
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
-use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
+
 
 use crate::frontend::high_level_ir::hir_parser::Rule;
 use crate::frontend::mid_level_ir::ffi::ffi_conversion::ffi_ssa_expr;

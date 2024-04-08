@@ -1,9 +1,6 @@
 use crate::frontend::{
-    high_level_ir::ast_types::{FailureCopy, IntegerWidth},
     type_system::{
-        context::Context,
-        tir_types::{MonoType, TIRType},
-        type_engine::instantiate,
+        tir_types::{MonoType},
     },
 };
 use std::{os::raw::c_char, ptr::null};
