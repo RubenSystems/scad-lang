@@ -27,14 +27,18 @@ widths = {
 	| "16"
 	| "32"
 	| "64"
-	| "128"
+}
+
+fwidths = {
+	"32"
+	| "64"
 }
 
 integer = @{ ASCII_DIGIT+ }
 float = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
 
 integer_literal = { integer ~ "_i" ~ (widths | "i") }
-float_literal = { float ~ "_f" ~ widths}
+float_literal = { float ~ "_f" ~ fwidths}
 
 char_array = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 identifier = { (ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) }

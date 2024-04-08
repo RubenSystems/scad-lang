@@ -83,7 +83,7 @@ pub fn convert_type_to_ffi(tpe: TIRType) -> FFIType {
     }
 }
 
-pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
+pub fn ffi_ssa_val(val: SSAValue) -> FFIHIRValue {
     match val.fcopy() {
         SSAValue::VariableReference(v, _) => FFIHIRValue {
             tag: FFIHirValueTag::VariableReference,
@@ -138,10 +138,8 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             parameters,
             pool_id: _,
         } => {
-            let param_transform: Vec<FFIHIRValue> = parameters
-                .into_iter()
-                .map(|x| ffi_ssa_val(std::mem::ManuallyDrop::new(x)))
-                .collect();
+            let param_transform: Vec<FFIHIRValue> =
+                parameters.into_iter().map(|x| ffi_ssa_val(x)).collect();
             let len = param_transform.len();
             let ptr = param_transform.as_ptr();
             std::mem::forget(param_transform);
@@ -158,10 +156,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
         }
         SSAValue::Nothing => todo!(),
         SSAValue::Tensor(v, _) => {
-            let arr: Vec<FFIHIRValue> = v
-                .into_iter()
-                .map(|x| ffi_ssa_val(std::mem::ManuallyDrop::new(x)))
-                .collect();
+            let arr: Vec<FFIHIRValue> = v.into_iter().map(|x| ffi_ssa_val(x)).collect();
             let arr_ptr = arr.as_ptr();
             let arr_len = arr.len();
             std::mem::forget(arr);
@@ -184,16 +179,10 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             value: ValueUnion {
                 conditional: FFIHIRConditional {
                     if_arm: FFIExpressionBlock {
-                        condition: Box::into_raw(Box::new(ffi_ssa_val(
-                            std::mem::ManuallyDrop::new(*if_block.condition),
-                        ))),
-                        block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
-                            *if_block.block.block,
-                        )))),
+                        condition: Box::into_raw(Box::new(ffi_ssa_val(*if_block.condition))),
+                        block: Box::into_raw(Box::new(ffi_ssa_expr(*if_block.block.block))),
                     },
-                    else_arm: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
-                        *else_block.block,
-                    )))),
+                    else_arm: Box::into_raw(Box::new(ffi_ssa_expr(*else_block.block))),
                 },
             },
         },
@@ -205,7 +194,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
             tag: FFIHirValueTag::Cast,
             value: ValueUnion {
                 cast: FFIHIRCast {
-                    expr: Box::into_raw(Box::new(ffi_ssa_val(std::mem::ManuallyDrop::new(*value)))),
+                    expr: Box::into_raw(Box::new(ffi_ssa_val(*value))),
                     to: unsafe {
                         *convert_type_to_ffi(TIRType::MonoType(to.to_tir_type())).applications
                     },
@@ -215,7 +204,7 @@ pub fn ffi_ssa_val(val: std::mem::ManuallyDrop<SSAValue>) -> FFIHIRValue {
     }
 }
 
-pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
+pub fn ffi_ssa_expr(expr: SSAExpression) -> FFIHIRExpr {
     match expr.fcopy() {
         SSAExpression::VariableDecl {
             name,
@@ -228,8 +217,8 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             value: ExpressionUnion {
                 variable_decl: FFIHIRVariableDecl {
                     name: FFIString::from_string(name),
-                    e1: ffi_ssa_val(std::mem::ManuallyDrop::new(e1)),
-                    e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+                    e1: ffi_ssa_val(e1),
+                    e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2))),
                 },
             },
         },
@@ -254,10 +243,8 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
                 value: ExpressionUnion {
                     function_decl: FFIHIRFunctionDecl {
                         name: FFIString::from_string(name),
-                        block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
-                            *block,
-                        )))),
-                        e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+                        block: Box::into_raw(Box::new(ffi_ssa_expr(*block))),
+                        e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2))),
                         args: a_ptr,
                         arg_len: a_len,
                     },
@@ -275,7 +262,7 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             value: ExpressionUnion {
                 forward_function_decl: FFIHIRForwardFunctionDecl {
                     name: FFIString::from_string(name),
-                    e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
+                    e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2))),
                 },
             },
         },
@@ -287,16 +274,16 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             tag: FFIHIRTag::Return,
             value: ExpressionUnion {
                 ret: FFIHIRReturn {
-                    res: ffi_ssa_val(std::mem::ManuallyDrop::new(val)),
+                    res: ffi_ssa_val(val),
                 },
             },
         },
-        SSAExpression::Block(b, _) => ffi_ssa_expr(std::mem::ManuallyDrop::new(*b)),
+        SSAExpression::Block(b, _) => ffi_ssa_expr(*b),
         SSAExpression::Yield { val, pool_id: _ } => FFIHIRExpr {
             tag: FFIHIRTag::Yield,
             value: ExpressionUnion {
                 yld: FFIHIRYield {
-                    res: ffi_ssa_val(std::mem::ManuallyDrop::new(val)),
+                    res: ffi_ssa_val(val),
                 },
             },
         },
@@ -314,14 +301,12 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             value: ExpressionUnion {
                 floop: FFIHIRForLoop {
                     iv: FFIString::from_string(iv),
-                    start: ffi_ssa_val(std::mem::ManuallyDrop::new(from)),
-                    end: ffi_ssa_val(std::mem::ManuallyDrop::new(to)),
-                    block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
-                        *block,
-                    )))),
+                    start: ffi_ssa_val(from),
+                    end: ffi_ssa_val(to),
+                    block: Box::into_raw(Box::new(ffi_ssa_expr(*block))),
                     parallel,
-                    e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
-                    step: ffi_ssa_val(std::mem::ManuallyDrop::new(step)),
+                    e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2))),
+                    step: ffi_ssa_val(step),
                 },
             },
         },
@@ -335,14 +320,10 @@ pub fn ffi_ssa_expr(expr: std::mem::ManuallyDrop<SSAExpression>) -> FFIHIRExpr {
             tag: FFIHIRTag::WhileLoop,
             value: ExpressionUnion {
                 whl: FFIHIRWhile {
-                    condition: ffi_ssa_val(std::mem::ManuallyDrop::new(cond)),
-                    block: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
-                        *block,
-                    )))),
-                    e2: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(*e2)))),
-                    cond_expr: Box::into_raw(Box::new(ffi_ssa_expr(std::mem::ManuallyDrop::new(
-                        *cond_expr,
-                    )))),
+                    condition: ffi_ssa_val(cond),
+                    block: Box::into_raw(Box::new(ffi_ssa_expr(*block))),
+                    e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2))),
+                    cond_expr: Box::into_raw(Box::new(ffi_ssa_expr(*cond_expr))),
                 },
             },
         },

@@ -1,7 +1,6 @@
 pub mod core;
 pub mod frontend;
 
-
 use crate::frontend::error::{ErrorPool, SCADError};
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
@@ -12,10 +11,8 @@ use crate::frontend::mid_level_ir::mir_opt::{
 };
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
-
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_ast_types::SSAExpression;
-
 
 use crate::frontend::high_level_ir::hir_parser::Rule;
 use crate::frontend::mid_level_ir::ffi::ffi_conversion::ffi_ssa_expr;
@@ -30,10 +27,20 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
 
-
-    fn a(je: i32) i32 {
-        @add(a: je, b: je)
+    fn main() i32 {
+	
+	
+        let a = 1.0_f32; 
+        let b = @addf(a: a, b: 1.0_f32);
+        let c = @addf(a: b, b: 1.0_f32);
+    
+    
+        @print(value: c);
+    
+    
+        0_i32
     };
+    
     
     "#;
     let _counter: usize = 0;
@@ -81,7 +88,7 @@ fn main() -> std::io::Result<()> {
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
     println!("{context:#?}");
-    let _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
+    let _ = ffi_ssa_expr(code);
 
     Ok(())
 }

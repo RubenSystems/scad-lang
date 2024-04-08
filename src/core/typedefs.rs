@@ -5,18 +5,23 @@ use crate::frontend::type_system::{
 
 pub fn create_types_for_core() -> Context {
     let mut consumable_context = Context::new();
-
+    
+    
     consumable_context.add_type_for_name(
         "@print".into(),
-        TIRType::MonoType(MonoType::Application {
-            dimensions: None,
-            c: "->".into(),
-            types: vec![
-                MonoType::Variable("any_vec_any".into()),
-                MonoType::Variable("any_vec_any".into()),
-            ],
+        TIRType::PolyType(PolyType::TypeQuantifier {
+            alpha: "@print.type".into(),
+            sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                dimensions: None,
+                c: "->".into(),
+                types: vec![
+                    MonoType::Variable("@print.type".into()),
+                    MonoType::Variable("@print.type".into()),
+                ],
+            })),
         }),
     );
+
 
     consumable_context.add_type_for_name(
         "@drop".into(),
@@ -33,7 +38,7 @@ pub fn create_types_for_core() -> Context {
         }),
     );
 
-    ["add", "sub", "mul", "div"].into_iter().for_each(|x| {
+    ["addi", "subi", "muli", "divi"].into_iter().for_each(|x| {
         consumable_context.add_type_for_name(
             format!("@{x}"),
             TIRType::PolyType(PolyType::TypeQuantifier {
@@ -57,7 +62,31 @@ pub fn create_types_for_core() -> Context {
         );
     });
 
-    ["lte", "lt", "eq", "gre", "gr"].into_iter().for_each(|x| {
+    ["addf", "subf", "mulf", "divf"].into_iter().for_each(|x| {
+        consumable_context.add_type_for_name(
+            format!("@{x}"),
+            TIRType::PolyType(PolyType::TypeQuantifier {
+                alpha: format!("@{x}.type"),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable(format!("@{x}.type")),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Variable(format!("@{x}.type")),
+                                MonoType::Variable(format!("@{x}.type")),
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        );
+    });
+
+    ["ltei", "lti", "eqi", "grei", "gri"].into_iter().for_each(|x| {
         consumable_context.add_type_for_name(
             format!("@{x}"),
             TIRType::PolyType(PolyType::TypeQuantifier {
@@ -85,7 +114,70 @@ pub fn create_types_for_core() -> Context {
         );
     });
 
-    ["add", "sub", "mul", "div"].into_iter().for_each(|x| {
+    ["ltef", "ltf", "eqf", "gref", "grf"].into_iter().for_each(|x| {
+        consumable_context.add_type_for_name(
+            format!("@{x}"),
+            TIRType::PolyType(PolyType::TypeQuantifier {
+                alpha: format!("@{x}.type"),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable(format!("@{x}.type")),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Variable(format!("@{x}.type")),
+                                MonoType::Application {
+                                    c: "i1".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        );
+    });
+
+    ["addi", "subi", "muli", "divi"].into_iter().for_each(|x| {
+        consumable_context.add_type_for_name(
+            format!("@{x}.v"),
+            TIRType::PolyType(PolyType::TypeQuantifier {
+                alpha: format!("@{x}.type"),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable(format!("@{x}.type")),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Variable(format!("@{x}.type")),
+                                MonoType::Application {
+                                    c: "->".into(),
+                                    dimensions: None,
+                                    types: vec![
+                                        MonoType::Variable(format!("@{x}.type")),
+                                        MonoType::Application {
+                                            c: "ii".into(),
+                                            dimensions: None,
+                                            types: vec![],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        );
+    });
+
+    ["addf", "subf", "mulf", "divf"].into_iter().for_each(|x| {
         consumable_context.add_type_for_name(
             format!("@{x}.v"),
             TIRType::PolyType(PolyType::TypeQuantifier {
@@ -142,6 +234,38 @@ pub fn create_types_for_core() -> Context {
                                 },
                                 MonoType::Application {
                                     c: format!("i{x}"),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        );
+    });
+
+    vec![32, 64].into_iter().for_each(|x| {
+        consumable_context.add_type_for_name(
+            format!("@index.f{x}"),
+            TIRType::PolyType(PolyType::TypeQuantifier {
+                alpha: "@index.tensor".into(),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable("@index.tensor".into()),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Application {
+                                    c: "ii".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                                MonoType::Application {
+                                    c: format!("f{x}"),
                                     dimensions: None,
                                     types: vec![],
                                 },
@@ -212,6 +336,49 @@ pub fn create_types_for_core() -> Context {
                                         },
                                         MonoType::Application {
                                             c: format!("i{x}"),
+                                            dimensions: None,
+                                            types: vec![],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                })),
+            }),
+        );
+    });
+
+    vec![32, 64].into_iter().for_each(|x| {
+        consumable_context.add_type_for_name(
+            format!("@set.f{x}"),
+            TIRType::PolyType(PolyType::TypeQuantifier {
+                alpha: "@set.type".into(),
+                sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                    c: "->".into(),
+                    dimensions: None,
+                    types: vec![
+                        MonoType::Variable("@set.type".into()),
+                        MonoType::Application {
+                            c: "->".into(),
+                            dimensions: None,
+                            types: vec![
+                                MonoType::Application {
+                                    c: "ii".into(),
+                                    dimensions: None,
+                                    types: vec![],
+                                },
+                                MonoType::Application {
+                                    c: "->".into(),
+                                    dimensions: None,
+                                    types: vec![
+                                        MonoType::Application {
+                                            c: format!("f{x}"),
+                                            dimensions: None,
+                                            types: vec![],
+                                        },
+                                        MonoType::Application {
+                                            c: format!("f{x}"),
                                             dimensions: None,
                                             types: vec![],
                                         },

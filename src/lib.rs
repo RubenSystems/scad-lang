@@ -4,12 +4,15 @@ pub mod frontend;
 use crate::frontend::error::SCADError;
 use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
+use crate::frontend::mid_level_ir::ffi::ffi_types::ProgramOut;
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
 use frontend::error::ErrorPool;
+use frontend::mid_level_ir::ffi::ffi_drop::drop_ffi_data;
+use frontend::mid_level_ir::ffi::ffi_types::OutData;
 use frontend::mid_level_ir::ffi::{
     ffi_conversion::ffi_ssa_expr,
     ffi_types::{FFIHIRExpr, FFIType},
@@ -26,18 +29,6 @@ use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
 
-#[repr(C)]
-pub union ProgramOut {
-    pub program: std::mem::ManuallyDrop<FFIHIRExpr>,
-    pub error: u32,
-}
-
-#[repr(C)]
-pub struct OutData {
-    pub compiled: bool,
-    pub program: ProgramOut,
-}
-
 #[no_mangle]
 pub extern "C" fn query(
     query_engine: *mut c_void,
@@ -52,7 +43,12 @@ pub extern "C" fn query(
 }
 
 #[no_mangle]
-pub extern "C" fn compile(
+pub extern "C" fn drop_ir(ffi: OutData) {
+    drop_ffi_data(ffi)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn compile(
     filename: *const c_char,
     context_query_engine: *mut *mut c_void,
 ) -> OutData {
@@ -123,11 +119,12 @@ pub extern "C" fn compile(
     unsafe { *context_query_engine = qep as *mut c_void };
 
     // Make it so code is not automatically dropped using std::mem::manually drop
-    let code_res = std::mem::ManuallyDrop::new(code);
     OutData {
         compiled: true,
         program: ProgramOut {
-            program: std::mem::ManuallyDrop::new(ffi_ssa_expr(code_res)),
+            program: std::mem::ManuallyDrop::new(ffi_ssa_expr(code)),
         },
     }
 }
+
+

@@ -1,9 +1,17 @@
-use crate::frontend::{
-    type_system::{
-        tir_types::{MonoType},
-    },
-};
+use crate::frontend::type_system::tir_types::MonoType;
 use std::{os::raw::c_char, ptr::null};
+
+#[repr(C)]
+pub union ProgramOut {
+    pub program: std::mem::ManuallyDrop<FFIHIRExpr>,
+    pub error: u32,
+}
+
+#[repr(C)]
+pub struct OutData {
+    pub compiled: bool,
+    pub program: ProgramOut,
+}
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
