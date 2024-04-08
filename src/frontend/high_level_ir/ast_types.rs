@@ -205,6 +205,7 @@ pub struct ForLoop {
     pub unroll: usize,
     pub block: StatementBlock, // Block of statements to be executed if the condition is met
     pub parallel: bool,
+    pub vector_iv: bool,
 }
 
 impl FailureCopy for ForLoop {
@@ -217,6 +218,7 @@ impl FailureCopy for ForLoop {
             parallel: self.parallel,
             step: self.step,
             unroll: self.unroll,
+            vector_iv: self.vector_iv,
         }
     }
 }

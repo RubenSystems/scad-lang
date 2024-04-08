@@ -56,9 +56,10 @@ tensor = { "{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
 step = {"step" ~ integer}
 
 unroll = {"unroll" ~ integer}
+unroll_plus = {"vectoriv" ~ integer}
 
 for_loop = {
-	"for" ~ identifier ~ ":" ~ expression ~ "->" ~ expression ~ step? ~ unroll? ~ statement_block 
+	"for" ~ identifier ~ ":" ~ expression ~ "->" ~ expression ~ step? ~ (unroll | unroll_plus)? ~ statement_block 
 }
 
 while_loop = {

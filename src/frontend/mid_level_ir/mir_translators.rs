@@ -7,8 +7,8 @@ use crate::frontend::{
 use super::{
     mir_ast_types::{SSAExpression, SSALabeledBlock, SSAValue},
     parsers::{
-        generate_label_name, generate_register_name, parse_expression_block, parse_for_block,
-        parse_statement_block,
+        for_block_induction_variable, generate_label_name, generate_register_name,
+        parse_expression_block, parse_for_block, parse_statement_block,
     },
 };
 
@@ -223,12 +223,13 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                     expression_l1_to_l2(
                         f.to.fcopy(),
                         Box::new(move |to_var| SSAExpression::ForLoop {
-                            block: Box::new(parse_for_block(
+                            block: Box::new(for_block_induction_variable(
                                 f.block.fcopy(),
                                 f.block.fcopy(),
                                 f.unroll,
                                 f.fcopy(),
-                                f.step as i128, 
+                                f.step as i128,
+                                f.vector_iv,
                                 pid,
                             )),
                             iv: f.variable.0,

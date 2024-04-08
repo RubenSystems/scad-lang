@@ -52,7 +52,7 @@ pub enum ErrorType {
     ForLoopInductionVariablesMustBeIndexType,
     IncorrectFunctionReturnType,
     CouldNotFindFunction(String),
-    CannotFindFunctionWithMatchingArguementTypes
+    CannotFindFunctionWithMatchingArguementTypes,
 }
 
 #[derive(Debug, Clone)]

@@ -1,31 +1,28 @@
 pub mod core;
 pub mod frontend;
-pub mod testing;
 
-use crate::core::typedefs::create_types_for_core;
 use crate::frontend::error::SCADError;
-use crate::frontend::high_level_ir::ast_types::{FailureCopy, Statement};
+use crate::frontend::high_level_ir::ast_types::Statement;
 use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
-use crate::frontend::mid_level_ir::ffi::{ffi_ssa_expr, TypeQueryEngine};
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
-use crate::frontend::type_system::mir_to_tir::transform_mir_to_tir;
 
-use crate::frontend::type_system::type_engine::{w_algo, WAlgoInfo};
 use frontend::error::ErrorPool;
-use frontend::mid_level_ir::ffi::{FFIHIRExpr, FFIType};
+use frontend::mid_level_ir::ffi::{ffi_types::{FFIHIRExpr, FFIType}, type_query_engine::TypeQueryEngine, ffi_conversion::ffi_ssa_expr};
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
 use frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold, remove_unused_variables};
+use frontend::type_system::type_engine::extract_type_information;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
+
 
 #[repr(C)]
 pub union ProgramOut {
@@ -51,6 +48,8 @@ pub extern "C" fn query(
     let tir = std::mem::ManuallyDrop::new(qep.get_type_for(str_slice));
     tir
 }
+
+
 
 #[no_mangle]
 pub extern "C" fn compile(
@@ -95,31 +94,15 @@ pub extern "C" fn compile(
         .collect();
     let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
 
+    // perform desugaring 
     let code = rename_variables(unop_code, vec!["prog".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
-    // println!("{code:#?}");
-    // Optimiser
-    let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
-    // endof optimiser
 
-    let consumable_context = create_types_for_core();
-
-    let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
-
-    let (_, _, context) = match w_algo(
-        ctx,
-        WAlgoInfo {
-            retry_count: 0,
-            req_type: None,
-            pool: &location_pool,
-        },
-        &tir,
-    ) {
+    // extract type information 
+    let context = match extract_type_information(&code, location_pool) {
         Ok(e) => e,
         Err(e) => {
-            print!("{e}");
+            println!("{e}");
             return OutData {
                 compiled: false,
                 program: ProgramOut { error: 0 },
@@ -127,12 +110,20 @@ pub extern "C" fn compile(
         }
     };
 
+    // Run optimisation and liveness passes
+    let code = mir_variable_fold(code, HashMap::new());
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
     let code = unalive_vars(code, vec![]);
+
+
+    // generate query engine for type information 
     let query_engine = TypeQueryEngine::new(context);
     let qep = Box::into_raw(Box::new(query_engine));
 
     unsafe { *context_query_engine = qep as *mut c_void };
 
+    // Make it so code is not automatically dropped using std::mem::manually drop 
     let code_res = std::mem::ManuallyDrop::new(code);
     OutData {
         compiled: true,

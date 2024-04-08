@@ -122,15 +122,135 @@ pub fn parse_statement_block(blk: StatementBlock) -> SSAExpression {
     }
 }
 
-pub fn parse_for_block(
+pub fn for_block_induction_variable(
     og: StatementBlock,
     blk: StatementBlock,
     unroll_count: usize,
     lp: ForLoop,
     step: i128,
+    vector_iv: bool,
     pid: usize,
 ) -> SSAExpression {
+    if (unroll_count == 0 && !vector_iv) || step != 1 {
+        parse_for_block(og, blk, unroll_count, 0, lp, step, pid, None)
+    } else {
+        parse_for_block_vector_iv(og, blk, unroll_count, 0, lp, step, pid, None)
+    } 
+}
 
+pub fn parse_for_block_vector_iv(
+    og: StatementBlock,
+    blk: StatementBlock,
+    unroll_count: usize,
+    unroll_index: usize,
+    lp: ForLoop,
+    step: i128,
+    pid: usize,
+    iv_array_name: Option<String>,
+) -> SSAExpression {
+
+
+    if unroll_index % 8 == 0 {
+        let ivname = generate_register_name();
+        SSAExpression::VariableDecl {
+            name: ivname.clone(),
+            vtype: None,
+            e1: SSAValue::FunctionCall {
+                name: "@induction_variable.unroll".into(),
+                parameters: vec![
+                    SSAValue::VariableReference(lp.variable.0.clone(), pid),
+                    SSAValue::Integer {
+                        value: 8,
+                        width: IntegerWidth::IndexType,
+                        pool_id: pid,
+                    },
+                ],
+                pool_id: pid,
+            },
+            e2: Box::new(inner_parse_for_block_vector_iv(og, blk, unroll_count, unroll_index, lp, step, pid, Some(ivname))),
+            pool_id: pid,
+        }
+    } else {
+        inner_parse_for_block_vector_iv(og, blk, unroll_count, unroll_index, lp, step, pid, iv_array_name)
+    }
+
+}
+
+pub fn inner_parse_for_block_vector_iv(
+    og: StatementBlock,
+    blk: StatementBlock,
+    unroll_count: usize,
+    unroll_index: usize,
+    lp: ForLoop,
+    step: i128,
+    pid: usize,
+    iv_array_name: Option<String>,
+) -> SSAExpression {
+    if blk.statements.len() == 1 {
+        // last statement, send it to be unrolled
+        statement_l1_to_l2(
+            blk.statements[0].fcopy(),
+            Box::new(move |_| {
+                if unroll_count == 0 {
+                    SSAExpression::Noop
+                } else {
+                    SSAExpression::VariableDecl {
+                        name: lp.variable.0.clone(),
+                        vtype: None,
+                        e1: SSAValue::FunctionCall {
+                            name: "@induction_variable.vector.get".into(),
+                            parameters: vec![
+                                SSAValue::VariableReference(iv_array_name.clone().unwrap(), pid),
+                                SSAValue::Integer {
+                                    value: (unroll_index % 8) as i128,
+                                    width: IntegerWidth::IndexType,
+                                    pool_id: pid,
+                                },
+                            ],
+                            pool_id: pid,
+                        },
+                        e2: Box::new(parse_for_block_vector_iv(
+                            og.fcopy(),
+                            og,
+                            unroll_count - 1,
+                            unroll_index + 1,
+                            lp,
+                            step,
+                            pid,
+                            iv_array_name,
+                        )),
+                        pool_id: pid,
+                    }
+                }
+            }),
+        )
+    } else if blk.statements.len() > 1 {
+        let rest_clone = blk.statements[1..].iter().map(|x| x.fcopy()).collect();
+        statement_l1_to_l2(
+            blk.statements.first().unwrap().fcopy(),
+            Box::new(move |_| {
+                let new_blk = StatementBlock {
+                    statements: rest_clone,
+                };
+                parse_for_block_vector_iv(og, new_blk, unroll_count, unroll_index, lp, step, pid, iv_array_name)
+            }),
+        )
+    } else {
+        SSAExpression::Noop
+    }
+}
+
+
+pub fn parse_for_block(
+    og: StatementBlock,
+    blk: StatementBlock,
+    unroll_count: usize,
+    unroll_index: usize,
+    lp: ForLoop,
+    step: i128,
+    pid: usize,
+    iv_array_name: Option<String>,
+) -> SSAExpression {
     if blk.statements.len() == 1 {
         // last statement, send it to be unrolled
         statement_l1_to_l2(
@@ -145,16 +265,25 @@ pub fn parse_for_block(
                         e1: SSAValue::FunctionCall {
                             name: "@add".into(),
                             parameters: vec![
+                                SSAValue::VariableReference(lp.variable.0.clone(), pid),
                                 SSAValue::Integer {
                                     value: step,
                                     width: IntegerWidth::IndexType,
                                     pool_id: pid,
                                 },
-                                SSAValue::VariableReference(lp.variable.0.clone(), pid),
                             ],
                             pool_id: pid,
                         },
-                        e2: Box::new(parse_for_block(og.fcopy(), og, unroll_count - 1, lp, step, pid)),
+                        e2: Box::new(parse_for_block(
+                            og.fcopy(),
+                            og,
+                            unroll_count - 1,
+                            unroll_index + 1,
+                            lp,
+                            step,
+                            pid,
+                            iv_array_name,
+                        )),
                         pool_id: pid,
                     }
                 }
@@ -168,7 +297,7 @@ pub fn parse_for_block(
                 let new_blk = StatementBlock {
                     statements: rest_clone,
                 };
-                parse_for_block(og, new_blk, unroll_count, lp, step, pid)
+                parse_for_block(og, new_blk, unroll_count, unroll_index, lp, step, pid, iv_array_name)
             }),
         )
     } else {

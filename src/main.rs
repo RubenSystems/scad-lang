@@ -1,6 +1,5 @@
 pub mod core;
 pub mod frontend;
-pub mod testing;
 
 use crate::core::typedefs::create_types_for_core;
 use crate::frontend::error::{ErrorPool, SCADError};
@@ -34,7 +33,7 @@ fn main() -> std::io::Result<()> {
 
 
     fn a(je: i32) i32 {
-        @add(a: 0_ii, b: je)
+        @add(a: je, b: je)
     };
     
     "#;
@@ -74,7 +73,7 @@ fn main() -> std::io::Result<()> {
     let consumable_context = create_types_for_core();
     let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
 
-    let (_, _, _context) = match w_algo(
+    let (_, _, context) = match w_algo(
         ctx,
         WAlgoInfo {
             retry_count: 0,
@@ -92,7 +91,7 @@ fn main() -> std::io::Result<()> {
 
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
-    // println!("{code:#?}");
+    println!("{context:#?}");
     let _ = ffi_ssa_expr(std::mem::ManuallyDrop::new(code));
 
     Ok(())

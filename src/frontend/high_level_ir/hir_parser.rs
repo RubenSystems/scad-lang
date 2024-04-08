@@ -130,7 +130,6 @@ fn parse_for_loop(
 
     loc_pool: &mut ErrorPool,
 ) -> Result<Statement, SCADError> {
-    let _unroll_error = SCADError::from_pair(ErrorType::InvalidUnroll, &lp);
     let pid = loc_pool.insert(&lp);
     let mut it = lp.into_inner();
     let identifier = Identifier(it.next().unwrap().as_str().to_string());
@@ -139,6 +138,7 @@ fn parse_for_loop(
     let mut nxt = it.next().unwrap();
     let mut step = None;
     let mut unroll = None;
+    let mut vector_iv = false;
 
     match nxt.as_rule() {
         Rule::step => {
@@ -157,6 +157,14 @@ fn parse_for_loop(
             unroll = Some(factor);
 
             nxt = it.next().unwrap()
+        }
+        Rule::unroll_plus => {
+            let factor = nxt.into_inner().as_str().parse::<usize>().unwrap();
+
+            unroll = Some(factor);
+
+            nxt = it.next().unwrap();
+            vector_iv = true;
         }
         _ => {}
     }
@@ -184,6 +192,7 @@ fn parse_for_loop(
             parallel,
             step: step.unwrap_or(1),
             unroll: unroll.unwrap_or(0),
+            vector_iv
         },
         pid,
     ))

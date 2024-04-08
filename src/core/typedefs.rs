@@ -258,6 +258,66 @@ pub fn create_types_for_core() -> Context {
     });
 
     consumable_context.add_type_for_name(
+        format!("@induction_variable.unroll"),
+        TIRType::PolyType(PolyType::TypeQuantifier {
+            alpha: "@induction_variable.unroll.type".into(),
+            sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                c: "->".into(),
+                dimensions: None,
+                types: vec![
+                    MonoType::Application {
+                        c: "ii".into(),
+                        dimensions: None,
+                        types: vec![],
+                    },
+                    MonoType::Application {
+                        c: "->".into(),
+                        dimensions: None,
+                        types: vec![
+                            MonoType::Application {
+                                c: "ii".into(),
+                                dimensions: None,
+                                types: vec![],
+                            },
+                            MonoType::Variable(format!("@induction_variable.unroll.type")),
+                        ],
+                    },
+                ],
+            })),
+        }),
+    );
+
+    consumable_context.add_type_for_name(
+        format!("@induction_variable.vector.get"),
+        TIRType::PolyType(PolyType::TypeQuantifier {
+            alpha: "@induction_variable.vector.get.type".into(),
+            sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                c: "->".into(),
+                dimensions: None,
+                types: vec![
+                    MonoType::Variable(format!("@induction_variable.unroll.type")),
+                    MonoType::Application {
+                        c: "->".into(),
+                        dimensions: None,
+                        types: vec![
+                            MonoType::Application {
+                                c: "ii".into(),
+                                dimensions: None,
+                                types: vec![],
+                            },
+                            MonoType::Application {
+                                c: "ii".into(),
+                                dimensions: None,
+                                types: vec![],
+                            },
+                        ],
+                    },
+                ],
+            })),
+        }),
+    );
+
+    consumable_context.add_type_for_name(
         format!("@vec.load"),
         TIRType::PolyType(PolyType::TypeQuantifier {
             alpha: "@vec.type".into(),

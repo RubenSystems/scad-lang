@@ -4,18 +4,32 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::frontend::{
+use crate::{core::typedefs::create_types_for_core, frontend::{
     error::{ErrorPool, ErrorType, SCADError},
-    high_level_ir::ast_types::IntegerWidth,
-};
+    high_level_ir::ast_types::{FailureCopy, IntegerWidth}, mid_level_ir::mir_ast_types::SSAExpression,
+}};
 
 use super::{
-    context::Context,
-    substitution::Substitution,
-    tir_ast_expressions::TIRExpression,
-    tir_types::{generate_type_name, MonoType, PolyType, TIRType},
-    traits::{FreeVarsGettable, Instantiatable},
+    context::Context, mir_to_tir::transform_mir_to_tir, substitution::Substitution, tir_ast_expressions::TIRExpression, tir_types::{generate_type_name, MonoType, PolyType, TIRType}, traits::{FreeVarsGettable, Instantiatable}
 };
+
+pub fn extract_type_information(code: &SSAExpression, location_pool: ErrorPool) -> Result<Context, SCADError>{
+    let consumable_context = create_types_for_core();
+
+    let (tir, ctx) = transform_mir_to_tir(code.fcopy(), consumable_context);
+
+    let (_, _, ctx ) = w_algo(
+        ctx,
+        WAlgoInfo {
+            retry_count: 0,
+            req_type: None,
+            pool: &location_pool,
+        },
+        &tir,
+    )?;
+
+    Ok(ctx)
+}
 
 const MAX_HINDLEY_RETRYS: usize = 10000;
 
@@ -30,7 +44,7 @@ pub struct WAlgoInfo<'a> {
     pub pool: &'a ErrorPool,
 }
 
-pub fn w_algo(
+fn w_algo(
     context: Context,
     info: WAlgoInfo,
     exp: &TIRExpression,
@@ -83,8 +97,6 @@ pub fn w_algo(
                     info.pool,
                 ));
             };
-
-            
 
             let tpe = match tpe.get(info.retry_count).clone() {
                 Some(a) => a,
@@ -154,7 +166,7 @@ pub fn w_algo(
             //     if tir_t != t1 {
             //         unreachable!("skill issue: attempting to assign expression of type: \n\n{t1:#?} to variable of specified_type \n\n{tir_t:#?}")
             //     }
-            // } 
+            // }
 
             let mut sub_context = context.applying_substitution(&s1).clone();
             if !sub_context.has_type_for_name(name) {
@@ -219,7 +231,11 @@ pub fn w_algo(
                     Err(_e) => retry_count += 1,
                 };
                 if retry_count > MAX_HINDLEY_RETRYS {
-                    return Err(SCADError::from_pid(ErrorType::CannotFindFunctionWithMatchingArguementTypes, *pool_id, info.pool))
+                    return Err(SCADError::from_pid(
+                        ErrorType::CannotFindFunctionWithMatchingArguementTypes,
+                        *pool_id,
+                        info.pool,
+                    ));
                 }
             }
         }
@@ -553,7 +569,6 @@ pub fn w_algo(
 }
 
 fn get_rettype_of_application(app: MonoType) -> Option<MonoType> {
-
     match app {
         MonoType::Variable(_) => None,
         MonoType::Application {
