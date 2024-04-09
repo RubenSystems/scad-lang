@@ -240,7 +240,7 @@ pub fn statement_l1_to_l2(statement: Statement, _k: ContinuationFunction) -> SSA
                             pool_id: pid,
                             step: SSAValue::Integer {
                                 value: new_step,
-                                width: IntegerWidth::IndexType,
+                                width: Some(IntegerWidth::IndexType),
                                 pool_id: pid,
                             },
                         }),

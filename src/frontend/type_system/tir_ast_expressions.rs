@@ -12,8 +12,8 @@ pub struct TIRPhi {
 
 #[derive(Debug)]
 pub enum TIRExpression {
-    Integer(i128, IntegerWidth, PoolID),
-    Float(f64, u32, PoolID),
+    Integer(i128, Option<IntegerWidth>, PoolID),
+    Float(f64, Option<u32>, PoolID),
     Bool(bool, PoolID),
     Void,
     Tensor(Vec<TIRExpression>, PoolID),

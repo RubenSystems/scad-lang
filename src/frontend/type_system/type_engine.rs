@@ -24,7 +24,7 @@ use super::{
 
 pub fn extract_type_information(
     code: &SSAExpression,
-    location_pool: ErrorPool,
+    location_pool: &ErrorPool,
 ) -> Result<Context, SCADError> {
     let consumable_context = create_types_for_core();
 
@@ -57,23 +57,33 @@ pub struct WAlgoInfo<'a> {
 }
 
 fn w_algo(
-    context: Context,
+    mut context: Context,
     info: WAlgoInfo,
     exp: &TIRExpression,
 ) -> Result<(Substitution, MonoType, Context), SCADError> {
     match exp {
-        TIRExpression::Integer(_, width, _) => Ok((
-            Substitution::new(),
-            MonoType::Application {
-                c: match width {
-                    IntegerWidth::IndexType => "ii".into(),
-                    IntegerWidth::Variable(v) => format!("i{v}"),
-                },
-                dimensions: None,
-                types: vec![],
-            },
-            context,
-        )),
+        TIRExpression::Integer(_, width, _) => {
+            if let Some(width) = width {
+                Ok((
+                    Substitution::new(),
+                    MonoType::Application {
+                        c: match width {
+                            IntegerWidth::IndexType => "ii".into(),
+                            IntegerWidth::Variable(v) => format!("i{v}"),
+                        },
+                        dimensions: None,
+                        types: vec![],
+                    },
+                    context,
+                ))
+            } else {
+                Ok((
+                    Substitution::new(),
+                    MonoType::Variable(generate_type_name()),
+                    context,
+                ))
+            }
+        }
         TIRExpression::Bool(_, _) => Ok((
             Substitution::new(),
             MonoType::Application {
@@ -92,15 +102,25 @@ fn w_algo(
             },
             context,
         )),
-        TIRExpression::Float(_, width, _p) => Ok((
-            Substitution::new(),
-            MonoType::Application {
-                c: format!("f{width}"),
-                dimensions: None,
-                types: vec![],
-            },
-            context,
-        )),
+        TIRExpression::Float(_, width, _p) => {
+            if let Some(width) = width {
+                Ok((
+                    Substitution::new(),
+                    MonoType::Application {
+                        c: format!("f{width}"),
+                        dimensions: None,
+                        types: vec![],
+                    },
+                    context,
+                ))
+            } else {
+                Ok((
+                    Substitution::new(),
+                    MonoType::Variable(generate_type_name()),
+                    context,
+                ))
+            }
+        }
         TIRExpression::VariableReference { name, pool_id } => {
             let Some(tpe) = context.get_type_for_name(name) else {
                 return Err(SCADError::from_pid(
@@ -130,6 +150,8 @@ fn w_algo(
             e2,
             pool_id,
         } => {
+
+
             let (s1, t1, mut context) = w_algo(
                 context,
                 WAlgoInfo {
@@ -144,7 +166,6 @@ fn w_algo(
             )?;
 
             if let Some(x) = context.get_type_for_name(name) {
-                // TODO: make it so polymorphic types are allowed
                 match x.first().unwrap() {
                     TIRType::ForwardDecleration(_) => {
                         // context.remove_type_for_name(name);
@@ -152,7 +173,7 @@ fn w_algo(
                     TIRType::MonoType(m) => {
                         let unification = unify(m, &t1).map_err(|_| {
                             SCADError::from_pid(
-                                ErrorType::CannotTypeExpression,
+                                ErrorType::UnknownError("HI THERE".to_string()),
                                 *pool_id,
                                 info.pool,
                             )
@@ -171,13 +192,11 @@ fn w_algo(
                     }
                 }
             }
-            //VARIBLE TYPE CHECKING!!!
-            // if let Some(t) = type_hint {
-            //     let tir_t = t.to_tir_type();
-            //     println!("{tir_t:?}");
-            //     if tir_t != t1 {
-            //         unreachable!("skill issue: attempting to assign expression of type: \n\n{t1:#?} to variable of specified_type \n\n{tir_t:#?}")
-            //     }
+
+            // if let Some(th) = type_hint {
+            //     let tir_type = th.to_tir_type();
+            //     println!("{name} {tir_type:#?}");
+            //     context.add_type_for_name(name.clone(), TIRType::MonoType(tir_type));
             // }
 
             let mut sub_context = context.applying_substitution(&s1).clone();
@@ -580,7 +599,7 @@ fn w_algo(
     }
 }
 
-fn get_rettype_of_application(app: MonoType) -> Option<MonoType> {
+pub fn get_rettype_of_application(app: MonoType) -> Option<MonoType> {
     match app {
         MonoType::Variable(_) => None,
         MonoType::Application {

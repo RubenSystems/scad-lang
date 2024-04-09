@@ -26,16 +26,45 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-
+    fn idx(row: ii, col: ii) ii {
+        @addi(a: @muli(a: row, b: 2_ii), b: col)
+    };
+    
+    fn get(container: 4xi32, row: ii, column: ii) i32 {
+        let gtidx = idx(r: row, c: column);
+        @index.i32(c: container, idx: gtidx)
+    };
+    
+    fn dot(a: 4xi32, b: 4xi32) 4xi32 {
+        let result = {0_i32, 0_i32, 0_i32, 0_i32};
+    
+        for i: 0_ii -> 2_ii {
+            for j: 0_ii -> 2_ii {
+                for k: 0_ii -> 2_ii {
+                    let res = @muli(a: get(container: a, r: i, c: k), b: get(container: a, r: k, c: j));
+                    let existing = @index.i32(container: result, idx: idx(r: i, c: j));
+    
+                    @set.i32(container: result, index: idx(r: i, c: j), value: @addi(a: res, b: existing));
+                };
+            };
+        };
+    
+    
+        result
+    };
+    
+    
+    
     fn main() i32 {
-	
-	
-        let a = 1.0_f32; 
-        let b = @addf(a: a, b: 1.0_f32);
-        let c = @addf(a: b, b: 1.0_f32);
     
+        let a = {1_i32, 2_i32, 3_i32, 4_i32};
+        let b = {1_i32, 2_i32, 3_i32, 4_i32};
     
-        @print(value: c);
+        let dot_val = dot(a: a, b: b);
+    
+        for i: 0_ii -> 4_ii {
+            @print(a: @index.i32(container: dot_val, index: i));
+        };
     
     
         0_i32
@@ -68,16 +97,16 @@ fn main() -> std::io::Result<()> {
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
     // Optimiser
-    let code = mir_variable_fold(code, HashMap::new());
-    let referenced_vars = get_referenced(&code.0);
-    let code = remove_unused_variables(code.0, &referenced_vars);
+    // let code = mir_variable_fold(code, HashMap::new());
+    // let referenced_vars = get_referenced(&code.0);
+    // let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
     // println!("{code:#?}");
 
     // println!("{:#?}", consumable_context);
 
-    let context = match extract_type_information(&code, location_pool) {
+    let context = match extract_type_information(&code, &location_pool) {
         Ok(e) => e,
         Err(e) => {
             println!("{e}");
@@ -88,7 +117,7 @@ fn main() -> std::io::Result<()> {
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
     println!("{context:#?}");
-    let _ = ffi_ssa_expr(code);
+    let _ = ffi_ssa_expr(code, "", &context, &location_pool);
 
     Ok(())
 }

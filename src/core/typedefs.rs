@@ -5,8 +5,7 @@ use crate::frontend::type_system::{
 
 pub fn create_types_for_core() -> Context {
     let mut consumable_context = Context::new();
-    
-    
+
     consumable_context.add_type_for_name(
         "@print".into(),
         TIRType::PolyType(PolyType::TypeQuantifier {
@@ -21,7 +20,6 @@ pub fn create_types_for_core() -> Context {
             })),
         }),
     );
-
 
     consumable_context.add_type_for_name(
         "@drop".into(),
@@ -86,61 +84,65 @@ pub fn create_types_for_core() -> Context {
         );
     });
 
-    ["ltei", "lti", "eqi", "grei", "gri"].into_iter().for_each(|x| {
-        consumable_context.add_type_for_name(
-            format!("@{x}"),
-            TIRType::PolyType(PolyType::TypeQuantifier {
-                alpha: format!("@{x}.type"),
-                sigma: Box::new(PolyType::MonoType(MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Variable(format!("@{x}.type")),
-                        MonoType::Application {
-                            c: "->".into(),
-                            dimensions: None,
-                            types: vec![
-                                MonoType::Variable(format!("@{x}.type")),
-                                MonoType::Application {
-                                    c: "i1".into(),
-                                    dimensions: None,
-                                    types: vec![],
-                                },
-                            ],
-                        },
-                    ],
-                })),
-            }),
-        );
-    });
+    ["ltei", "lti", "eqi", "grei", "gri"]
+        .into_iter()
+        .for_each(|x| {
+            consumable_context.add_type_for_name(
+                format!("@{x}"),
+                TIRType::PolyType(PolyType::TypeQuantifier {
+                    alpha: format!("@{x}.type"),
+                    sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                        c: "->".into(),
+                        dimensions: None,
+                        types: vec![
+                            MonoType::Variable(format!("@{x}.type")),
+                            MonoType::Application {
+                                c: "->".into(),
+                                dimensions: None,
+                                types: vec![
+                                    MonoType::Variable(format!("@{x}.type")),
+                                    MonoType::Application {
+                                        c: "i1".into(),
+                                        dimensions: None,
+                                        types: vec![],
+                                    },
+                                ],
+                            },
+                        ],
+                    })),
+                }),
+            );
+        });
 
-    ["ltef", "ltf", "eqf", "gref", "grf"].into_iter().for_each(|x| {
-        consumable_context.add_type_for_name(
-            format!("@{x}"),
-            TIRType::PolyType(PolyType::TypeQuantifier {
-                alpha: format!("@{x}.type"),
-                sigma: Box::new(PolyType::MonoType(MonoType::Application {
-                    c: "->".into(),
-                    dimensions: None,
-                    types: vec![
-                        MonoType::Variable(format!("@{x}.type")),
-                        MonoType::Application {
-                            c: "->".into(),
-                            dimensions: None,
-                            types: vec![
-                                MonoType::Variable(format!("@{x}.type")),
-                                MonoType::Application {
-                                    c: "i1".into(),
-                                    dimensions: None,
-                                    types: vec![],
-                                },
-                            ],
-                        },
-                    ],
-                })),
-            }),
-        );
-    });
+    ["ltef", "ltf", "eqf", "gref", "grf"]
+        .into_iter()
+        .for_each(|x| {
+            consumable_context.add_type_for_name(
+                format!("@{x}"),
+                TIRType::PolyType(PolyType::TypeQuantifier {
+                    alpha: format!("@{x}.type"),
+                    sigma: Box::new(PolyType::MonoType(MonoType::Application {
+                        c: "->".into(),
+                        dimensions: None,
+                        types: vec![
+                            MonoType::Variable(format!("@{x}.type")),
+                            MonoType::Application {
+                                c: "->".into(),
+                                dimensions: None,
+                                types: vec![
+                                    MonoType::Variable(format!("@{x}.type")),
+                                    MonoType::Application {
+                                        c: "i1".into(),
+                                        dimensions: None,
+                                        types: vec![],
+                                    },
+                                ],
+                            },
+                        ],
+                    })),
+                }),
+            );
+        });
 
     ["addi", "subi", "muli", "divi"].into_iter().for_each(|x| {
         consumable_context.add_type_for_name(

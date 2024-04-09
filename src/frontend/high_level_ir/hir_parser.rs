@@ -296,7 +296,21 @@ pub fn parse_pair(
                 None => IntegerWidth::IndexType,
             };
             Ok(Statement::Expression(
-                Expression::Integer(Integer { value, width }, pid),
+                Expression::Integer(
+                    Integer {
+                        value,
+                        width: Some(width),
+                    },
+                    pid,
+                ),
+                pid,
+            ))
+        }
+        Rule::integer => {
+            let pid = loc_pool.insert(&primary);
+            let value = primary.as_str().parse::<i128>().unwrap();
+            Ok(Statement::Expression(
+                Expression::Integer(Integer { value, width: None }, pid),
                 pid,
             ))
         }
@@ -306,7 +320,21 @@ pub fn parse_pair(
             let value = p.next().unwrap().as_str().parse::<f64>().unwrap();
             let width = p.next().unwrap().as_str().parse::<u32>().unwrap();
             Ok(Statement::Expression(
-                Expression::Float(Float { value, width }, pid),
+                Expression::Float(
+                    Float {
+                        value,
+                        width: Some(width),
+                    },
+                    pid,
+                ),
+                pid,
+            ))
+        }
+        Rule::float => {
+            let pid = loc_pool.insert(&primary);
+            let value = primary.as_str().parse::<f64>().unwrap();
+            Ok(Statement::Expression(
+                Expression::Float(Float { value, width: None }, pid),
                 pid,
             ))
         }
@@ -420,6 +448,7 @@ pub fn parse_pair(
                 loc,
             ))
         }
+
         Rule::function_definition => {
             // on
             let loc = loc_pool.insert(&primary);

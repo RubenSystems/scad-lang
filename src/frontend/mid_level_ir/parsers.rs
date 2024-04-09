@@ -159,7 +159,7 @@ pub fn parse_for_block_vector_iv(
                     SSAValue::VariableReference(lp.variable.0.clone(), pid),
                     SSAValue::Integer {
                         value: 8,
-                        width: IntegerWidth::IndexType,
+                        width: Some(IntegerWidth::IndexType),
                         pool_id: pid,
                     },
                 ],
@@ -218,7 +218,7 @@ pub fn inner_parse_for_block_vector_iv(
                                 SSAValue::VariableReference(iv_array_name.clone().unwrap(), pid),
                                 SSAValue::Integer {
                                     value: (unroll_index % 8) as i128,
-                                    width: IntegerWidth::IndexType,
+                                    width: Some(IntegerWidth::IndexType),
                                     pool_id: pid,
                                 },
                             ],
@@ -291,7 +291,7 @@ pub fn parse_for_block(
                                 SSAValue::VariableReference(lp.variable.0.clone(), pid),
                                 SSAValue::Integer {
                                     value: step,
-                                    width: IntegerWidth::IndexType,
+                                    width: Some(IntegerWidth::IndexType),
                                     pool_id: pid,
                                 },
                             ],
