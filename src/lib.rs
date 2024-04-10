@@ -26,7 +26,7 @@ use frontend::mid_level_ir::ffi::ffi_drop::drop_ffi_data;
 use frontend::mid_level_ir::ffi::ffi_types::OutData;
 use frontend::mid_level_ir::ffi::{
     ffi_conversion::ffi_ssa_expr,
-    ffi_types::{FFIHIRExpr, FFIType},
+    ffi_types::{FFIType},
     type_query_engine::TypeQueryEngine,
 };
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;

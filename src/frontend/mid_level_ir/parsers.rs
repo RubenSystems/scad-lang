@@ -10,7 +10,7 @@
 ///
 //===----------------------------------------------------------------------===//
 use crate::frontend::high_level_ir::ast_types::{
-    Block, ExpressionBlock, ForLoop, Statement, StatementBlock,
+    ExpressionBlock, ForLoop, Statement, StatementBlock,
 };
 
 use crate::frontend::high_level_ir::ast_types::FailureCopy;

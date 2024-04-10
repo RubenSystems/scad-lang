@@ -9,13 +9,13 @@
 use lazy_static::lazy_static;
 use pest::{
     iterators::Pairs,
-    pratt_parser::{Assoc, Op, PrattParser},
+    pratt_parser::{PrattParser},
 };
 use pest_derive::Parser;
 
 use crate::frontend::{
     error::{ErrorPool, ErrorType, SCADError},
-    high_level_ir::ast_types::{Block, FunctionDefinition, FunctionName},
+    high_level_ir::ast_types::{FunctionDefinition, FunctionName},
 };
 
 use super::ast_types::{

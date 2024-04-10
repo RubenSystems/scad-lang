@@ -510,8 +510,8 @@ fn get_width_for_tir_type(tpe: &TIRType, pid: usize, pool: &ErrorPool) -> Result
     println!("mt");
     let MonoType::Application {
         c,
-        dimensions,
-        types,
+        dimensions: _,
+        types: _,
     } = mt
     else {
         // todo!();
@@ -556,8 +556,8 @@ fn get_width_for_tir_function_type(
     let ret = get_rettype_of_application(mt.clone()).unwrap();
     let MonoType::Application {
         c,
-        dimensions,
-        types,
+        dimensions: _,
+        types: _,
     } = ret
     else {
         return Err(SCADError::from_pid(
