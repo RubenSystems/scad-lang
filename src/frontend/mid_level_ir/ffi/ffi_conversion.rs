@@ -501,13 +501,11 @@ fn get_width_for_type_from_context(
             ));
         }
     };
-    println!("{type_name}");
     get_width_for_tir_type(&entry[0], pid, pool)
 }
 
 fn get_width_for_tir_type(tpe: &TIRType, pid: usize, pool: &ErrorPool) -> Result<u32, SCADError> {
     let mt = instantiate(tpe.clone());
-    println!("mt");
     let MonoType::Application {
         c,
         dimensions: _,

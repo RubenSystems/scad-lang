@@ -87,6 +87,7 @@ pub extern "C" fn drop_ir(ffi: OutData) {
 pub unsafe extern "C" fn compile(
     filename: *const c_char,
     context_query_engine: *mut *mut c_void,
+    verbose: bool
 ) -> OutData {
     let c_str = unsafe { CStr::from_ptr(filename) };
 
@@ -153,6 +154,10 @@ pub unsafe extern "C" fn compile(
     let referenced_vars = get_referenced(&code.0);
     let code = remove_unused_variables(code.0, &referenced_vars);
     let code = unalive_vars(code, vec![]);
+    
+    if verbose {
+        println!("{code:#?}");
+    }
 
     let ffiex = match ffi_ssa_expr(code, "", &context, &location_pool) {
         Ok(e) => e,
@@ -165,6 +170,8 @@ pub unsafe extern "C" fn compile(
         }
     };
     // generate query engine for type information
+
+
     let out = OutData {
         compiled: true,
         program: ProgramOut {
@@ -177,6 +184,5 @@ pub unsafe extern "C" fn compile(
 
     unsafe { *context_query_engine = qep as *mut c_void };
 
-    // Make it so code is not automatically dropped using std::mem::manually drop
     out
 }
