@@ -22,6 +22,7 @@ use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
 use frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold, remove_unused_variables};
+use frontend::mid_level_ir::mir_translators::TranslatorInformation;
 use frontend::type_system::type_engine::extract_type_information;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
@@ -88,14 +89,20 @@ pub unsafe extern "C" fn compile(
             }
         })
         .collect();
-    let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
+    let unop_code = parse_program(
+        raw_statements,
+        Box::new(|_| SSAExpression::Noop),
+        TranslatorInformation {
+            tensor_type_info: None,
+        },
+    );
 
     // perform desugaring
     let code = rename_variables(unop_code, vec!["prog".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
 
     // extract type information
-    let context = match extract_type_information(&code, location_pool) {
+    let context = match extract_type_information(&code, &location_pool) {
         Ok(e) => e,
         Err(e) => {
             println!("{e}");
@@ -112,19 +119,29 @@ pub unsafe extern "C" fn compile(
     let code = remove_unused_variables(code.0, &referenced_vars);
     let code = unalive_vars(code, vec![]);
 
+    let ffiex = match ffi_ssa_expr(code, "", &context, &location_pool) {
+        Ok(e) => e,
+        Err(e) => {
+            println!("{e}");
+            return OutData {
+                compiled: false,
+                program: ProgramOut { error: 0 },
+            };
+        }
+    };
     // generate query engine for type information
+    let out = OutData {
+        compiled: true,
+        program: ProgramOut {
+            program: std::mem::ManuallyDrop::new(ffiex),
+        },
+    };
+
     let query_engine = TypeQueryEngine::new(context);
     let qep = Box::into_raw(Box::new(query_engine));
 
     unsafe { *context_query_engine = qep as *mut c_void };
 
     // Make it so code is not automatically dropped using std::mem::manually drop
-    OutData {
-        compiled: true,
-        program: ProgramOut {
-            program: std::mem::ManuallyDrop::new(ffi_ssa_expr(code)),
-        },
-    }
+    out
 }
-
-

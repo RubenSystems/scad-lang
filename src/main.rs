@@ -9,6 +9,7 @@ use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, r
 use crate::frontend::mid_level_ir::mir_opt::{
     get_referenced, mir_variable_fold, remove_unused_variables,
 };
+use crate::frontend::mid_level_ir::mir_translators::TranslatorInformation;
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
@@ -27,20 +28,12 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
 
-    fn main() i32 {
-	
-	
-        let a = 1.0_f32; 
-        let b = @addf(a: a, b: 1.0_f32);
-        let c = @addf(a: b, b: 1.0_f32);
-    
-    
-        @print(value: c);
-    
-    
+    fn je(a: i32) i32 {
         0_i32
     };
-    
+    fn main() i32 {
+        je(a: 100)
+    };
     
     "#;
     let _counter: usize = 0;
@@ -63,7 +56,13 @@ fn main() -> std::io::Result<()> {
             }
         })
         .collect();
-    let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
+    let unop_code = parse_program(
+        raw_statements,
+        Box::new(|_| SSAExpression::Noop),
+        TranslatorInformation {
+            tensor_type_info: None,
+        },
+    );
 
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
@@ -73,11 +72,11 @@ fn main() -> std::io::Result<()> {
     let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
-    // println!("{code:#?}");
+    println!("{code:#?}");
 
     // println!("{:#?}", consumable_context);
 
-    let context = match extract_type_information(&code, location_pool) {
+    let context = match extract_type_information(&code, &location_pool) {
         Ok(e) => e,
         Err(e) => {
             println!("{e}");
@@ -87,33 +86,8 @@ fn main() -> std::io::Result<()> {
 
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
-    println!("{context:#?}");
-    let _ = ffi_ssa_expr(code);
+    // println!("{context:#?}");
+    let _ = ffi_ssa_expr(code, "", &context, &location_pool).expect("failed to generate");
 
     Ok(())
-}
-
-mod tests {
-    // use crate::testing::run_test;
-
-    // fn test_programs(path: &str) {
-    //     let test_output = run_test(path);
-    //     println!("C Speed: {}", test_output.c_test.duration.as_nanos());
-    //     println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
-    //     println!(
-    //         "Speed up: {}",
-    //         (test_output.scad_test.duration - test_output.c_test.duration).as_nanos()
-    //     );
-    //     assert_eq!(test_output.scad_test.output, test_output.c_test.output);
-    // }
-
-    // #[test]
-    // fn basic_program() {
-    //     test_programs("test_programs/basic");
-    // }
-
-    // #[test]
-    // fn basic_conditional_1() {
-    //     test_programs("test_programs/basic_conditional_1");
-    // }
 }

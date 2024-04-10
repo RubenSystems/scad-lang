@@ -299,7 +299,7 @@ pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression,
             (
                 TIRExpression::VariableDecl {
                     name,
-                    type_hint: ret_type,
+                    type_hint: None,
                     e1: Box::new(e1xp),
                     e2: Box::new(e2xp),
                     pool_id,

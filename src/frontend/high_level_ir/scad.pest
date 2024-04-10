@@ -228,12 +228,14 @@ non_infix_expressions = _{
 	function_call 
 	| "(" ~ expression ~ ")" 
 	| if_expression_control_flow
+	| literal
 	| tensor
 	| expression_block 
-	| literal
 	| boolean_t 
 	| char_array
 	| identifier 
+	| float 
+	| integer
 }
 
 expression = { 

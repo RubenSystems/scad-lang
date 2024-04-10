@@ -1,6 +1,5 @@
 use super::ffi_types::{FFIHIRExpr, FFIHIRValue, FFIString, OutData};
 
-
 fn drop_val(val: *const FFIHIRValue) {
     let val_d = unsafe { &*val };
 
@@ -8,7 +7,7 @@ fn drop_val(val: *const FFIHIRValue) {
         super::ffi_types::FFIHirValueTag::Tensor => {
             let value = unsafe { val_d.value.tensor };
 
-			let vec = unsafe {
+            let vec = unsafe {
                 Vec::from_raw_parts(value.vals as *mut FFIHIRValue, value.size, value.size)
             };
             drop(vec);
@@ -17,8 +16,12 @@ fn drop_val(val: *const FFIHIRValue) {
         super::ffi_types::FFIHirValueTag::VariableReference => {}
         super::ffi_types::FFIHirValueTag::FunctionCall => {
             let value = unsafe { val_d.value.function_call };
-			let vec = unsafe {
-                Vec::from_raw_parts(value.params as *mut FFIHIRValue, value.param_len, value.param_len)
+            let vec = unsafe {
+                Vec::from_raw_parts(
+                    value.params as *mut FFIHIRValue,
+                    value.param_len,
+                    value.param_len,
+                )
             };
             drop(vec);
         }
@@ -40,10 +43,10 @@ fn drop_val(val: *const FFIHIRValue) {
 fn drop_expr_ref(ex_d: &FFIHIRExpr) {
     match ex_d.tag {
         super::ffi_types::FFIHIRTag::VariableDecl => {
-			let expr = unsafe { ex_d.value.variable_decl };
-			drop_val(&expr.e1);
-			drop_expr(expr.e2);
-		},
+            let expr = unsafe { ex_d.value.variable_decl };
+            drop_val(&expr.e1);
+            drop_expr(expr.e2);
+        }
         super::ffi_types::FFIHIRTag::Noop => {}
         super::ffi_types::FFIHIRTag::FunctionDecl => {
             let expr = unsafe { ex_d.value.function_decl };
@@ -58,13 +61,13 @@ fn drop_expr_ref(ex_d: &FFIHIRExpr) {
             drop_expr(expr.e2)
         }
         super::ffi_types::FFIHIRTag::Return => {
-			let expr = unsafe { ex_d.value.ret };
-			drop_val(&expr.res)
-		}
+            let expr = unsafe { ex_d.value.ret };
+            drop_val(&expr.res)
+        }
         super::ffi_types::FFIHIRTag::Yield => {
-			let expr = unsafe { ex_d.value.yld };
-			drop_val(&expr.res)
-		}
+            let expr = unsafe { ex_d.value.yld };
+            drop_val(&expr.res)
+        }
         super::ffi_types::FFIHIRTag::ForLoop => {
             let expr = unsafe { ex_d.value.floop };
             drop_expr(expr.block);
@@ -91,5 +94,5 @@ pub fn drop_ffi_data(ffi: OutData) {
     let program = ffi.program;
 
     drop_expr_ref(unsafe { &program.program });
-	drop(unsafe{std::mem::ManuallyDrop::into_inner(program.program)});
+    drop(unsafe { std::mem::ManuallyDrop::into_inner(program.program) });
 }

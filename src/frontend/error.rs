@@ -34,7 +34,7 @@ impl ErrorPool {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ErrorType {
     ParsingError,
     InvalidType,
@@ -53,6 +53,7 @@ pub enum ErrorType {
     IncorrectFunctionReturnType,
     CouldNotFindFunction(String),
     CannotFindFunctionWithMatchingArguementTypes,
+    UnknownError(String),
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +79,7 @@ impl ErrorLocation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SCADError {
     location_info: ErrorLocation,
     error_type: ErrorType,
@@ -135,6 +136,10 @@ impl Display for SCADError {
             ErrorType::CannotFindFunctionWithMatchingArguementTypes => write!(
                 f,
                 "\n| Cannot find function that matches the provided return types. This is after several retries."
+            ),
+            ErrorType::UnknownError(e) => write!(
+                f,
+                "\n| An Unknown error has occured\n| {e}"
             ),
         };
         _ = write!(

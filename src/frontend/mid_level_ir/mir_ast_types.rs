@@ -202,12 +202,12 @@ pub enum SSAValue {
     },
     Integer {
         value: i128,
-        width: IntegerWidth,
+        width: Option<IntegerWidth>,
         pool_id: PoolID,
     },
     Float {
         value: f64,
-        width: u32,
+        width: Option<u32>,
         pool_id: PoolID,
     },
     Bool(bool, PoolID),

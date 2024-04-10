@@ -28,13 +28,13 @@ pub enum IntegerWidth {
 #[derive(Debug)]
 pub struct Integer {
     pub value: i128,
-    pub width: IntegerWidth,
+    pub width: Option<IntegerWidth>,
 }
 
 #[derive(Debug)]
 pub struct Float {
     pub value: f64,
-    pub width: u32,
+    pub width: Option<u32>,
 } // Terminal symbol for floating-point values
 
 #[derive(Debug)]

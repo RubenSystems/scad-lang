@@ -16,6 +16,7 @@ use crate::frontend::high_level_ir::ast_types::{
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
 use super::mir_ast_types::SSAValue;
+use super::mir_translators::TranslatorInformation;
 use super::{
     mir_ast_types::SSAExpression,
     mir_translators::{expression_l1_to_l2, statement_l1_to_l2, ContinuationFunction},
@@ -50,21 +51,30 @@ pub fn op_to_llvm(op: &str) -> String {
     }
 }
 
-pub fn parse_program(prog: Vec<Statement>, k: ContinuationFunction) -> SSAExpression {
+pub fn parse_program(
+    prog: Vec<Statement>,
+    k: ContinuationFunction,
+    info: TranslatorInformation,
+) -> SSAExpression {
     match prog.as_slice() {
         [head] => {
             match head {
                 // currently can only render functions
                 Statement::FunctionDefinition(_, _)
                 | Statement::FunctionDecleration(_, _)
-                | Statement::VariableDecl(_, _) => statement_l1_to_l2(head.fcopy(), k),
+                | Statement::VariableDecl(_, _) => statement_l1_to_l2(head.fcopy(), k, info),
                 _ => todo!(),
             }
         }
         [head, rest @ ..] => match head {
             Statement::FunctionDefinition(_, _) | Statement::FunctionDecleration(_, _) => {
                 let rest_clone: Vec<Statement> = rest.iter().map(|x| x.fcopy()).collect();
-                statement_l1_to_l2(head.fcopy(), Box::new(|_| parse_program(rest_clone, k)))
+                let ioc = info.clone();
+                statement_l1_to_l2(
+                    head.fcopy(),
+                    Box::new(move |_| parse_program(rest_clone, k, info)),
+                    ioc,
+                )
             }
             _ => todo!(),
         },
@@ -80,42 +90,51 @@ pub fn parse_block(_blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> 
     todo!()
 }
 
-pub fn parse_expression_block(blk: ExpressionBlock, k: ContinuationFunction) -> SSAExpression {
+pub fn parse_expression_block(
+    blk: ExpressionBlock,
+    k: ContinuationFunction,
+    info: TranslatorInformation,
+) -> SSAExpression {
+    let ioc = info.clone();
     match blk.statements.as_slice() {
         [head] => statement_l1_to_l2(
             head.fcopy(),
-            Box::new(|_| expression_l1_to_l2(*blk.expression, k)),
+            Box::new(move |_| expression_l1_to_l2(*blk.expression, k, info.clone())),
+            ioc,
         ),
         [head, rest @ ..] => {
             let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
             statement_l1_to_l2(
                 head.fcopy(),
-                Box::new(|_| {
+                Box::new(move |_| {
                     let new_blk = ExpressionBlock {
                         statements: rest_clone,
                         expression: blk.expression,
                     };
-                    parse_expression_block(new_blk, k)
+                    parse_expression_block(new_blk, k, info.clone())
                 }),
+                ioc,
             )
         }
-        [] => expression_l1_to_l2(*blk.expression, k),
+        [] => expression_l1_to_l2(*blk.expression, k, info),
     }
 }
 
-pub fn parse_statement_block(blk: StatementBlock) -> SSAExpression {
+pub fn parse_statement_block(blk: StatementBlock, info: TranslatorInformation) -> SSAExpression {
     match blk.statements.as_slice() {
-        [head] => statement_l1_to_l2(head.fcopy(), Box::new(|_| SSAExpression::Noop)),
+        [head] => statement_l1_to_l2(head.fcopy(), Box::new(|_| SSAExpression::Noop), info),
         [head, rest @ ..] => {
             let rest_clone = rest.iter().map(|x| x.fcopy()).collect();
+            let ioc = info.clone();
             statement_l1_to_l2(
                 head.fcopy(),
                 Box::new(|_| {
                     let new_blk = StatementBlock {
                         statements: rest_clone,
                     };
-                    parse_statement_block(new_blk)
+                    parse_statement_block(new_blk, info)
                 }),
+                ioc,
             )
         }
         [] => SSAExpression::Noop,
@@ -130,11 +149,12 @@ pub fn for_block_induction_variable(
     step: i128,
     vector_iv: bool,
     pid: usize,
+    info: TranslatorInformation,
 ) -> SSAExpression {
     if (unroll_count == 0 && !vector_iv) || step != 1 {
-        parse_for_block(og, blk, unroll_count, 0, lp, step, pid, None)
+        parse_for_block(og, blk, unroll_count, 0, lp, step, pid, None, info)
     } else {
-        parse_for_block_vector_iv(og, blk, unroll_count, 0, lp, step, pid, None)
+        parse_for_block_vector_iv(og, blk, unroll_count, 0, lp, step, pid, None, info)
     }
 }
 
@@ -147,6 +167,7 @@ pub fn parse_for_block_vector_iv(
     step: i128,
     pid: usize,
     iv_array_name: Option<String>,
+    info: TranslatorInformation,
 ) -> SSAExpression {
     if unroll_index % 8 == 0 {
         let ivname = generate_register_name();
@@ -159,7 +180,7 @@ pub fn parse_for_block_vector_iv(
                     SSAValue::VariableReference(lp.variable.0.clone(), pid),
                     SSAValue::Integer {
                         value: 8,
-                        width: IntegerWidth::IndexType,
+                        width: Some(IntegerWidth::IndexType),
                         pool_id: pid,
                     },
                 ],
@@ -174,6 +195,7 @@ pub fn parse_for_block_vector_iv(
                 step,
                 pid,
                 Some(ivname),
+                info,
             )),
             pool_id: pid,
         }
@@ -187,6 +209,7 @@ pub fn parse_for_block_vector_iv(
             step,
             pid,
             iv_array_name,
+            info,
         )
     }
 }
@@ -200,9 +223,11 @@ pub fn inner_parse_for_block_vector_iv(
     step: i128,
     pid: usize,
     iv_array_name: Option<String>,
+    info: TranslatorInformation,
 ) -> SSAExpression {
     if blk.statements.len() == 1 {
         // last statement, send it to be unrolled
+        let ioc = info.clone();
         statement_l1_to_l2(
             blk.statements[0].fcopy(),
             Box::new(move |_| {
@@ -218,7 +243,7 @@ pub fn inner_parse_for_block_vector_iv(
                                 SSAValue::VariableReference(iv_array_name.clone().unwrap(), pid),
                                 SSAValue::Integer {
                                     value: (unroll_index % 8) as i128,
-                                    width: IntegerWidth::IndexType,
+                                    width: Some(IntegerWidth::IndexType),
                                     pool_id: pid,
                                 },
                             ],
@@ -233,14 +258,17 @@ pub fn inner_parse_for_block_vector_iv(
                             step,
                             pid,
                             iv_array_name,
+                            info,
                         )),
                         pool_id: pid,
                     }
                 }
             }),
+            ioc,
         )
     } else if blk.statements.len() > 1 {
         let rest_clone = blk.statements[1..].iter().map(|x| x.fcopy()).collect();
+        let ioc = info.clone();
         statement_l1_to_l2(
             blk.statements.first().unwrap().fcopy(),
             Box::new(move |_| {
@@ -256,8 +284,10 @@ pub fn inner_parse_for_block_vector_iv(
                     step,
                     pid,
                     iv_array_name,
+                    info,
                 )
             }),
+            ioc,
         )
     } else {
         SSAExpression::Noop
@@ -273,8 +303,10 @@ pub fn parse_for_block(
     step: i128,
     pid: usize,
     iv_array_name: Option<String>,
+    info: TranslatorInformation,
 ) -> SSAExpression {
     if blk.statements.len() == 1 {
+        let ioc = info.clone();
         // last statement, send it to be unrolled
         statement_l1_to_l2(
             blk.statements[0].fcopy(),
@@ -291,7 +323,7 @@ pub fn parse_for_block(
                                 SSAValue::VariableReference(lp.variable.0.clone(), pid),
                                 SSAValue::Integer {
                                     value: step,
-                                    width: IntegerWidth::IndexType,
+                                    width: Some(IntegerWidth::IndexType),
                                     pool_id: pid,
                                 },
                             ],
@@ -306,14 +338,17 @@ pub fn parse_for_block(
                             step,
                             pid,
                             iv_array_name,
+                            info.clone(),
                         )),
                         pool_id: pid,
                     }
                 }
             }),
+            ioc,
         )
     } else if blk.statements.len() > 1 {
         let rest_clone = blk.statements[1..].iter().map(|x| x.fcopy()).collect();
+        let ioc = info.clone();
         statement_l1_to_l2(
             blk.statements.first().unwrap().fcopy(),
             Box::new(move |_| {
@@ -329,8 +364,10 @@ pub fn parse_for_block(
                     step,
                     pid,
                     iv_array_name,
+                    info.clone(),
                 )
             }),
+            ioc,
         )
     } else {
         SSAExpression::Noop
