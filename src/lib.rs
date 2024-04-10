@@ -22,6 +22,7 @@ use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
 use frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold, remove_unused_variables};
+use frontend::mid_level_ir::mir_translators::TranslatorInformation;
 use frontend::type_system::type_engine::extract_type_information;
 use pest::Parser;
 use std::collections::{HashMap, HashSet};
@@ -88,7 +89,13 @@ pub unsafe extern "C" fn compile(
             }
         })
         .collect();
-    let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
+    let unop_code = parse_program(
+        raw_statements,
+        Box::new(|_| SSAExpression::Noop),
+        TranslatorInformation {
+            tensor_type_info: None,
+        },
+    );
 
     // perform desugaring
     let code = rename_variables(unop_code, vec!["prog".into()], &mut HashSet::new());
@@ -112,7 +119,7 @@ pub unsafe extern "C" fn compile(
     let code = remove_unused_variables(code.0, &referenced_vars);
     let code = unalive_vars(code, vec![]);
 
-    let ffiex = match ffi_ssa_expr(code, "", &context,   &location_pool) {
+    let ffiex = match ffi_ssa_expr(code, "", &context, &location_pool) {
         Ok(e) => e,
         Err(e) => {
             println!("{e}");

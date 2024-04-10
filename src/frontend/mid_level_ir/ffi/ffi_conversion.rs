@@ -1,9 +1,12 @@
 use crate::frontend::{
-    error::{ErrorPool, ErrorType, SCADError}, high_level_ir::ast_types::IntegerWidth, mid_level_ir::mir_ast_types::{SSAExpression, SSAValue}, type_system::{
+    error::{ErrorPool, ErrorType, SCADError},
+    high_level_ir::ast_types::IntegerWidth,
+    mid_level_ir::mir_ast_types::{SSAExpression, SSAValue},
+    type_system::{
         context::Context,
         tir_types::{MonoType, TIRType},
         type_engine::{get_rettype_of_application, instantiate},
-    }
+    },
 };
 
 use super::ffi_types::FFIHirValueTag;
@@ -87,7 +90,7 @@ pub fn ffi_ssa_val(
     current_render_width: &Result<u32, SCADError>,
     fname: &str,
     context: &Context,
-    pool: &ErrorPool
+    pool: &ErrorPool,
 ) -> Result<FFIHIRValue, SCADError> {
     match val.fcopy() {
         SSAValue::VariableReference(v, _) => Ok(FFIHIRValue {
@@ -162,7 +165,13 @@ pub fn ffi_ssa_val(
         } => {
             let mut param_transform = vec![];
             for i in parameters {
-                param_transform.push(ffi_ssa_val(i, current_render_width, fname.clone(), context, pool)?)
+                param_transform.push(ffi_ssa_val(
+                    i,
+                    current_render_width,
+                    fname.clone(),
+                    context,
+                    pool,
+                )?)
             }
             let len = param_transform.len();
             let ptr = param_transform.as_ptr();
@@ -182,7 +191,13 @@ pub fn ffi_ssa_val(
         SSAValue::Tensor(v, _) => {
             let mut arr = vec![];
             for i in v {
-                arr.push(ffi_ssa_val(i, current_render_width, fname.clone(), context, pool)?)
+                arr.push(ffi_ssa_val(
+                    i,
+                    current_render_width,
+                    fname.clone(),
+                    context,
+                    pool,
+                )?)
             }
             let arr_ptr = arr.as_ptr();
             let arr_len = arr.len();
@@ -210,18 +225,21 @@ pub fn ffi_ssa_val(
                             *if_block.condition,
                             current_render_width,
                             fname,
-                            context, pool
+                            context,
+                            pool,
                         )?)),
                         block: Box::into_raw(Box::new(ffi_ssa_expr(
                             *if_block.block.block,
                             fname,
-                            context,pool
+                            context,
+                            pool,
                         )?)),
                     },
                     else_arm: Box::into_raw(Box::new(ffi_ssa_expr(
                         *else_block.block,
                         fname,
-                        context,pool
+                        context,
+                        pool,
                     )?)),
                 },
             },
@@ -238,7 +256,8 @@ pub fn ffi_ssa_val(
                         *value,
                         current_render_width,
                         fname,
-                        context,pool
+                        context,
+                        pool,
                     )?)),
                     to: unsafe {
                         *convert_type_to_ffi(TIRType::MonoType(to.to_tir_type())).applications
@@ -249,7 +268,12 @@ pub fn ffi_ssa_val(
     }
 }
 
-pub fn ffi_ssa_expr(expr: SSAExpression, fname: &str, context: &Context, pool: &ErrorPool) -> Result<FFIHIRExpr, SCADError> {
+pub fn ffi_ssa_expr(
+    expr: SSAExpression,
+    fname: &str,
+    context: &Context,
+    pool: &ErrorPool,
+) -> Result<FFIHIRExpr, SCADError> {
     match expr.fcopy() {
         SSAExpression::VariableDecl {
             name,
@@ -265,7 +289,8 @@ pub fn ffi_ssa_expr(expr: SSAExpression, fname: &str, context: &Context, pool: &
                         e1,
                         &get_width_for_type_from_context(&name, context, pool_id, pool),
                         fname,
-                        context,pool
+                        context,
+                        pool,
                     )?,
                     name: FFIString::from_string(name),
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2, fname, context, pool)?)),
@@ -328,7 +353,8 @@ pub fn ffi_ssa_expr(expr: SSAExpression, fname: &str, context: &Context, pool: &
                         val,
                         &get_width_for_function_from_context(&fname, context, pool_id, pool),
                         fname,
-                        context,pool
+                        context,
+                        pool,
                     )?,
                 },
             },
@@ -342,7 +368,8 @@ pub fn ffi_ssa_expr(expr: SSAExpression, fname: &str, context: &Context, pool: &
                         val,
                         &get_width_for_function_from_context(&fname, context, pool_id, pool),
                         fname,
-                        context,pool
+                        context,
+                        pool,
                     )?,
                 },
             },
@@ -383,52 +410,81 @@ pub fn ffi_ssa_expr(expr: SSAExpression, fname: &str, context: &Context, pool: &
                     condition: ffi_ssa_val(cond, &Ok(1), fname, context, pool)?,
                     block: Box::into_raw(Box::new(ffi_ssa_expr(*block, fname, context, pool)?)),
                     e2: Box::into_raw(Box::new(ffi_ssa_expr(*e2, fname, context, pool)?)),
-                    cond_expr: Box::into_raw(Box::new(ffi_ssa_expr(*cond_expr, fname, context, pool)?)),
+                    cond_expr: Box::into_raw(Box::new(ffi_ssa_expr(
+                        *cond_expr, fname, context, pool,
+                    )?)),
                 },
             },
         }),
     }
 }
 
-fn get_width_for_type_from_context(type_name: &str, context: &Context, pid: usize, pool: &ErrorPool) -> Result<u32, SCADError> {
+fn get_width_for_type_from_context(
+    type_name: &str,
+    context: &Context,
+    pid: usize,
+    pool: &ErrorPool,
+) -> Result<u32, SCADError> {
     let entry = match context.get_type_for_name(type_name) {
         Some(e) => e,
-        None => {return Err(SCADError::from_pid(ErrorType::CannotTypeExpression, pid, pool));}
+        None => {
+            return Err(SCADError::from_pid(
+                ErrorType::CannotTypeExpression,
+                pid,
+                pool,
+            ));
+        }
     };
-    get_width_for_tir_type(
-        &entry[0], pid, pool
-    )
+    println!("{type_name}");
+    get_width_for_tir_type(&entry[0], pid, pool)
 }
 
 fn get_width_for_tir_type(tpe: &TIRType, pid: usize, pool: &ErrorPool) -> Result<u32, SCADError> {
     let mt = instantiate(tpe.clone());
+    println!("mt");
     let MonoType::Application {
         c,
         dimensions,
         types,
     } = mt
     else {
-        return Err(SCADError::from_pid(ErrorType::CannotTypeExpression, pid, pool))
+        // todo!();
+
+        return Err(SCADError::from_pid(
+            ErrorType::CannotTypeExpression,
+            pid,
+            pool,
+        ));
     };
 
     Ok(width_conversion(&c))
 }
 
-fn get_width_for_function_from_context(type_name: &str, context: &Context, pid: usize, pool: &ErrorPool) -> Result<u32, SCADError> {
-
+fn get_width_for_function_from_context(
+    type_name: &str,
+    context: &Context,
+    pid: usize,
+    pool: &ErrorPool,
+) -> Result<u32, SCADError> {
     let entry = match context.get_type_for_name(type_name) {
         Some(e) => e,
-        None => {return Err(SCADError::from_pid(ErrorType::CannotTypeExpression, pid, pool));}
+        None => {
+            return Err(SCADError::from_pid(
+                ErrorType::CannotTypeExpression,
+                pid,
+                pool,
+            ));
+        }
     };
 
-    get_width_for_tir_function_type(
-        &entry[0],
-            pid, pool
-
-    )
+    get_width_for_tir_function_type(&entry[0], pid, pool)
 }
 
-fn get_width_for_tir_function_type(tpe: &TIRType , pid: usize, pool: &ErrorPool) -> Result<u32, SCADError>  {
+fn get_width_for_tir_function_type(
+    tpe: &TIRType,
+    pid: usize,
+    pool: &ErrorPool,
+) -> Result<u32, SCADError> {
     let mt = instantiate(tpe.clone());
 
     let ret = get_rettype_of_application(mt.clone()).unwrap();
@@ -438,7 +494,11 @@ fn get_width_for_tir_function_type(tpe: &TIRType , pid: usize, pool: &ErrorPool)
         types,
     } = ret
     else {
-        return Err(SCADError::from_pid(ErrorType::CannotTypeExpression, pid, pool))
+        return Err(SCADError::from_pid(
+            ErrorType::CannotTypeExpression,
+            pid,
+            pool,
+        ));
     };
     Ok(width_conversion(&c))
 }

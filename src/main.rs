@@ -9,6 +9,7 @@ use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, r
 use crate::frontend::mid_level_ir::mir_opt::{
     get_referenced, mir_variable_fold, remove_unused_variables,
 };
+use crate::frontend::mid_level_ir::mir_translators::TranslatorInformation;
 use crate::frontend::mid_level_ir::parsers::parse_program;
 
 use crate::frontend::mid_level_ir::liveness_analysis::unalive_vars;
@@ -26,50 +27,13 @@ fn main() -> std::io::Result<()> {
     // compile(&args[1], &args[2])?;
 
     let test_prog = r#"
-    fn idx(row: ii, col: ii) ii {
-        @addi(a: @muli(a: row, b: 2_ii), b: col)
-    };
-    
-    fn get(container: 4xi32, row: ii, column: ii) i32 {
-        let gtidx = idx(r: row, c: column);
-        @index.i32(c: container, idx: gtidx)
-    };
-    
-    fn dot(a: 4xi32, b: 4xi32) 4xi32 {
-        let result = {0_i32, 0_i32, 0_i32, 0_i32};
-    
-        for i: 0_ii -> 2_ii {
-            for j: 0_ii -> 2_ii {
-                for k: 0_ii -> 2_ii {
-                    let res = @muli(a: get(container: a, r: i, c: k), b: get(container: a, r: k, c: j));
-                    let existing = @index.i32(container: result, idx: idx(r: i, c: j));
-    
-                    @set.i32(container: result, index: idx(r: i, c: j), value: @addi(a: res, b: existing));
-                };
-            };
-        };
-    
-    
-        result
-    };
-    
-    
-    
-    fn main() i32 {
-    
-        let a = {1_i32, 2_i32, 3_i32, 4_i32};
-        let b = {1_i32, 2_i32, 3_i32, 4_i32};
-    
-        let dot_val = dot(a: a, b: b);
-    
-        for i: 0_ii -> 4_ii {
-            @print(a: @index.i32(container: dot_val, index: i));
-        };
-    
-    
+
+    fn je(a: i32) i32 {
         0_i32
     };
-    
+    fn main() i32 {
+        je(a: 100)
+    };
     
     "#;
     let _counter: usize = 0;
@@ -92,17 +56,23 @@ fn main() -> std::io::Result<()> {
             }
         })
         .collect();
-    let unop_code = parse_program(raw_statements, Box::new(|_| SSAExpression::Noop));
+    let unop_code = parse_program(
+        raw_statements,
+        Box::new(|_| SSAExpression::Noop),
+        TranslatorInformation {
+            tensor_type_info: None,
+        },
+    );
 
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
     // Optimiser
-    // let code = mir_variable_fold(code, HashMap::new());
-    // let referenced_vars = get_referenced(&code.0);
-    // let code = remove_unused_variables(code.0, &referenced_vars);
+    let code = mir_variable_fold(code, HashMap::new());
+    let referenced_vars = get_referenced(&code.0);
+    let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser
 
-    // println!("{code:#?}");
+    println!("{code:#?}");
 
     // println!("{:#?}", consumable_context);
 
@@ -116,33 +86,8 @@ fn main() -> std::io::Result<()> {
 
     // println!("\n\n{:#?}\n\n",context);
     let code = unalive_vars(code, vec![]);
-    println!("{context:#?}");
-    let _ = ffi_ssa_expr(code, "", &context, &location_pool);
+    // println!("{context:#?}");
+    let _ = ffi_ssa_expr(code, "", &context, &location_pool).expect("failed to generate");
 
     Ok(())
-}
-
-mod tests {
-    // use crate::testing::run_test;
-
-    // fn test_programs(path: &str) {
-    //     let test_output = run_test(path);
-    //     println!("C Speed: {}", test_output.c_test.duration.as_nanos());
-    //     println!("SCaD Speed: {}", test_output.scad_test.duration.as_nanos());
-    //     println!(
-    //         "Speed up: {}",
-    //         (test_output.scad_test.duration - test_output.c_test.duration).as_nanos()
-    //     );
-    //     assert_eq!(test_output.scad_test.output, test_output.c_test.output);
-    // }
-
-    // #[test]
-    // fn basic_program() {
-    //     test_programs("test_programs/basic");
-    // }
-
-    // #[test]
-    // fn basic_conditional_1() {
-    //     test_programs("test_programs/basic_conditional_1");
-    // }
 }

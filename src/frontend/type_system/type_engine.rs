@@ -150,8 +150,6 @@ fn w_algo(
             e2,
             pool_id,
         } => {
-
-
             let (s1, t1, mut context) = w_algo(
                 context,
                 WAlgoInfo {
@@ -193,11 +191,11 @@ fn w_algo(
                 }
             }
 
-            // if let Some(th) = type_hint {
-            //     let tir_type = th.to_tir_type();
-            //     println!("{name} {tir_type:#?}");
-            //     context.add_type_for_name(name.clone(), TIRType::MonoType(tir_type));
-            // }
+            if let Some(th) = type_hint {
+                let tir_type = th.to_tir_type();
+                println!("{name} {tir_type:#?}");
+                context.add_type_for_name(name.clone(), TIRType::MonoType(tir_type));
+            }
 
             let mut sub_context = context.applying_substitution(&s1).clone();
             if !sub_context.has_type_for_name(name) {
