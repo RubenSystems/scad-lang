@@ -1,3 +1,12 @@
+//===----------------------------------------------------------------------===//
+///
+/// This file defines all the types of the FFI. It is a one to one mapping 
+/// of the LIR except for the fact that it does not include any enumerations 
+/// instead using tagged unions
+///
+//===----------------------------------------------------------------------===//
+
+
 use crate::frontend::type_system::tir_types::MonoType;
 use std::{os::raw::c_char, ptr::null};
 

@@ -1,3 +1,14 @@
+//===----------------------------------------------------------------------===//
+///
+/// ffi_conversion defines the conversion process from LIR to FFI 
+/// This involces converting enums into tagged unions which can then 
+/// be used with C++. 
+/// 
+/// Type information is fused with the LIR at this stage. Type information
+/// is generated using the typing system.
+///
+//===----------------------------------------------------------------------===//
+
 use crate::frontend::{
     error::{ErrorPool, ErrorType, SCADError},
     high_level_ir::ast_types::IntegerWidth,
@@ -19,6 +30,25 @@ use super::ffi_types::{
 };
 use crate::frontend::high_level_ir::ast_types::FailureCopy;
 
+
+/*
+    Applications are defined recursively. 
+    This means that a fuction defintion for the TLCIR:
+
+        a -> b -> c
+
+    looks like this to the FFI layer
+
+        a -> (b -> c)
+
+    making the extraction of return types and arugement
+    types difficult. The flattening process works by 
+    flattening the types into a buffer: 
+
+        [a,b,c]
+
+    making them easier to access for the backend
+*/
 fn flatten_applications(tpe: MonoType) -> FFIType {
     let MonoType::Application {
         c,
@@ -53,6 +83,9 @@ fn flatten_applications(tpe: MonoType) -> FFIType {
     }
 }
 
+
+// Helper for the application flattening which 
+// walks the application and flattens it
 fn collapse_application(app: MonoType, collapsed_val: &mut Vec<MonoType>) -> bool {
     let MonoType::Application {
         c,
@@ -77,6 +110,10 @@ fn collapse_application(app: MonoType, collapsed_val: &mut Vec<MonoType>) -> boo
     }
 }
 
+/*
+    Convert a type from TIR type to FFI type 
+    which can then be passed to the backend
+*/
 pub fn convert_type_to_ffi(tpe: TIRType) -> FFIType {
     match tpe.clone() {
         TIRType::MonoType(mt) => flatten_applications(mt),
@@ -85,6 +122,18 @@ pub fn convert_type_to_ffi(tpe: TIRType) -> FFIType {
     }
 }
 
+
+/*
+    Convert all LIR values to the ffi bridge 
+    representation 
+
+
+    because some values (e.g floats/ints) may not 
+    be fully typed at this stage, they require a 
+    fname which is the lookup key in the typing environment
+    (context). If the value cannot be found, it will have to 
+    raise an error, which is why the pool is needed
+*/
 pub fn ffi_ssa_val(
     val: SSAValue,
     current_render_width: &Result<u32, SCADError>,
@@ -113,11 +162,13 @@ pub fn ffi_ssa_val(
                     value: value as usize,
                     width: if let Some(width) = width {
                         match width {
-                            // This is not very clever and will blow up in ur face at some point in time
+                            // Index types are a special case of width 1000 whcih 
+                            // the backend knows to convert to II
                             IntegerWidth::IndexType => 1000,
                             IntegerWidth::Variable(v) => v,
                         }
                     } else {
+                        // Type fuse
                         match current_render_width {
                             Ok(o) => *o,
                             Err(e) => return Err(e.clone()),
@@ -268,6 +319,14 @@ pub fn ffi_ssa_val(
     }
 }
 
+
+/* 
+
+    This process is very much like the process for converting values 
+    except it operates on expressions. Type fusion is required and 
+    it can throw
+
+*/
 pub fn ffi_ssa_expr(
     expr: SSAExpression,
     fname: &str,
@@ -419,6 +478,13 @@ pub fn ffi_ssa_expr(
     }
 }
 
+
+/*
+=====
+    Helper functions for typing environment 
+    lookup
+====
+*/
 fn get_width_for_type_from_context(
     type_name: &str,
     context: &Context,

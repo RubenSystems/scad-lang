@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===// 
+///
+/// Mono and poly type definitions for the typing algorithms
+/// 
+//===----------------------------------------------------------------------===//
+
+
 use std::collections::HashMap;
 
 use super::traits::{FreeVarsGettable, Instantiatable};

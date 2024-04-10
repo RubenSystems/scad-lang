@@ -1,3 +1,13 @@
+
+//===----------------------------------------------------------------------===//
+///
+/// typedefs.rs defines the 
+/// compile time type information for the core library. This allows
+/// the type system to check a program with that uses the core library 
+///
+//===----------------------------------------------------------------------===//
+
+
 use crate::frontend::type_system::{
     context::Context,
     tir_types::{MonoType, PolyType, TIRType},

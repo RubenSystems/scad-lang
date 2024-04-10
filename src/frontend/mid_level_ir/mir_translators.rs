@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+///
+/// Transform program to a almost-SSA representation 
+///
+//===----------------------------------------------------------------------===//
+
+
+
 use crate::frontend::{
     error::PoolID,
     high_level_ir::ast_types::{Expression, FailureCopy, IntegerWidth, Statement, Type},
@@ -12,8 +20,22 @@ use super::{
     },
 };
 
+/*
+    Define funciton for continuation passing style. 
+
+    The general idea with this conversion is that all values must be 
+    brought out of the definition and converted into their own varible. once 
+    this process is completed, the expression must be generated. the values 
+    that are hoisted out of the expression are passed into the function and the 
+    expression render uses these to generate the new expression. 
+*/
 pub type ContinuationFunction = Box<dyn FnOnce(SSAValue) -> SSAExpression>;
 
+
+/*
+    Information that needs to be 'pushed down' to lower recursive 
+    iterations
+*/
 #[derive(Clone)]
 pub struct TranslatorInformation {
     pub tensor_type_info: Option<Type>,
@@ -57,7 +79,6 @@ pub fn expression_l1_to_l2(
 
             aux(v, vec![], pid, k, info)
         }
-        Expression::InfixOperation(_e, _) => todo!(),
         Expression::Float(f, pid) => k(SSAValue::Float {
             value: f.value,
             width: f.width,
@@ -69,7 +90,6 @@ pub fn expression_l1_to_l2(
             width: i.width,
             pool_id: pid,
         }),
-        Expression::CharArray(_, _) => todo!(),
         Expression::Identifier(x, pid) => k(SSAValue::VariableReference(x.0, pid)),
         Expression::Block(b, pid) => {
             SSAExpression::Block(Box::new(parse_expression_block(b, k, info)), pid)
@@ -207,7 +227,9 @@ pub fn statement_l1_to_l2(
                     e2: Box::new(gen(val)),
                     pool_id: p,
                 }),
-                TranslatorInformation { tensor_type_info: vcpy },
+                TranslatorInformation {
+                    tensor_type_info: vcpy,
+                },
             )
         }
         Statement::Expression(exp, _p) => expression_l1_to_l2(exp, _k, info),

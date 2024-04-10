@@ -1,3 +1,19 @@
+//===----------------------------------------------------------------------===//
+///
+/// This performs constant propagation and dead value removal on the MIR. 
+/// 
+/// 
+/// Constant propagation involves moving all propagatable values to their 
+/// reference site. Some values which may involve a cost will not be 
+/// propagated. 
+/// 
+/// Once this has happened, some dead values may be produced (if the programmer
+/// has skill issues(), they may also produce dead values. These can be removed
+/// which can reduce the size of the program passed to the backend
+///
+//===----------------------------------------------------------------------===//
+
+
 use std::collections::{HashMap, HashSet};
 
 use crate::frontend::{
@@ -7,7 +23,11 @@ use crate::frontend::{
 
 use super::mir_ast_types::{SSAConditionalBlock, SSAExpression, SSAValue};
 
-fn foldable(val: &SSAValue) -> bool {
+
+/*
+    Determine if a value is propagatable 
+*/
+fn propagatable(val: &SSAValue) -> bool {
     match val {
         SSAValue::VariableReference(_, _) => true,
         SSAValue::Phi(_) => false,
@@ -48,6 +68,12 @@ fn foldable(val: &SSAValue) -> bool {
     }
 }
 
+/*
+    Values that are 'pure' can be removed if they are unusedd. 
+    However, functions may not be pure and as such even if the 
+    return value is unuseed, removing them will alter the semantics 
+    of the program
+*/
 fn is_pure(val: &SSAValue) -> bool {
     match val {
         SSAValue::VariableReference(_, _) => true,
@@ -89,6 +115,11 @@ fn is_pure(val: &SSAValue) -> bool {
     }
 }
 
+/*
+    Find all the variebles that are 'referenced'
+    by a value. These are considered alive and so should not be removed
+    by the dead code remover
+*/
 fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
     match val {
         SSAValue::VariableReference(v, _) => {
@@ -163,6 +194,11 @@ fn get_referenced_value(val: &SSAValue) -> HashSet<String> {
     }
 }
 
+
+/*
+    Similar to the get_referenced_value function, this 
+    finds all alive variables in an expression tree
+*/
 pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
     match expr {
         SSAExpression::VariableDecl {
@@ -233,6 +269,14 @@ pub fn get_referenced(expr: &SSAExpression) -> HashSet<String> {
     }
 }
 
+/*
+    A part of the dead code analyser. 
+
+    This funciton removes all unreferenced variables from an expression. 
+
+    As an arguement, a hashset containing all the unreferenced variables must be provided, this 
+    is usedd to identify any varibles to remove
+*/
 pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> SSAExpression {
     match expr {
         SSAExpression::VariableDecl {
@@ -323,7 +367,10 @@ pub fn remove_unused_variables(expr: SSAExpression, used: &HashSet<String>) -> S
     }
 }
 
-fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> SSAValue {
+/*
+    Perform constant propagation on values
+*/
+fn mir_val_constant_propagate(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> SSAValue {
     match val.fcopy() {
         SSAValue::VariableReference(r, _) => match env.get(&r) {
             Some(nval) => nval.fcopy(),
@@ -333,7 +380,7 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
             p.into_iter()
                 .map(|x| Phi {
                     branch_name: x.branch_name,
-                    value: mir_val_variable_fold(x.value, env),
+                    value: mir_val_constant_propagate(x.value, env),
                 })
                 .collect(),
         ),
@@ -364,14 +411,14 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
             name,
             parameters: parameters
                 .into_iter()
-                .map(|x| mir_val_variable_fold(x, env))
+                .map(|x| mir_val_constant_propagate(x, env))
                 .collect(),
             pool_id,
         },
         SSAValue::Nothing => SSAValue::Nothing,
         SSAValue::Tensor(v, p) => SSAValue::Tensor(
             v.into_iter()
-                .map(|x| mir_val_variable_fold(x, env))
+                .map(|x| mir_val_constant_propagate(x, env))
                 .collect(),
             p,
         ),
@@ -385,16 +432,16 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
             // let ev2: HashMap<String, SSAValue> =
             //     env.iter().map(|(x, y)| (x.clone(), y.fcopy())).collect();
 
-            let (op_if_block, mut env) = mir_variable_fold(*if_block.block.block, env.clone());
+            let (op_if_block, mut env) = mir_constant_propagate(*if_block.block.block, env.clone());
             let op_if = SSAConditionalBlock {
-                condition: Box::new(mir_val_variable_fold(*if_block.condition, &mut env)),
+                condition: Box::new(mir_val_constant_propagate(*if_block.condition, &mut env)),
                 block: SSALabeledBlock {
                     label: if_block.block.label,
                     block: Box::new(op_if_block),
                 },
             };
 
-            let (op_else_block, _env) = mir_variable_fold(*else_block.block, env);
+            let (op_else_block, _env) = mir_constant_propagate(*else_block.block, env);
             let op_else = SSALabeledBlock {
                 label: else_block.label,
                 block: Box::new(op_else_block),
@@ -416,7 +463,16 @@ fn mir_val_variable_fold(val: SSAValue, env: &mut HashMap<String, SSAValue>) -> 
     }
 }
 
-pub fn mir_variable_fold(
+
+/*
+    Perform constant propagation on values
+
+    an empty hash set can be provded which contains all the variable assignments
+    this will be generated as the function walks through the program. 
+
+    Any references to a variable can be replaced with the value using this method
+*/
+pub fn mir_constant_propagate(
     expr: SSAExpression,
     mut env: HashMap<String, SSAValue>,
 ) -> (SSAExpression, HashMap<String, SSAValue>) {
@@ -428,12 +484,12 @@ pub fn mir_variable_fold(
             e2,
             pool_id,
         } => {
-            let optimised_val = mir_val_variable_fold(e1, &mut env);
-            if foldable(&optimised_val) {
+            let optimised_val = mir_val_constant_propagate(e1, &mut env);
+            if propagatable(&optimised_val) {
                 env.insert(name.clone(), optimised_val.fcopy());
             }
 
-            let (optimised_rest, env) = mir_variable_fold(*e2, env);
+            let (optimised_rest, env) = mir_constant_propagate(*e2, env);
 
             (
                 SSAExpression::VariableDecl {
@@ -456,9 +512,9 @@ pub fn mir_variable_fold(
         } => {
             let env_cpy1 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
             let env_cpy2 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
-            let (op_block, _env) = mir_variable_fold(*block, env_cpy1.collect());
+            let (op_block, _env) = mir_constant_propagate(*block, env_cpy1.collect());
             // COPY ENV HERE
-            let (op_e2, env) = mir_variable_fold(*e2, env_cpy2.collect());
+            let (op_e2, env) = mir_constant_propagate(*e2, env_cpy2.collect());
 
             (
                 SSAExpression::FuncDecl {
@@ -479,7 +535,7 @@ pub fn mir_variable_fold(
             e2,
             pool_id,
         } => {
-            let (op, env) = mir_variable_fold(*e2, env);
+            let (op, env) = mir_constant_propagate(*e2, env);
             (
                 SSAExpression::FuncForwardDecl {
                     name,
@@ -494,15 +550,15 @@ pub fn mir_variable_fold(
         SSAExpression::Noop => (SSAExpression::Noop, env),
         SSAExpression::Return { val, pool_id } => (
             SSAExpression::Return {
-                val: mir_val_variable_fold(val, &mut env),
+                val: mir_val_constant_propagate(val, &mut env),
                 pool_id,
             },
             env,
         ),
-        SSAExpression::Block(b, _) => mir_variable_fold(*b, env),
+        SSAExpression::Block(b, _) => mir_constant_propagate(*b, env),
         SSAExpression::Yield { val, pool_id } => (
             SSAExpression::Yield {
-                val: mir_val_variable_fold(val, &mut env),
+                val: mir_val_constant_propagate(val, &mut env),
                 pool_id,
             },
             env,
@@ -520,15 +576,15 @@ pub fn mir_variable_fold(
             let env_cpy1 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
             let env_cpy2 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
 
-            let (op_block, _env) = mir_variable_fold(*block, env_cpy1.collect());
+            let (op_block, _env) = mir_constant_propagate(*block, env_cpy1.collect());
             // COPY ENV HERE
-            let (op_e2, env_rst) = mir_variable_fold(*e2, env_cpy2.collect());
+            let (op_e2, env_rst) = mir_constant_propagate(*e2, env_cpy2.collect());
 
             (
                 SSAExpression::ForLoop {
                     iv,
-                    from: mir_val_variable_fold(from, &mut env),
-                    to: mir_val_variable_fold(to, &mut env),
+                    from: mir_val_constant_propagate(from, &mut env),
+                    to: mir_val_constant_propagate(to, &mut env),
                     block: Box::new(op_block),
                     parallel,
                     e2: Box::new(op_e2),
@@ -549,14 +605,14 @@ pub fn mir_variable_fold(
             let env_cpy2 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
             let env_cpy3 = env.iter().map(|(n, v)| (n.clone(), v.fcopy()));
 
-            let (op_cond, _env) = mir_variable_fold(*cond_expr, env_cpy1.collect());
-            let (op_block, _env) = mir_variable_fold(*block, env_cpy2.collect());
-            let (op_rst, _env) = mir_variable_fold(*e2, env_cpy3.collect());
+            let (op_cond, _env) = mir_constant_propagate(*cond_expr, env_cpy1.collect());
+            let (op_block, _env) = mir_constant_propagate(*block, env_cpy2.collect());
+            let (op_rst, _env) = mir_constant_propagate(*e2, env_cpy3.collect());
 
             (
                 SSAExpression::WhileLoop {
                     cond_expr: Box::new(op_cond),
-                    cond: mir_val_variable_fold(cond, &mut env),
+                    cond: mir_val_constant_propagate(cond, &mut env),
                     block: Box::new(op_block),
                     e2: Box::new(op_rst),
                     pool_id: pool_id,

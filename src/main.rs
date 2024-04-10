@@ -1,3 +1,9 @@
+/*
+
+    This file is for testing purposes 
+
+*/
+
 pub mod core;
 pub mod frontend;
 
@@ -7,7 +13,7 @@ use crate::frontend::high_level_ir::hir_parser::{parse, SCADParser};
 use crate::frontend::mid_level_ir::mir_desugar::{rename_variable_reassignment, rename_variables};
 
 use crate::frontend::mid_level_ir::mir_opt::{
-    get_referenced, mir_variable_fold, remove_unused_variables,
+    get_referenced, mir_constant_propagate, remove_unused_variables,
 };
 use crate::frontend::mid_level_ir::mir_translators::TranslatorInformation;
 use crate::frontend::mid_level_ir::parsers::parse_program;
@@ -67,7 +73,7 @@ fn main() -> std::io::Result<()> {
     let code = rename_variables(unop_code, vec!["test".into()], &mut HashSet::new());
     let code = rename_variable_reassignment(code, &mut HashMap::new());
     // Optimiser
-    let code = mir_variable_fold(code, HashMap::new());
+    let code = mir_constant_propagate(code, HashMap::new());
     let referenced_vars = get_referenced(&code.0);
     let code = remove_unused_variables(code.0, &referenced_vars);
     // endof optimiser

@@ -1,3 +1,12 @@
+//===----------------------------------------------------------------------===//
+///
+/// Since the typing enviornmnent needs to be dropped (it is being passed to
+/// C++ which does not automatically insert the drop handler) these functions 
+/// define how the C++ code can drop the FFI bridge representatio
+///
+//===----------------------------------------------------------------------===//
+
+
 use super::ffi_types::{FFIHIRExpr, FFIHIRValue, FFIString, OutData};
 
 fn drop_val(val: *const FFIHIRValue) {

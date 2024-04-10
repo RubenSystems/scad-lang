@@ -1,15 +1,5 @@
-//===- scad.pst - SCaD Grammar Specification -*- PEST -*-=====================//
-//
-// This file defines the grammar rules for a custom language using PEST.
-// Part of the SCaD Compiler
-//
-//===----------------------------------------------------------------------===//
-///
-/// \file
-/// Defines the grammar using the PEST library for parsing SCaD.
-/// This grammar defines the syntax and rules for various constructs in the
-/// language.
-///
+//=============================================================================//
+/// File defining the grammar of the SCaD language. 
 //===----------------------------------------------------------------------===//
 
 

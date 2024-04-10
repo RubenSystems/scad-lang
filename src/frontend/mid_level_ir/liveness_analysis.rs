@@ -1,7 +1,31 @@
+//===----------------------------------------------------------------------===//
+///
+/// Since SCaD vectors are allocated, they require freeing. This process is 
+/// completed automatically for the programmer. 
+/// 
+/// 
+/// The liveness analyser tracks all allocations and traces their lifetime. Once
+/// they fall out of scope, they are dropped. 
+/// 
+/// 
+/// This involves a walk of the program source, looking for values that 
+/// require tracking. If they do, they are marked as alive. 
+/// 
+/// Once a exit (return/yield) statment is reached, all values that have not 
+/// been returned are marked as dead and a drop handler can be inserted before 
+/// the return statement. 
+/// 
+///
+//===----------------------------------------------------------------------===//
+
+
+
 use super::mir_ast_types::{SSAExpression, SSAValue};
 
 use crate::frontend::mid_level_ir::parsers::generate_register_name;
 
+
+// Right now, only tensors (vectors) require autodropping
 fn requires_tracking(val: &SSAValue) -> bool {
     match val {
         SSAValue::Tensor(_, _) => true,

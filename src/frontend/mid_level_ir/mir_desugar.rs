@@ -1,3 +1,44 @@
+//===----------------------------------------------------------------------===//
+///
+/// Desugaring involves lexical scoping and giving each variable 
+/// reassingment a fresh name. 
+/// 
+/// Lexical scoping involves giving varibles in different scopes 
+/// which can access the variables in outer scopes a fresh name 
+/// 
+///     e.g 
+///         let x = 1; 
+///         if something 
+///             let x = 2; 
+///             print(x)
+/// 
+///     will be converted to
+///         let x = 1; 
+///         %label if something 
+///             let x.label = 2; 
+///             print(x.label)
+/// 
+/// giving each variable assignment a fresh name is to preserve SSA 
+/// for example 
+/// 
+///     let x = 1; 
+///     print(x)
+///     x = 2; 
+///     print(x)
+/// 
+/// the above is not SSA. to convert it into SSA, it must be rewritten to 
+/// 
+///     let x.0 = 1; 
+///     print(x.0)
+///     let x.1 = 2; 
+///     print(x.1)
+/// 
+/// All references to x now have to be rewritten to ensure that they refere
+/// to the correct x
+///
+//===----------------------------------------------------------------------===//
+
+
 use std::collections::{HashMap, HashSet};
 
 use super::{
@@ -10,6 +51,13 @@ fn scoped_rename(existing_name: &str, scoped_name: &Vec<String>) -> String {
     format!("{sn}.{existing_name}")
 }
 
+
+/*
+    ========================================
+            Variable reassignment 
+    ========================================
+
+*/
 pub fn rename_variable_reassignment_value(
     val: SSAValue,
     tracker: &mut HashMap<String, i32>,
@@ -226,7 +274,14 @@ pub fn rename_variable_reassignment(
     }
 }
 
-// rename based on scope
+
+
+/*
+    ========================================
+            Lexical scoping 
+    ========================================
+
+*/
 pub fn rename_variables_value(
     value: SSAValue,
     mut scoped_name: Vec<String>,

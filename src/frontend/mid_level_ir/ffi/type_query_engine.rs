@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+///
+/// This bridges the typing enviornment from rust to c++, enabling the C++ 
+/// bakcend to make queries about the types of functions or variables
+///
+//===----------------------------------------------------------------------===//
+
+
 use crate::frontend::type_system::context::Context;
 
 use super::{ffi_conversion::convert_type_to_ffi, ffi_types::FFIType};

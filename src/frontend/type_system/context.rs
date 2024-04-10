@@ -1,3 +1,12 @@
+//===----------------------------------------------------------------------===//
+///
+/// Definiton of the typing enviornment (capital gamma?) which is just 
+/// a lookup table which maps functions and variables to the correct type 
+///
+//===----------------------------------------------------------------------===//
+
+
+
 use std::collections::HashMap;
 
 use super::{substitution::Substitution, tir_types::TIRType, traits::FreeVarsGettable};

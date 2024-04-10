@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+///
+/// This file defines the converter from parse tree to AST
+/// The general idea is that the parser will walk the tree
+/// and peform a near one to one mapping in a more memory
+/// dense representation
+///
+//===----------------------------------------------------------------------===//
 use lazy_static::lazy_static;
 use pest::{
     iterators::Pairs,
@@ -29,15 +37,7 @@ pub struct HIRParser {
 impl HIRParser {
     pub fn new() -> Self {
         Self {
-            parser: PrattParser::new()
-                .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::subtract, Assoc::Left))
-                .op(Op::infix(Rule::multiply, Assoc::Left) | Op::infix(Rule::divide, Assoc::Left))
-                .op(Op::infix(Rule::greater, Assoc::Left)
-                    | Op::infix(Rule::greater_equal, Assoc::Left))
-                .op(Op::infix(Rule::equal, Assoc::Left)
-                    | Op::infix(Rule::greater_equal, Assoc::Left))
-                .op(Op::infix(Rule::and, Assoc::Left) | Op::infix(Rule::or, Assoc::Left))
-                .op(Op::prefix(Rule::infix_operator)),
+            parser: PrattParser::new(),
         }
     }
 }
@@ -54,6 +54,10 @@ lazy_static! {
 
 }
 
+
+/*
+    Define converter from a CST type to an AST type
+*/
 fn parse_type(
     tpe: pest::iterators::Pair<'_, Rule>,
     _loc_pool: &mut ErrorPool,
@@ -87,6 +91,10 @@ fn parse_type(
     }
 }
 
+
+/* 
+    
+*/
 fn parse_function_def_arg(
     arg: pest::iterators::Pair<'_, Rule>,
 
@@ -175,14 +183,6 @@ fn parse_for_loop(
         unreachable!()
     };
 
-    // let (step, block) = match nxt.as_rule() {
-    //     Rule::statement_block => (1_usize, parse_statement_block(nxt, loc_pool)?),
-    //     _ => (
-    //         nxt.as_str().parse::<usize>().unwrap(),
-
-    //         parse_statement_block(it.next().unwrap(), loc_pool)?,
-    //     ),
-    // };
     Ok(Statement::ForLoop(
         ForLoop {
             variable: identifier,
@@ -198,6 +198,8 @@ fn parse_for_loop(
     ))
 }
 
+
+// Parse the arguements of a function call
 fn parse_function_call_args(
     tpe: pest::iterators::Pair<'_, Rule>,
 
@@ -208,18 +210,7 @@ fn parse_function_call_args(
         .collect()
 }
 
-fn parse_block(
-    blk: pest::iterators::Pair<'_, Rule>,
-    loc_pool: &mut ErrorPool,
-) -> Result<Block, SCADError> {
-    let mut statements = vec![];
-    for x in blk.into_inner() {
-        statements.push(parse(x.into_inner(), loc_pool)?)
-    }
-
-    Ok(Block { statements })
-}
-
+// Parse a block of statements
 fn parse_statement_block(
     blk: pest::iterators::Pair<'_, Rule>,
 
@@ -233,6 +224,9 @@ fn parse_statement_block(
     Ok(StatementBlock { statements })
 }
 
+
+
+// Parse a block of expressions
 fn parse_expression_block(
     blk: pest::iterators::Pair<'_, Rule>,
 
@@ -260,6 +254,7 @@ fn parse_expression_block(
     })
 }
 
+// Parse a conditonal block
 fn parse_expression_conditional_block(
     blk: pest::iterators::Pair<'_, Rule>,
 
@@ -573,6 +568,10 @@ pub fn parse_pair(
     }
 }
 
+
+/*
+    Funciton that converts a parse tree to a Statement
+*/
 pub fn parse(rules: Pairs<Rule>, loc_pool: &mut ErrorPool) -> Result<Statement, SCADError> {
     let x = PARSER
         .parser

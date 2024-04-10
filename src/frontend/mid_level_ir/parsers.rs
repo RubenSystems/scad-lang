@@ -31,32 +31,30 @@ pub fn get_number_for_name() -> u128 {
     val
 }
 
+// Generate a temporary name for registers
 pub fn generate_register_name() -> String {
     format!("tmp{}", get_number_for_name())
 }
 
+// Generate temporary name for control flow 
 pub fn generate_label_name() -> String {
     format!("label{}", get_number_for_name())
 }
 
-pub fn op_to_llvm(op: &str) -> String {
-    match op {
-        "+" => "add".into(),
-        "*" => "mul".into(),
-        "-" => "sub".into(),
-        "/" => "sdiv".into(),
-        ">=" => "icmp sle".into(),
-        "==" => "icmp eq".into(),
-        _ => todo!(),
-    }
-}
+/*
+    Function which converts a vector of AST statements 
+    into a single SSA expression. SSA expressons have continuation nodes
+    unlike AST statements. This function will correctly nest the nodes .
 
+*/
 pub fn parse_program(
     prog: Vec<Statement>,
     k: ContinuationFunction,
     info: TranslatorInformation,
 ) -> SSAExpression {
     match prog.as_slice() {
+        // This will only render top level statements
+        // Anything else can be rendered using the l1 converters
         [head] => {
             match head {
                 // currently can only render functions
@@ -82,14 +80,15 @@ pub fn parse_program(
     }
 }
 
-pub fn parse_block(_blk: Block, _k: ContinuationFunction) -> Vec<SSAExpression> {
-    // blk.statements
-    //     .iter()
-    //     .map(|s| statement_l1_to_l2(s.fcopy(), Box::new(|_| SSAExpression::Noop)))
-    //     .collect()
-    todo!()
-}
 
+/*
+    Render blocks (anything in a functon or conditional)
+    This works by walking the vector, converting every element
+    into a SSA statement and then nesting subsequent statements i nthe 
+    continuation 
+
+    Expression blocks have expressions at the end. This is dealt with
+*/
 pub fn parse_expression_block(
     blk: ExpressionBlock,
     k: ContinuationFunction,
@@ -120,6 +119,13 @@ pub fn parse_expression_block(
     }
 }
 
+
+/*
+    Render blocks (anything in a functon or conditional)
+    This works by walking the vector, converting every element
+    into a SSA statement and then nesting subsequent statements i nthe 
+    continuation 
+*/
 pub fn parse_statement_block(blk: StatementBlock, info: TranslatorInformation) -> SSAExpression {
     match blk.statements.as_slice() {
         [head] => statement_l1_to_l2(head.fcopy(), Box::new(|_| SSAExpression::Noop), info),
@@ -141,6 +147,13 @@ pub fn parse_statement_block(blk: StatementBlock, info: TranslatorInformation) -
     }
 }
 
+/*
+    Render a for loop. 
+
+    For loops are complex due to frontend optimisations 
+    such as loop unrolling and vectorising the induction 
+    variable incrementation 
+*/
 pub fn for_block_induction_variable(
     og: StatementBlock,
     blk: StatementBlock,
@@ -151,6 +164,7 @@ pub fn for_block_induction_variable(
     pid: usize,
     info: TranslatorInformation,
 ) -> SSAExpression {
+    // check to see if vectoriv can be performed 
     if (unroll_count == 0 && !vector_iv) || step != 1 {
         parse_for_block(og, blk, unroll_count, 0, lp, step, pid, None, info)
     } else {
@@ -158,6 +172,18 @@ pub fn for_block_induction_variable(
     }
 }
 
+
+/*
+
+    vectorising the induction variable involves 
+    incrementing the induction varible at each loop unroll. 
+
+    This process can be vectorised as it is a repeated action. 
+
+    Computers do not have an unlimited width vector registers and so 
+    this must be done in tiles (i have chosen tile sizes of 8)
+
+*/
 pub fn parse_for_block_vector_iv(
     og: StatementBlock,
     blk: StatementBlock,
@@ -213,6 +239,7 @@ pub fn parse_for_block_vector_iv(
         )
     }
 }
+
 
 pub fn inner_parse_for_block_vector_iv(
     og: StatementBlock,
@@ -294,6 +321,13 @@ pub fn inner_parse_for_block_vector_iv(
     }
 }
 
+
+/*
+    Standard loop render. This works by rendering the block. Once
+    the block is rendered, check to see if a further unroll is needed. 
+    If one is, it will inject an artifical induction variable increment 
+    and continue.
+*/
 pub fn parse_for_block(
     og: StatementBlock,
     blk: StatementBlock,

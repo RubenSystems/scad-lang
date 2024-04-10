@@ -1,3 +1,23 @@
+//===----------------------------------------------------------------------===//
+///
+/// This file defines the types for the mid level SSA representation 
+/// it is represented as a tree with a continuation
+/// 
+///                                 function
+///                                     conditional
+///                                         expr
+///                                             cont
+///                                     else
+///                                         expr
+///                                             cont
+///                                     cont
+///                                 cont
+/// 
+/// the continuation defines the next 'thing' in the program
+///
+//===----------------------------------------------------------------------===//
+
+
 use crate::frontend::{
     error::PoolID,
     high_level_ir::ast_types::{FailureCopy, IntegerWidth, Type},
@@ -226,6 +246,9 @@ pub enum SSAValue {
     Tensor(Vec<SSAValue>, PoolID),
 }
 
+/*
+    Define the copying process for an SSA vlue
+*/
 impl FailureCopy for SSAValue {
     fn fcopy(&self) -> SSAValue {
         match self {

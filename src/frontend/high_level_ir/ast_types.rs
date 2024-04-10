@@ -1,50 +1,53 @@
-//===- ast_types.rs - Abstract Syntax tree -----*- rust -*-===//
-//
-// Part of the SCaD Compiler,
-//
 //===----------------------------------------------------------------------===//
 ///
-/// \file
 /// Defines the Abstract Syntax Tree (AST) for SCaD.
 /// Thispub  file contains data structures representing different elements
 /// of the abstract syntax tree for the custom language.
 ///
 //===----------------------------------------------------------------------===//
-
-// Definition of terminal symbols representing basic data types and identifiers
 use crate::frontend::{error::PoolID, type_system::tir_types::MonoType};
 
-// When you are a failure, you copy. When you are a succes, you move
 pub trait FailureCopy {
     fn fcopy(&self) -> Self;
 }
 
+/*
+    Definitions of all widths that
+    an integer can take in SCaD.
+*/
 #[derive(Debug, Clone, Copy)]
 pub enum IntegerWidth {
     IndexType,
     Variable(u32),
 }
 
+/*
+    Definition of Integer values in scad
+    The width may be specified by the user when defining the numeric
+    in the literal. If they have not specified the value of width is none
+*/
 #[derive(Debug)]
 pub struct Integer {
     pub value: i128,
     pub width: Option<IntegerWidth>,
 }
 
+/*
+    Definition of floating point values in scad
+    The width may be specified by the user when defining the numeric
+    in the literal. If they have not specified the value of width is none
+*/
 #[derive(Debug)]
 pub struct Float {
     pub value: f64,
     pub width: Option<u32>,
-} // Terminal symbol for floating-point values
+}
 
+/*
+   Representation of an identifier
+*/
 #[derive(Debug)]
-pub struct CharArray(pub String); // Terminal symbol for character arrays
-
-#[derive(Debug)]
-pub struct InfixOperator(pub String); // Terminal symbol for character arrays
-
-#[derive(Debug)]
-pub struct Identifier(pub String); // Terminal symbol for identifiers
+pub struct Identifier(pub String);
 
 #[derive(Debug)]
 pub struct VariableName(pub String);
@@ -63,12 +66,20 @@ pub struct Type {
 }
 
 impl Type {
+    /*
+        Convert a type to string representation.
+        This allows for better outputing of type information
+    */
     pub fn to_string(&self) -> String {
         let dimension_string: Vec<String> = self.dimensions.iter().map(|x| x.to_string()).collect();
         let fstring = format!("{}x{}", dimension_string.join("x"), self.subtype.0);
         fstring
     }
 
+    /*
+       Conversion to a TIR type so that user specified
+       type annotations can be used in later typing phases
+    */
     pub fn to_tir_type(&self) -> MonoType {
         MonoType::Application {
             c: self.subtype.0.clone(),
@@ -134,16 +145,16 @@ impl FailureCopy for StatementBlock {
 // Definition of constant declarations in the language
 #[derive(Debug)]
 pub struct ConstDecl {
-    pub identifier: VariableName, // Identifier for the constant
-    pub subtype: Type,            // Type of the constant
-    pub expression: Expression,   // Expression representing the constant's value
+    pub identifier: VariableName,
+    pub subtype: Type,
+    pub expression: Expression,
 }
 
 #[derive(Debug)]
 pub struct VariableDecl {
-    pub identifier: VariableName, // Identifier for the constant
-    pub subtype: Option<Type>,    // Type of the constant
-    pub expression: Expression,   // Expression representing the constant's value
+    pub identifier: VariableName,
+    pub subtype: Option<Type>,
+    pub expression: Expression,
 }
 
 #[derive(Debug)]
@@ -225,8 +236,8 @@ impl FailureCopy for ForLoop {
 
 #[derive(Debug)]
 pub struct WhileLoop {
-    pub condition: Expression, // Condition for the block (boolean expression)
-    pub block: StatementBlock, // Block of statements to be executed if the condition is met
+    pub condition: Expression,
+    pub block: StatementBlock,
 }
 
 impl FailureCopy for WhileLoop {
@@ -240,8 +251,8 @@ impl FailureCopy for WhileLoop {
 
 #[derive(Debug)]
 pub struct ConditionalStatementBlock {
-    pub condition: Expression, // Condition for the block (boolean expression)
-    pub block: Block,          // Block of statements to be executed if the condition is met
+    pub condition: Expression,
+    pub block: Block,
 }
 
 impl FailureCopy for ConditionalStatementBlock {
@@ -254,13 +265,6 @@ impl FailureCopy for ConditionalStatementBlock {
 }
 
 #[derive(Debug)]
-pub struct InfixOperation {
-    pub lhs: Box<Expression>,
-    pub op: InfixOperator,
-    pub rhs: Box<Expression>,
-}
-
-#[derive(Debug)]
 pub struct Cast {
     pub expr: Box<Expression>,
     pub to_type: Type,
@@ -269,11 +273,9 @@ pub struct Cast {
 // Enumeration of major building blocks of the language expressions
 #[derive(Debug)]
 pub enum Expression {
-    InfixOperation(InfixOperation, PoolID), // Boolean expressions
-    Float(Float, PoolID),                   // Floating-point value
+    Float(Float, PoolID), // Floating-point value
     Bool(bool, PoolID),
     Integer(Integer, PoolID),       // Integer values
-    CharArray(CharArray, PoolID),   // Character arrays
     Identifier(Identifier, PoolID), // Identifiers
     ConditionalExpressionControlFlowControl {
         if_blocks: Vec<ConditionalExpressionBlock>, // List of else-if condition blocks
@@ -286,17 +288,14 @@ pub enum Expression {
     Cast(Cast, PoolID),
 }
 
+/*
+    Define copy behaviour for AST expressions
+    This involves matching on the expression and peforming a
+    recursive copy
+*/
 impl FailureCopy for Expression {
     fn fcopy(&self) -> Expression {
         match self {
-            Expression::InfixOperation(i, pid) => Expression::InfixOperation(
-                InfixOperation {
-                    lhs: Box::new(i.lhs.fcopy()),
-                    op: InfixOperator(i.op.0.clone()),
-                    rhs: Box::new(i.rhs.fcopy()),
-                },
-                *pid,
-            ),
             Expression::Float(f, pid) => Expression::Float(
                 Float {
                     value: f.value,
@@ -311,7 +310,6 @@ impl FailureCopy for Expression {
                 },
                 *pid,
             ),
-            Expression::CharArray(_, _) => todo!(),
             Expression::Identifier(i, pid) => Expression::Identifier(Identifier(i.0.clone()), *pid),
             Expression::ConditionalExpressionControlFlowControl {
                 if_blocks,
@@ -352,9 +350,9 @@ impl FailureCopy for Expression {
 // Enumeration of different types of statements in the language
 #[derive(Debug)]
 pub enum Statement {
-    ConstDecl(ConstDecl, PoolID),       // Constant declaration statement
-    VariableDecl(VariableDecl, PoolID), // Constant declaration statement
-    Expression(Expression, PoolID),     // Expression statement
+    ConstDecl(ConstDecl, PoolID),
+    VariableDecl(VariableDecl, PoolID),
+    Expression(Expression, PoolID),
     FunctionDefinition(FunctionDefinition, PoolID),
     ProcedureDefinition(ProcedureDefinition, PoolID),
     ForLoop(ForLoop, PoolID),
@@ -363,6 +361,12 @@ pub enum Statement {
     ProcedureDecleration(ProcedureDecleration, PoolID),
     Block(Block, PoolID),
 }
+
+/*
+    Define copy behaviour for AST statements
+    This involves matching on the statement and peforming a
+    recursive copy
+*/
 
 impl FailureCopy for Statement {
     fn fcopy(&self) -> Self {

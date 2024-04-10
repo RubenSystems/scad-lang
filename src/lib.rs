@@ -1,3 +1,14 @@
+//===----------------------------------------------------------------------===// 
+///
+/// The SCaD frontend. 
+/// 
+/// This is the frontend module for scad and contains methods that can be 
+/// called by a  backend including compile, drop and query methods for a 
+/// context query engine
+/// 
+//===----------------------------------------------------------------------===//
+
+
 pub mod core;
 pub mod frontend;
 
@@ -21,7 +32,7 @@ use frontend::mid_level_ir::ffi::{
 use frontend::mid_level_ir::mir_ast_types::SSAExpression;
 
 use frontend::high_level_ir::hir_parser::Rule;
-use frontend::mid_level_ir::mir_opt::{get_referenced, mir_variable_fold, remove_unused_variables};
+use frontend::mid_level_ir::mir_opt::{get_referenced, mir_constant_propagate, remove_unused_variables};
 use frontend::mid_level_ir::mir_translators::TranslatorInformation;
 use frontend::type_system::type_engine::extract_type_information;
 use pest::Parser;
@@ -30,24 +41,48 @@ use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::Read;
 
+
+/*
+    Query: 
+
+        - provide a query engine
+        - provide a query
+
+    this will return the type of a query. 
+*/
 #[no_mangle]
 pub extern "C" fn query(
     query_engine: *mut c_void,
     query: *const c_char,
-) -> std::mem::ManuallyDrop<FFIType> {
+) -> FFIType {
     let qep: &TypeQueryEngine =
         unsafe { std::mem::transmute(query_engine as *mut TypeQueryEngine) };
     let c_str = unsafe { CStr::from_ptr(query) };
     let str_slice: &str = c_str.to_str().expect("Failed to convert CStr to str");
-    let tir = std::mem::ManuallyDrop::new(qep.get_type_for(str_slice));
+    let tir = qep.get_type_for(str_slice);
     tir
 }
 
+/*
+    function to drop the ir provided by compile method
+    this should be called to free the outdata 
+*/
 #[no_mangle]
 pub extern "C" fn drop_ir(ffi: OutData) {
     drop_ffi_data(ffi)
 }
 
+
+/*
+    Compile a SCaD program 
+
+        - a file name containing a scad program
+        - a pointer to a pointer to a context query engine 
+
+    the compiler will generate a cqe and overwrite the pointer (warning!)
+
+    the compiler will then generate the LIR and return it to the caller 
+*/
 #[no_mangle]
 pub unsafe extern "C" fn compile(
     filename: *const c_char,
@@ -114,7 +149,7 @@ pub unsafe extern "C" fn compile(
     };
 
     // Run optimisation and liveness passes
-    let code = mir_variable_fold(code, HashMap::new());
+    let code = mir_constant_propagate(code, HashMap::new());
     let referenced_vars = get_referenced(&code.0);
     let code = remove_unused_variables(code.0, &referenced_vars);
     let code = unalive_vars(code, vec![]);

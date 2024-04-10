@@ -1,3 +1,14 @@
+//===----------------------------------------------------------------------===// 
+///
+/// Hindley milner typing system for SCaD 
+/// 
+/// This takes in the UTLCIR (untyped lambda calculus intermediate repr) and
+/// generates type information which can be fused by the fusing layer of the 
+/// compiler to generate the LIR 
+/// 
+//===----------------------------------------------------------------------===//
+
+
 // given an HIR expression, return a type
 
 // define TIR(tm) (typed intermediate repr)
@@ -56,12 +67,28 @@ pub struct WAlgoInfo<'a> {
     pub pool: &'a ErrorPool,
 }
 
+
+/*
+    The w algorithm 
+
+    an explination for this algorithm as well as the typing rules 
+    can be seen in the report created about this programming language 
+*/
 fn w_algo(
-    mut context: Context,
+    context: Context,
     info: WAlgoInfo,
     exp: &TIRExpression,
 ) -> Result<(Substitution, MonoType, Context), SCADError> {
     match exp {
+
+        /*
+            Rules for an integer 
+            if the width is defined in the program, the type is 
+            known. 
+
+            Else it should be a generic integer and inferred using 
+            annotations or its interactions with functions etc 
+         */
         TIRExpression::Integer(_, width, _) => {
             if let Some(width) = width {
                 Ok((
@@ -102,6 +129,15 @@ fn w_algo(
             },
             context,
         )),
+
+        /*
+            Rules for a float 
+            if the width is defined in the program, the type is 
+            known. 
+
+            Else it should be a generic float and inferred using 
+            annotations or its interactions with functions etc 
+         */
         TIRExpression::Float(_, width, _p) => {
             if let Some(width) = width {
                 Ok((
@@ -121,6 +157,12 @@ fn w_algo(
                 ))
             }
         }
+        /*
+            A variable is a funcition or variable 
+
+            this can be extracted from the typing environment. If it is not 
+            in either, yeet
+         */
         TIRExpression::VariableReference { name, pool_id } => {
             let Some(tpe) = context.get_type_for_name(name) else {
                 return Err(SCADError::from_pid(
@@ -143,6 +185,23 @@ fn w_algo(
 
             Ok((Substitution::new(), instantiate(tpe.clone()), context))
         }
+
+        /*
+            Declare a variable. As discussed above, a variable is a function 
+            or a variable (recursive definition). 
+
+            First, the expression you are trying to assign to the variable must be 
+            typed. This is done recursivley. 
+
+            Next, checks are performed if the variable exists in the function env already to
+            ensure its not an invalid reassignment 
+
+            If a type hint is provided, it is used to push down information in the event that 
+            the type cannot be inferred (e.g in the case of a generic numeric)
+
+            after, substitutions are applied so the context reflects the new types. 
+
+         */
         TIRExpression::VariableDecl {
             name,
             type_hint,
@@ -171,7 +230,7 @@ fn w_algo(
                     TIRType::MonoType(m) => {
                         let unification = unify(m, &t1).map_err(|_| {
                             SCADError::from_pid(
-                                ErrorType::UnknownError("HI THERE".to_string()),
+                                ErrorType::CannotTypeExpression,
                                 *pool_id,
                                 info.pool,
                             )
@@ -193,7 +252,6 @@ fn w_algo(
 
             if let Some(th) = type_hint {
                 let tir_type = th.to_tir_type();
-                println!("{name} {tir_type:#?}");
                 context.add_type_for_name(name.clone(), TIRType::MonoType(tir_type));
             }
 
@@ -217,6 +275,14 @@ fn w_algo(
 
             Ok((s2.merge(&s1), t2, sub_context))
         }
+
+        /*
+            Typing rules for a funciton call
+
+            The first function 'cell' is typed. In lambda calculus, functions are one 
+            arguement and one return type. A function with multiple args must return a functioon
+            which can then has more args. This process must be typed
+         */
         TIRExpression::FunctionCall { e1, e2, pool_id } => {
             let mut retry_count = 0;
             loop {
@@ -329,6 +395,12 @@ fn w_algo(
 
             Ok((sub, x, new_context))
         }
+
+        /*
+            Rules for typing a conditonal 
+                Both branches must not have divergent types
+                The type for a conditional is equal to the type of each branch 
+         */
         TIRExpression::Conditional {
             condition,
             if_block,
@@ -405,19 +477,20 @@ fn w_algo(
                 ));
             }
 
-            // let Ok((e2_sub, e2_mt, e2_ctx)) = w_algo(
-            //     ctx,
-            //     WAlgoInfo {
-            //         retry_count: info.retry_count,
-            //         req_type: info.req_type,
-            //     },
-            //     e1,
-            // ) else {
-            //     todo!()
-            // };
             Ok((if_sub.merge(&else_sub), if_mt, ctx))
         }
+
+        /*
+            Phi nodes are depreciated in SCaD 0.1.3
+         */
         TIRExpression::Phi(_) => todo!(),
+        /*
+            Rules for typing a tensor 
+
+            All elements must be the same type. 
+
+            The type is n x type where n is the size
+         */
         TIRExpression::Tensor(v, p) => {
             let types: Vec<TIRType> = v
                 .iter()
@@ -455,11 +528,20 @@ fn w_algo(
 
             Ok((Substitution::new(), ret, context))
         }
+        /*
+            Type a cast (e.g return the type you are casting to)
+         */
         TIRExpression::Cast {
             from: _,
             to_type,
             pool_id: _,
         } => Ok((Substitution::new(), to_type.clone(), context)),
+
+        /*
+            While loops do not have a return type as they are statements 
+
+            The condition must be typed to ensure it is a bool
+         */
         TIRExpression::WhileLoop {
             condition,
             block,
@@ -534,6 +616,11 @@ fn w_algo(
 
             Ok((s2, t2, contex))
         }
+
+        /*
+            For loops must be typed to ensre the loop bounds are 
+            index types
+         */
         TIRExpression::ForLoop {
             from,
             to,
@@ -597,6 +684,9 @@ fn w_algo(
     }
 }
 
+/*
+    Get the return type of a function.
+*/
 pub fn get_rettype_of_application(app: MonoType) -> Option<MonoType> {
     match app {
         MonoType::Variable(_) => None,
@@ -618,6 +708,9 @@ pub fn get_rettype_of_application(app: MonoType) -> Option<MonoType> {
     }
 }
 
+/*
+    Create a vector type from a scalar type and size
+*/
 fn cvt_scalar_to_vector(size: u32, mt: MonoType) -> MonoType {
     match mt {
         MonoType::Variable(v) => MonoType::Variable(v),
@@ -643,6 +736,9 @@ fn cvt_scalar_to_vector(size: u32, mt: MonoType) -> MonoType {
     }
 }
 
+/*
+    Generalise by converting to a polytype
+*/
 fn generalise(ctx: &Context, tpe: MonoType) -> PolyType {
     let free_variables = diff(ctx.free_vars(), tpe.free_vars());
     let mut base_polytype = PolyType::MonoType(tpe);
@@ -682,6 +778,13 @@ pub enum UnificationError {
     IncorrectDimensions,
 }
 
+
+/*
+    Attempt to peform a unification on two monotypes. 
+
+    If unification is possible, return a general substitution which wen applied 
+    to a context converts both monotypes to the same monotype
+*/
 fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError> {
     // println!("----UNIFYING-----\n\n{t1:#?}\n\n{t2:#?}\n---------");
     if let (MonoType::Variable(a), MonoType::Variable(b)) = (&t1, &t2) {
@@ -734,6 +837,7 @@ fn unify(t1: &MonoType, t2: &MonoType) -> Result<Substitution, UnificationError>
 
     todo!()
 }
+
 
 fn diff(a: Vec<String>, b: Vec<String>) -> Vec<String> {
     let vars: HashSet<_> = a.into_iter().collect();

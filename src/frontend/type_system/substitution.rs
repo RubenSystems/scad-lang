@@ -1,3 +1,12 @@
+//===----------------------------------------------------------------------===// 
+///
+/// A simple construct representing a substitution that can be applied on 
+/// a context 
+/// 
+/// 
+//===----------------------------------------------------------------------===//
+
+
 use std::collections::HashMap;
 
 use super::tir_types::{MonoType, PolyType, TIRType};

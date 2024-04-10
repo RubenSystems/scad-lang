@@ -1,3 +1,20 @@
+//===----------------------------------------------------------------------===//
+///
+/// Convert MIR to an almost lambda calculus version 
+/// 
+/// The MIR is very similar to lambda calculus, the differences are 
+/// looping, conditonals and funcitons are more then one arg. 
+/// 
+/// Functions are easily rewritten, but looping and conditionals cannot 
+/// be without performing significant modifications on the code. 
+/// 
+/// looping and conditionals are therefore added to the LC repr to make 
+/// translation easier and quciker
+///
+//===----------------------------------------------------------------------===//
+
+
+
 use crate::frontend::{
     error::PoolID,
     high_level_ir::ast_types::{FailureCopy, Type},
@@ -10,7 +27,7 @@ use super::{
     tir_types::{MonoType, TIRType},
 };
 
-pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
+fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression, Context) {
     match mir {
         SSAValue::Bool(b, p) => (TIRExpression::Bool(b, p), ctx),
         SSAValue::VariableReference(r, p) => (
@@ -141,18 +158,9 @@ pub fn transform_mir_value_to_tir(mir: SSAValue, ctx: Context) -> (TIRExpression
     }
 }
 
-pub fn get_typename(tpe: Type) -> String {
-    tpe.to_string()
-}
 
-// pub fn convert_hir_to_tir_type(tpe: Type) -> TIRType {
-//     TIRType::MonoType(MonoType::Application {
-//         c: get_typename(tpe),
-//         types: vec![],
-//     })
-// }
 
-pub fn transform_mir_function_decl_to_tir(
+fn transform_mir_function_decl_to_tir(
     args: Vec<(String, Type)>,
     block: Box<SSAExpression>,
     ret_type_hint: Option<TIRType>,
@@ -208,7 +216,7 @@ pub fn transform_mir_function_decl_to_tir(
     }
 }
 
-pub fn transform_mir_function_forward_decl_to_tir(
+fn transform_mir_function_forward_decl_to_tir(
     args: Vec<Type>,
     ret_type: Option<Type>,
 ) -> MonoType {
@@ -260,6 +268,11 @@ pub fn transform_mir_function_forward_decl_to_tir(
     }
 }
 
+
+/*
+    convert an expresson to a TIR expression 
+    this can be used later for typing 
+*/
 pub fn transform_mir_to_tir(mir: SSAExpression, ctx: Context) -> (TIRExpression, Context) {
     match mir {
         SSAExpression::VariableDecl {
