@@ -3,7 +3,6 @@
 /// A simple construct representing a substitution that can be applied on 
 /// a context 
 /// 
-/// 
 //===----------------------------------------------------------------------===//
 
 
