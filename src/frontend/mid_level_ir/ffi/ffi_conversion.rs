@@ -551,12 +551,14 @@ fn get_width_for_tir_function_type(
 ) -> Result<u32, SCADError> {
     let mt = instantiate(tpe.clone());
 
-    let ret = get_rettype_of_application(mt.clone()).unwrap();
-    let MonoType::Application {
+    let ret = get_rettype_of_application(mt.clone());
+
+
+    let Some(MonoType::Application {
         c,
         dimensions: _,
         types: _,
-    } = ret
+    }) = ret
     else {
         return Err(SCADError::from_pid(
             ErrorType::CannotTypeExpression,

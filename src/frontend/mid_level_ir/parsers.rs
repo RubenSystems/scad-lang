@@ -352,7 +352,7 @@ pub fn parse_for_block(
                         name: lp.variable.0.clone(),
                         vtype: None,
                         e1: SSAValue::FunctionCall {
-                            name: "@add".into(),
+                            name: "@addi".into(),
                             parameters: vec![
                                 SSAValue::VariableReference(lp.variable.0.clone(), pid),
                                 SSAValue::Integer {

@@ -92,11 +92,11 @@ pub unsafe extern "C" fn compile(
     let c_str = unsafe { CStr::from_ptr(filename) };
 
     // Convert CStr to a string slice
-    let str_slice: &str = c_str.to_str().expect("Failed to convert CStr to str");
+    let str_slice: &str = c_str.to_str().expect("\n\n| error: failed to convert CStr to str\n\n");
 
     // Convert string slice to a String
 
-    let mut file = File::open(str_slice).unwrap();
+    let mut file = File::open(str_slice).expect(&format!("\n\n | error: could not find file {str_slice}\n\n"));
 
     // Read the contents of the file into a string
     let mut program = String::new();
