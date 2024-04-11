@@ -34,13 +34,16 @@ fn main() -> std::io::Result<()> {
 
     let test_prog = r#"
 
-    fn je(a: i32) i32 {
+
+    fn testing() i32 {
+        let x: 2xi32 = {0, 0}; 
+    
+        let y = @index.i32(c: x, b: 0.0_f32);
+    
+        @print(v: y);
+    
         0_i32
     };
-    fn main() i32 {
-        je(a: 100)
-    };
-    
     "#;
     let _counter: usize = 0;
     let mut location_pool = ErrorPool::new();

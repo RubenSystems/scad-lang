@@ -171,10 +171,11 @@ fn w_algo(
                     info.pool,
                 ));
             };
-
+            
             let tpe = match tpe.get(info.retry_count).clone() {
                 Some(a) => a,
                 None => {
+                    println!("{context:#?}");
                     return Err(SCADError::from_pid(
                         ErrorType::UndefinedVariableReference(name.clone()),
                         *pool_id,
@@ -325,7 +326,7 @@ fn w_algo(
                     }
                     Err(_e) => retry_count += 1,
                 };
-                if retry_count > MAX_HINDLEY_RETRYS {
+                if retry_count != 0 {
                     return Err(SCADError::from_pid(
                         ErrorType::CannotFindFunctionWithMatchingArguementTypes,
                         *pool_id,
